@@ -48,9 +48,13 @@ DBModel.prototype = {
 		this.errors 		= [];
 		this.logs		= [];
 
-		var parsedURL = new URL(this.dburl);
+		// var parsedURL = new URL(this.dburl);
 
-		if (parsedURL.protocol == "ws:"){
+		this._config = {
+			"ws:console:writeResponseMessage": 0
+		};
+
+		if (  this.dburl.match(/^ws:\/\//g)  ){
 			if (typeof WebSocket != "function"){
 				throw new Error("!WebSocket");
 			}
@@ -86,7 +90,7 @@ DBModel.prototype = {
 
 		console.log(
 			(new Date() - this.wsObservers[msgData.uid].t0) / 1000,
-			msg
+			(this._config["ws:console:writeResponseMessage"] ? msg : void 0)
 		);
 
 		delete this.wsObservers[msgData.uid];

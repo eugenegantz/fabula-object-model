@@ -10,5 +10,5 @@
 			window[keys[c]] = this.prototype[keys[c]];
 		}
 	};
-	window.FabulaObjModel = F;
+	window.FabulaObjectModel = F;
 })();

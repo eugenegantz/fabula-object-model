@@ -365,6 +365,30 @@ _utils.awwsBase64 = {
 
 
 /**
+ * @param {*} value
+ * @return {String}
+ * */
+_utils.getType = function(value){
+	if (  toString.call(value) == "[object Array]"  ){
+		return "array";
+
+	} else if (  toString.call(value) == "[object Object]"  )  {
+		return "object";
+
+	} else if (  value === null  ) {
+		return "null";
+
+	} else if (  value == "[object Date]"  ) {
+		return "date";
+
+	} else {
+		return typeof value;
+
+	}
+};
+
+
+/**
  * Парсинг строчных аргументов, в массив
  * Проверка типа, преобразование типов
  * Например: "100,200;;300;400,abc" => ['100','200','300','400'];

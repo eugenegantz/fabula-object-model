@@ -58,23 +58,33 @@ FabulaObjModel.prototype.create = function(name, arg){
 	if (typeof name != "string"){
 		throw new Error("1st argument suppose to be String");
 	}
-	var name_ = name;
+
 	name = name.toLowerCase();
-	if (typeof this._lowMethods[name] != "function"){
-		throw new Error("Class \"" + name_ + "\" does not exist");
+
+	if (typeof this._lowMethods[name] == "undefined"){
+		throw new Error("Class \"" + name + "\" does not exist");
 	}
+
 	// var rest = utils.arrayRest(arguments, 1);
 	// TODO передать ...rest в конструктор. Например через bind
 	var method = this._lowMethods[name];
 	var obj;
+	var type = _utils.getType(method);
 
-	if (  typeof method.prototype.getInstance == "function"  ){
-		obj = new method.prototype.getInstance();
-	} else {
-		obj = new method();
+	if (  type == "object"  ) {
+		obj = method;
+
+	} else if (type == "function") {
+		if (  typeof method.prototype.getInstance == "function"  ){
+			obj = method.prototype.getInstance();
+
+		} else {
+			obj = new method();
+
+		}
 	}
 
-	obj._fabulaInstance = this;
+	if (obj) obj._fabulaInstance = this;
 
 	return obj;
 };
