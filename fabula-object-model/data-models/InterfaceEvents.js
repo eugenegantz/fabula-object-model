@@ -1,3 +1,9 @@
+var IEvent = require("./IEvent");
+
+// Хак для NodeJS
+if (typeof CustomEvent == "undefined") var CustomEvent = IEvent;
+if (typeof Event == "undefined") var Event = IEvent;
+
 var EventsInterface = function(){
 	this._events = {};
 };
@@ -5,8 +11,6 @@ var EventsInterface = function(){
 EventsInterface.prototype = {
 
 	"trigger": function(eventName, e){
-
-		var EventConstructor = Event || CustomEvent;
 
 		if (typeof eventName != "string") return false;
 
@@ -18,10 +22,11 @@ EventsInterface.prototype = {
 		){
 
 			if (
-				e instanceof CustomEvent == false
+				e instanceof IEvent
+				&& e instanceof CustomEvent == false
 				&& e instanceof Event == false
 			){
-				e = new EventConstructor(eventName);
+				e = this._createEvent(eventName);
 			}
 
 			var events = this._events[eventName];
@@ -98,6 +103,31 @@ EventsInterface.prototype = {
 			}
 			this._events[eventName] = tmp;
 		}
+	},
+
+
+	/**
+	 * Создать событие
+	 * @param {String} name
+	 * @param {Object=} param
+	 * */
+	"_createEvent": function(name, param){
+		if (  typeof document != "object"  ){
+			return new IEvent(name);
+		}
+		var EventConstructor = CustomEvent || Event;
+		var event = new EventConstructor(name);
+
+		if (typeof param == "object"){
+			for(var prop in param){
+				if (  param.hasOwnProperty  ){
+					if (  !param.hasOwnProperty(prop)  ) continue;
+				}
+				event[prop] = param[prop];
+			}
+		}
+
+		return event;
 	},
 
 

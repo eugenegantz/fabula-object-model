@@ -209,18 +209,9 @@ DefaultDataModel.prototype = _objectsPrototyping(
 
 			if (  typeof useEvent == "undefined"  ) useEvent = true;
 
-			var EventConstructor = Event || CustomEvent;
-
-			var createEvent = function(name){
-				var event = new EventConstructor(name);
-				event.value = value;
-				event.argument = arg || null;
-				return event;
-			};
-
 			if (useEvent) {
-				var eventBefore = createEvent("set:" + key);
-				var eventAfter = createEvent("afterset:" + key);
+				var eventBefore = this._createEvent("set:" + key, {"value": value, "argument": arg}); // createEvent("set:" + key);
+				var eventAfter = this._createEvent("afterset:" + key, {"value": value, "argument": arg}); // createEvent("afterset:" + key);
 				this.trigger(eventBefore.type, eventBefore);
 			}
 

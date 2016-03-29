@@ -37,7 +37,7 @@ FabulaObjModel.prototype.utils								= require("./utils");
 
 FabulaObjModel.prototype.ObjectA						= require("./data-models/ObjectA");
 
-FabulaObjModel.prototype.DBModel						= require("./browser/DBModel");
+FabulaObjModel.prototype.DBModel						= require("./nodejs/DBModel");
 
 // ------------------------------------------------------------------------
 
@@ -69,7 +69,7 @@ FabulaObjModel.prototype.create = function(name, arg){
 	// TODO передать ...rest в конструктор. Например через bind
 	var method = this._lowMethods[name];
 	var obj;
-	var type = _utils.getType(method);
+	var type = this.utils.getType(method);
 
 	if (  type == "object"  ) {
 		obj = method;

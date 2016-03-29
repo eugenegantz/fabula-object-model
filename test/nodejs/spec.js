@@ -1,8 +1,48 @@
 var assert = require("assert");
+var modPath = require("path");
 
-var Ajax = require("./../../fabula-object-model/nodejs/Ajax.js");
+var __root = modPath.join(__dirname, "./../../fabula-object-model");
+console.log(__root);
+
+var Ajax = require(modPath.join(__root, "./nodejs/Ajax.js"));
+var _use = require(modPath.join(__root, "./nodejs/RequireCustom"));
+_use.addPath(modPath.join(__dirname, "./../../fabula-object-model"));
 
 // ------------------------------------------------------------------------------------
+
+describe("requireCustom", ()=>{
+
+	it("RequireCustom. DBModel", ()=>{
+		assert.ok(
+			Boolean(_use("DBModel"))
+		);
+	});
+
+});
+
+describe("DBModel", ()=>{
+
+	var db = new _use("DBModel")
+		.prototype
+		.getInstance({
+			"dburl": "http://127.0.0.1:9000/db?",
+			"dbname": "well.demo",
+			"dbsrc": "main"
+		});
+
+	it("DBModel.dbquery / SELECT NOW();", (done)=>{
+		db.dbquery({
+			"query": "SELECT NOW();",
+			"callback": (dbres)=>{
+				if (  dbres.recs.length != 1 ){
+					throw new Error("dbres.recs.length != 1");
+				}
+				done();
+			}
+		});
+	});
+
+});
 
 describe("Ajax-module", ()=>{
 
@@ -74,6 +114,43 @@ describe("Ajax-module", ()=>{
 				done();
 			}
 		});
+	});
+
+});
+
+describe("FOM", ()=>{
+
+	var fom = new _use("FabulaObjectModel")
+		.prototype
+		.getInstance({
+			"dburl": "http://127.0.0.1:9000/db?",
+			"dbname": "well.demo",
+			"dbsrc": "main"
+		});
+
+	var db = fom.getDBInstance();
+
+	it("FOM.create", ()=>{
+		var mov = fom.create("MovDataModel");
+		assert.ok(  mov instanceof fom.MovDataModel  );
+	});
+
+	it("MovDataModel", (done)=>{
+		db.dbquery({
+			"query": "SELECT TOP 5 MMID FROM Movement ORDER BY GSDate DESC",
+			"callback": (dbres)=>{
+				var mov = fom.create("MovDataModel");
+				mov.set("MMID", dbres.recs[0].MMID);
+				mov.load({
+					callback: ()=>{
+						if (!mov.get("GS")){
+							throw new Error('!mov.get("GS")');
+						}
+						done();
+					}
+				});
+			}
+		})
 	});
 
 });
