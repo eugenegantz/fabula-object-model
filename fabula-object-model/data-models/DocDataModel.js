@@ -5,7 +5,7 @@ var MovDataModel = require("./MovDataModel");
 
 // Для совместимости
 var getContextDB = function(){
-	var FabulaObjectModel = require("./../fabulaObjectModel.js");
+	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
 	var DBModel = FabulaObjectModel.prototype.DBModel;
 
 	if (  this._fabulaInstance ){

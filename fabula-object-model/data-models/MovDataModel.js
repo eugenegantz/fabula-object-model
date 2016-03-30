@@ -6,7 +6,7 @@ var _utils = require("./../utils");
 
 // Для совместимости
 var getContextDB = function(){
-	var FabulaObjectModel = require("./../fabulaObjectModel.js");
+	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
 	var DBModel = FabulaObjectModel.prototype.DBModel;
 
 	if (  this._fabulaInstance ){
@@ -560,7 +560,7 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			defaultFields.gsdate.value = "NOW()";
 
 			var values = [], fields = [];
-			var value, c, prop, tmp, type, lowName;
+			var value, c, prop, type, lowName;
 
 			// -----------------------------------------------------------------
 
@@ -770,6 +770,7 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				"delimiters":	[",",";"]
 			}) || [];
 
+			/*
 			var includeMovs = _utils.parseArg({
 				"value": typeof arg.includeMovs == "undefined"? null : arg.includeMovs,
 				"into":			"array",
@@ -778,6 +779,7 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				"kickEmpty":	true,
 				"delimiters":	[",",";"]
 			}) || [];
+			*/
 
 			var MMID = this.get("MMID");
 

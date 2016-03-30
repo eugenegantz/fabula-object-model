@@ -266,7 +266,7 @@ Adapters.MovTaskAdapter = function(mov){
 		throw new Error("arguments.length == 0");
 	}
 
-	if (mov instanceof MovDataModel == false){
+	if (mov instanceof MovDataModel === false){
 		throw new Error("1st argument suppose to be \"MovDataModel\"");
 	}
 
@@ -391,7 +391,7 @@ Adapters.MovTaskAdapter.prototype = {
 	"setPostproc": function(postproc){
 
 		var mov = this._getSelfObj();
-		var child, c, v, tmp;
+		var child, c;
 		var postproc_ = [];
 
 		for(c=0; c<postproc.length; c++){
@@ -462,7 +462,7 @@ Adapters.DocAdapter = function(doc){
 	if (!arguments.length){
 		throw new Error("!arguments.length");
 	}
-	if (  doc instanceof DocDataModel == false ){
+	if (  doc instanceof DocDataModel === false ){
 		throw new Error("1st argument suppose to be \"DocDataModel\"");
 	}
 	this.doc = doc;

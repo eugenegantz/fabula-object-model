@@ -1,6 +1,6 @@
 var IEvent = require("./IEvent");
 
-// Хак для NodeJS
+// РҐР°Рє РґР»СЏ nodejs
 if (typeof CustomEvent == "undefined") var CustomEvent = IEvent;
 if (typeof Event == "undefined") var Event = IEvent;
 
@@ -23,8 +23,8 @@ EventsInterface.prototype = {
 
 			if (
 				e instanceof IEvent
-				&& e instanceof CustomEvent == false
-				&& e instanceof Event == false
+				&& e instanceof CustomEvent === false
+				&& e instanceof Event === false
 			){
 				e = this._createEvent(eventName);
 			}
@@ -107,7 +107,7 @@ EventsInterface.prototype = {
 
 
 	/**
-	 * Создать событие
+	 * пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
 	 * @param {String} name
 	 * @param {Object=} param
 	 * */

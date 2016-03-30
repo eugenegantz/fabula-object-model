@@ -1,6 +1,6 @@
 // --------------------------------------------------------------------------------
-// ������� CustomEvents ��� IE9+
-// ��������: https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent/CustomEvent
+// Полфил CustomEvents для IE9+
+// https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent/CustomEvent
 (function () {
 	if ( typeof window.CustomEvent === "function" ) return false;
 
@@ -19,14 +19,16 @@
 // --------------------------------------------------------------------------------
 // FabulaObjectModel
 (function(){
-	var cascade = require("./cascade");
+	require("./cascade");
 	var dbModel = require("./DBModel");
-	var F = require("./../FabulaObjectModel");
-	F.prototype.DBModel = dbModel;
-	F.prototype._lowMethods.dbmodel = dbModel;
+	var F = require("./../_FabulaObjectModel");
+
+	// Установка модуля БД для браузера
+	F.prototype._setModule("DBModel", dbModel);
+
 	F.globalize = function(){
-		keys = Object.getOwnPropertyNames(this.prototype);
-		for(c=0; c<keys.length; c++){
+		var keys = Object.getOwnPropertyNames(this.prototype);
+		for(var c=0; c<keys.length; c++){
 			window[keys[c]] = this.prototype[keys[c]];
 		}
 	};

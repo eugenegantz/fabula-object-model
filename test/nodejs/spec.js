@@ -154,3 +154,21 @@ describe("FOM", ()=>{
 	});
 
 });
+
+describe("Calc", function(){
+
+	var fom = new _use("FabulaObjectModel")
+		.prototype
+		.getInstance({
+			"dburl": "http://127.0.0.1:9000/db?",
+			"dbname": "well.demo",
+			"dbsrc": "main"
+		});
+
+	var defaultCalc = fom.create("CalcDefaultPrint");
+
+	defaultCalc.calc({
+		""
+	});
+
+});

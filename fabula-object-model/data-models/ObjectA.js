@@ -4,7 +4,7 @@
  * */
 var ObjectA = function(obj){
 
-	if (this instanceof ObjectA == false){
+	if (this instanceof ObjectA === false){
 		throw new Error("Wrong context");
 	}
 
