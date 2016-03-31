@@ -1,18 +1,6 @@
 // ------------------------------------------------------
 // Номенклатура
-
-var ObjectA = require("./ObjectA");
-
-// Для совместимости
-var getContextDB = function(){
-	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
-	var DBModel = FabulaObjectModel.prototype.DBModel;
-
-	if (  this._fabulaInstance ){
-		return this._fabulaInstance.getDBInstance();
-	}
-	return DBModel.prototype.getInstance();
-};
+var Ajax = require("./../browser/Ajax");
 
 var GandsDataModel = function(){
 	this.init();
@@ -35,9 +23,6 @@ GandsDataModel.prototype = {
 
 	"instances" : [],
 
-	/**
-	 * @return {GandsDataModel}
-	 * */
 	"getInstance" : function(){
 		if (this.instances.length){
 			return this.instances[0];
@@ -48,105 +33,58 @@ GandsDataModel.prototype = {
 	"load" : function(A){
 		if (typeof A == "undefined") A = Object.create(null);
 		var callback = (typeof A.callback == "function" ? A.callback : function(){} );
-		var db = getContextDB.call(this);
 		var self = this;
 
-		// Номеклатура
-		var dbq = [
-			"SELECT * FROM Gands " 		+
-			"WHERE "							+
-			"GSCOP LIKE '87%' "			+
-			"OR GSCOP LIKE '17%' "		+
-			"OR GSCOP LIKE '27%' "		+
-			"OR GSCOP LIKE '07%' "		+
-			"OR GSID LIKE 'ТСПо%' "
-		];
+		Ajax.req({
+			url: self._fabulaInstance.url,
+			method: "POST",
+			data: {
+				model: "GandsDataModel"
+			},
+			callback: function(http){
+				var res = JSON.parse(http.responseText);
 
-		// Расширение номенклатуры
-		dbq.push(
-			"SELECT * FROM GandsExt "				+
-			"WHERE "										+
-			"GSExID IN ("									+
-			dbq[0].replace(/[*]/gi, "GSID")			+
-			")"
-		);
+				self.data = res.data;
+				self.state = 1;
 
-		// Свойства номенклатуры
-		dbq.push(
-			"SELECT pid, extID, property, value FROM Property "	+
-			"WHERE "																+
-			"ExtID IN ("															+
-			dbq[0].replace(/[*]/gi, "GSID")									+
-			")"
-		);
+				var c, L, gandsRef = Object.create(null);
 
-		if (db){
-			db.dbquery({
-				"query" : dbq.join("; "),
-				"callback" : function(res){
-					self.data = res[0].recs;
-					self.state = 1;
-
-					var c, L, gandsRef = Object.create(null);
-
-					for(c=0; c<self.data.length; c++){
-						gandsRef[self.data[c].GSID] = self.data[c];
-						self.data[c].gandsExtRef = [];
-						self.data[c].gandsPropertiesRef = [];
-					}
-
-					var gandsExt = res[1].recs;
-
-					for(c=0; c<gandsExt.length; c++){
-						if (  typeof gandsRef[gandsExt[c].GSExID] == "undefined"  ) continue;
-						gandsRef[gandsExt[c].GSExID].gandsExtRef.push(gandsExt[c]);
-					}
-
-					var gandsProps = res[2].recs;
-
-					for(c=0; c<gandsProps.length; c++){
-						if (  typeof gandsRef[gandsProps[c].extID] == "undefined"  ) continue;
-						gandsRef[gandsProps[c].extID].gandsPropertiesRef.push(gandsProps[c]);
-					}
-
-					for(c= 0, L=self.data.length; c<L; c++){
-						if (typeof self.GSUnits[self.data[c].GSID] == "undefined") {
-							self.GSUnits[self.data[c].GSID] = self.data[c].GSUnit
-						}
-					}
-
-					self.dataReferences = new ObjectA(gandsRef);
-
-					// this._indexBuild();
-
-					callback(self.data);
+				for(c=0; c<self.data.length; c++){
+					gandsRef[self.data[c].GSID] = self.data[c];
+					self.data[c].gandsExtRef = [];
 				}
-			});
-		}
+
+				var gandsExt = res.ext;
+
+				for(c=0; c<gandsExt.length; c++){
+					if (  typeof gandsRef[gandsExt[c].GSExID] == "undefined"  ) continue;
+					gandsRef[gandsExt[c].GSExID].gandsExtRef.push(gandsExt[c]);
+				}
+
+				var gandsProps = res.props;
+
+				for(c=0; c<gandsProps.length; c++){
+					if (  typeof gandsRef[gandsProps[c].extID] == "undefined"  ) continue;
+					gandsRef[gandsProps[c].extID].gandsPropertiesRef.push(gandsProps[c]);
+				}
+
+				for(c= 0, L=self.data.length; c<L; c++){
+					if (typeof self.GSUnits[self.data[c].GSID] == "undefined") {
+						self.GSUnits[self.data[c].GSID] = self.data[c].GSUnit
+					}
+				}
+
+				self.dataReferences = gandsRef;
+
+				callback(self.data);
+
+			},
+			onerror: function(http){
+				console.error(http);
+			}
+		});
+
 	},
-
-
-	"_indexData": {
-		"material-paper": [],
-		"paper": [],
-		"materials:print": [],
-		"carton": [],
-		"envelope": [],
-		"products": [],
-		"print": [],
-		"products:print": []
-	},
-
-
-	"_indexHas": function(){
-
-	},
-
-
-	"_indexBuild": function(){
-
-	},
-
 
 	"get" : function(A){
 		if (typeof A != "object") A = Object.create(null);
@@ -160,14 +98,6 @@ GandsDataModel.prototype = {
 		for (c = 0; c < this.data.length; c++) {
 
 			if (  tmp.indexOf(this.data[c]) > -1  ) continue;
-
-			// Печатные форматы форматы
-			if (
-				type.indexOf("print-formats") > -1
-				&& this.data[c].GSID.match(/ТСПо/gi)
-			) {
-				tmp.push(this.data[c]);
-			}
 
 			// Соответсвует ТМЦ / Бумага
 			// Сюда могут быть включены: картон, самокопирка и пр.
@@ -246,6 +176,32 @@ GandsDataModel.prototype = {
 				}
 			}
 
+			/*
+			if (type.indexOf("postproc:COP17") > -1) {
+				if (  this.data[c].GSCOP == "176" ) {
+					tmp.push(this.data[c]);
+				}
+			}
+
+			if (type.indexOf("postproc:cutting") > -1) {
+				if (  this.data[c].GSID.match(/ПЗРАВЫ|РУПОДП01|ДХПОДОВы/)  ) {
+					tmp.push(this.data[c]);
+				}
+			}
+
+			if (type.indexOf("postproc:COP27") > -1) {
+				if (  this.data[c].GSCOP == "276" ) {
+					tmp.push(this.data[c]);
+				}
+			}
+
+			if (type.indexOf("COP07") > -1){
+				if (  this.data[c].GSCOP == "07" ) {
+					tmp.push(this.data[c]);
+				}
+			}
+			*/
+
 			for(v=0; v<cop.length; v++){
 				if (  cop[v] instanceof RegExp  ){
 					if (  this.data[c].GSCOP.match(cop[v])  ){
@@ -264,21 +220,12 @@ GandsDataModel.prototype = {
 		return tmp;
 	},
 
-
 	"getGSUnit": function(GSID){
 		if (typeof GSID == "undefined") return;
 
 		if (typeof this.GSUnits[GSID] == "undefined") return;
 
 		return this.GSUnits[GSID];
-	},
-
-
-	"getJSON": function(){
-		var ret = Object.create(null);
-		ret.data = this.data;
-		ret.GSUnits = this.GSUnits;
-		return ret
 	}
 
 };

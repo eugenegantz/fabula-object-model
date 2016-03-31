@@ -12,22 +12,29 @@ var modDBAwwS = _use("DBAwwS");
  * @param {String} arg.dbsrc
  * */
 var DBModel = function(arg){
-	if (typeof arg != "object") {
-		throw new Error("1st argument suppose to be Object");
-	}
 
-	var tmp = ["dburl", "dbname", "dbname"];
-
-	for(let c=0; c<tmp.length; c++){
-		if (!arg[tmp[c]]){
-			throw new Error("!arg." + tmp[c]);
+	if (  !modDBAwwS.prototype.instances.length  ){
+		if (typeof arg != "object") {
+			throw new Error("1st argument suppose to be Object");
 		}
-	}
 
-	this.dbAwwS					= modDBAwwS.prototype.getInstance(arg);
-	this.dbAwwS.dburl			= arg.dburl;
-	this.dbAwwS.dbname		= arg.dbname; // well.2015
-	this.dbAwwS.dbsrc			= arg.dbsrc; // main, common, stat
+		var tmp = ["dburl", "dbname", "dbname"];
+
+		for(let c=0; c<tmp.length; c++){
+			if (!arg[tmp[c]]){
+				throw new Error("!arg." + tmp[c]);
+			}
+		}
+
+		this.dbAwwS					= modDBAwwS.prototype.getInstance(arg);
+		this.dbAwwS.dburl			= arg.dburl;
+		this.dbAwwS.dbname		= arg.dbname; // well.2015
+		this.dbAwwS.dbsrc			= arg.dbsrc; // main, common, stat
+
+	} else {
+		this.dbAwwS					= modDBAwwS.prototype.getInstance();
+
+	}
 
 	this.instances.push(this);
 };

@@ -2,11 +2,12 @@ var assert = require("assert");
 var modPath = require("path");
 
 var __root = modPath.join(__dirname, "./../../fabula-object-model");
-console.log(__root);
 
 var Ajax = require(modPath.join(__root, "./nodejs/Ajax.js"));
+var cUtils = require(modPath.join(__root, "./data-models/calc/CalcUtils.js"));
 var _use = require(modPath.join(__root, "./nodejs/RequireCustom"));
-_use.addPath(modPath.join(__dirname, "./../../fabula-object-model"));
+
+_use.addPath(__root);
 
 // ------------------------------------------------------------------------------------
 
@@ -120,7 +121,7 @@ describe("Ajax-module", ()=>{
 
 describe("FOM", ()=>{
 
-	var fom = new _use("FabulaObjectModel")
+	var fom = new _use("./../fabula-object-model/")
 		.prototype
 		.getInstance({
 			"dburl": "http://127.0.0.1:9000/db?",
@@ -132,7 +133,7 @@ describe("FOM", ()=>{
 
 	it("FOM.create", ()=>{
 		var mov = fom.create("MovDataModel");
-		assert.ok(  mov instanceof fom.MovDataModel  );
+		assert.ok(  mov instanceof fom.mod.MovDataModel  );
 	});
 
 	it("MovDataModel", (done)=>{
@@ -153,22 +154,23 @@ describe("FOM", ()=>{
 		})
 	});
 
+	it("GandsDataModel", function(done){
+		var gm = fom.create("GandsDataModel");
+		gm.load({
+			"callback": function(){
+				done();
+			}
+		});
+	});
+
 });
 
 describe("Calc", function(){
 
-	var fom = new _use("FabulaObjectModel")
-		.prototype
-		.getInstance({
-			"dburl": "http://127.0.0.1:9000/db?",
-			"dbname": "well.demo",
-			"dbsrc": "main"
-		});
-
-	var defaultCalc = fom.create("CalcDefaultPrint");
-
-	defaultCalc.calc({
-		""
+	it("Calc. CalcUtils", function(){
+		assert.ok(
+			Object.keys(cUtils.getFormats()).length > 0
+		);
 	});
 
 });

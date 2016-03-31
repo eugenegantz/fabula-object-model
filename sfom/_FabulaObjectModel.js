@@ -1,6 +1,17 @@
 
 var FabulaObjModel = function(arg){
-	this._dbInstance = this.mod.DBModel.prototype.getInstance(arg);
+	this._dbInstance = null; // this.mod.DBModel.prototype.getInstance(arg);
+
+	if (typeof arg != "object"){
+		throw new Error("!arg");
+	}
+
+	if (typeof arg.url != "string" || !arg.url){
+		throw new Error("!arg.url");
+	}
+
+	this.url = arg.url;
+
 	this.instances.push(this);
 };
 
@@ -29,46 +40,35 @@ FabulaObjModel.prototype._setModule = function(name, _module){
 
 // ------------------------------------------------------------------------
 
-FabulaObjModel.prototype._getModule = function(name){
-	if (typeof name != "string"){
-		throw new Error("1st argument suppose to be String");
-	}
-	return this.mod[name.toLowerCase()];
-};
+// FabulaObjModel.prototype._setModule("AgentsDataModel", require("./data-models/AgentsDataModel"));
 
-// ------------------------------------------------------------------------
-
-FabulaObjModel.prototype._setModule("AgentsDataModel", require("./data-models/AgentsDataModel"));
-
-FabulaObjModel.prototype._setModule("DataModelAdapters", require("./data-models/DataModelAdapters"));
+// FabulaObjModel.prototype._setModule("DataModelAdapters", require("./data-models/DataModelAdapters"));
 
 FabulaObjModel.prototype._setModule("DefaultDataModel", require("./data-models/DefaultDataModel"));
 
-FabulaObjModel.prototype._setModule("DocDataModel", require("./data-models/DocDataModel"));
+// FabulaObjModel.prototype._setModule("DocDataModel", require("./data-models/DocDataModel"));
 
-FabulaObjModel.prototype._setModule("FirmsDataModel", require("./data-models/FirmsDataModel"));
+// FabulaObjModel.prototype._setModule("FirmsDataModel", require("./data-models/FirmsDataModel"));
 
 FabulaObjModel.prototype._setModule("GandsDataModel", require("./data-models/GandsDataModel"));
 
 FabulaObjModel.prototype._setModule("InterfaceEvents", require("./data-models/InterfaceEvents"));
 
-FabulaObjModel.prototype._setModule("InterfaceFProperty", require("./data-models/InterfaceFProperty"));
+// FabulaObjModel.prototype._setModule("InterfaceFProperty", require("./data-models/InterfaceFProperty"));
 
-FabulaObjModel.prototype._setModule("MovDataModel	", require("./data-models/MovDataModel"));
+// FabulaObjModel.prototype._setModule("MovDataModel	", require("./data-models/MovDataModel"));
 
-FabulaObjModel.prototype._setModule("PathsDataModel", require("./data-models/PathsDataModel"));
+// FabulaObjModel.prototype._setModule("PathsDataModel", require("./data-models/PathsDataModel"));
 
-FabulaObjModel.prototype._setModule("TalksDataModel",  require("./data-models/TalksDataModel"));
+// FabulaObjModel.prototype._setModule("TalksDataModel",  require("./data-models/TalksDataModel"));
 
 FabulaObjModel.prototype._setModule("CalcDefaultPrint",  require("./data-models/calc/DefaultPrintCalc"));
-
-FabulaObjModel.prototype._setModule("CalcBrochure",  require("./data-models/calc/CalcBrochure"));
 
 FabulaObjModel.prototype._setModule("utils", require("./utils"));
 
 FabulaObjModel.prototype._setModule("ObjectA", require("./data-models/ObjectA"));
 
-FabulaObjModel.prototype._setModule("DBModel", null);
+// FabulaObjModel.prototype._setModule("DBModel", null);
 
 // ------------------------------------------------------------------------
 

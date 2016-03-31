@@ -1,0 +1,15 @@
+module.exports = {
+
+	DIGITAL_PRINT_MAX_AMOUNT: 250,
+
+	DIGITAL_PRINT: "DIGITAL",
+
+	OFFSET_PRINT: "OFFSET",
+
+	CARTON_PRINT: "CARTON",
+
+	RISOGRAPH_PRINT: "RISOGRAPH"
+
+};
+
+Object.freeze(module.exports);
