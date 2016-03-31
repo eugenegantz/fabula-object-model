@@ -33,7 +33,7 @@ FabulaObjModel.prototype._getModule = function(name){
 	if (typeof name != "string"){
 		throw new Error("1st argument suppose to be String");
 	}
-	return this.mod[name.toLowerCase()];
+	return this._lowMethods[name.toLowerCase()];
 };
 
 // ------------------------------------------------------------------------

@@ -1,17 +1,115 @@
 var assert = require("assert");
-var modPath = require("path");
 
+assert.notOk = function(value){
+	return assert.strictEqual(value, false);
+};
+
+// ------------------------------------------------------------------------------------
+
+var modPath = require("path");
 var __root = modPath.join(__dirname, "./../../fabula-object-model");
+
+// ------------------------------------------------------------------------------------
 
 var Ajax = require(modPath.join(__root, "./nodejs/Ajax.js"));
 var cUtils = require(modPath.join(__root, "./data-models/calc/CalcUtils.js"));
 var _use = require(modPath.join(__root, "./nodejs/RequireCustom"));
-
 _use.addPath(__root);
 
 // ------------------------------------------------------------------------------------
 
-describe("requireCustom", ()=>{
+var FabulaObjectModel = require(__root);
+var fom = FabulaObjectModel
+	.prototype
+	.getInstance({
+		"dburl": "http://127.0.0.1:9000/db?",
+		"dbname": "well.demo",
+		"dbsrc": "main"
+	});
+
+// ------------------------------------------------------------------------------------
+
+describe("fabula-object-model", function(){
+
+	it(".prototype.getInstance()", function(){
+		assert.ok(Boolean(fom));
+	})
+
+});
+
+describe(
+	"ObjectA",
+	function(){
+
+		var ObjectA = fom._getModule("ObjectA");
+
+		(function(){
+
+			var obj = new ObjectA();
+
+			describe(".set()", function(){
+				it(".set(aBcD, 100)", function(){
+					obj.set("aBcD",100);
+					assert.ok(true);
+				});
+			});
+
+			describe(".get()", function(){
+				it(".get(abcd) == 100", function(){
+					assert.equal(obj.get("abcd"), 100);
+				});
+			});
+
+		})();
+
+		(function(){
+
+			var arg = {
+				"a": 1,
+				"b": "2",
+				"c": {"c":3},
+				"d": [4]
+			};
+
+			var obj = new ObjectA(arg);
+
+			describe(".getLength()", function(){
+				it(".getLength() == 4", function(){
+					assert.equal(obj.getLength(), 4);
+				});
+			});
+
+			describe("remove(), .getLength()", function(){
+				it("remove(A), .getLength() == 3", function(){
+					obj.remove("A");
+					assert.equal(obj.getLength(), 3, "remove");
+				});
+			});
+
+			describe(".has()", function(){
+				it(".has(B) == true", function(){
+					assert.ok(
+						obj.has("B"),
+						"has.true"
+					);
+				});
+			});
+
+			describe(".has()", function(){
+				it(".has(A) == false", function(){
+					assert.notOk(
+						obj.has("A"),
+						"has.false"
+					);
+				});
+			});
+
+		})();
+
+	}
+);
+
+describe.skip("requireCustom", ()=>{
 
 	it("RequireCustom. DBModel", ()=>{
 		assert.ok(
@@ -21,7 +119,7 @@ describe("requireCustom", ()=>{
 
 });
 
-describe("DBModel", ()=>{
+describe.skip("DBModel", ()=>{
 
 	var db = new _use("DBModel")
 		.prototype
@@ -45,7 +143,7 @@ describe("DBModel", ()=>{
 
 });
 
-describe("Ajax-module", ()=>{
+describe.skip("Ajax-module", ()=>{
 
 	it("Ajax._xFormParam", ()=>{
 		var a = Ajax._xFormParam({
@@ -119,15 +217,7 @@ describe("Ajax-module", ()=>{
 
 });
 
-describe("FOM", ()=>{
-
-	var fom = new _use("./../fabula-object-model/")
-		.prototype
-		.getInstance({
-			"dburl": "http://127.0.0.1:9000/db?",
-			"dbname": "well.demo",
-			"dbsrc": "main"
-		});
+describe.skip("FOM", ()=>{
 
 	var db = fom.getDBInstance();
 
@@ -165,7 +255,7 @@ describe("FOM", ()=>{
 
 });
 
-describe("Calc", function(){
+describe.skip("Calc", function(){
 
 	it("Calc. CalcUtils", function(){
 		assert.ok(
