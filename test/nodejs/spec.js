@@ -29,7 +29,7 @@ var fom = FabulaObjectModel
 
 // ------------------------------------------------------------------------------------
 
-describe("fabula-object-model", function(){
+describe.skip("fabula-object-model", function(){
 
 	it(".prototype.getInstance()", function(){
 		assert.ok(Boolean(fom));
@@ -37,7 +37,7 @@ describe("fabula-object-model", function(){
 
 });
 
-describe(
+describe.skip(
 	"ObjectA",
 	function(){
 
@@ -93,9 +93,6 @@ describe(
 						"has.true"
 					);
 				});
-			});
-
-			describe(".has()", function(){
 				it(".has(A) == false", function(){
 					assert.notOk(
 						obj.has("A"),
@@ -109,6 +106,40 @@ describe(
 	}
 );
 
+
+// -----------------------------------------------------------------------------
+
+
+describe.skip(
+	"InterfaceEvents",
+	function(){
+		var st = false;
+
+		var InterfaceEvents = fom._getModule("InterfaceEvents");
+		var ie = new InterfaceEvents();
+
+		ie.on(
+			"ev",
+			function(){
+				st = true;
+			}
+		);
+
+		ie.trigger("ev");
+
+		describe(".on(), .trigger()", function(){
+			it(".on(ev), .trigger(ev)", function(){
+				assert.ok(st);
+			});
+		});
+
+	}
+);
+
+
+// -----------------------------------------------------------------------------
+
+
 describe.skip("requireCustom", ()=>{
 
 	it("RequireCustom. DBModel", ()=>{
@@ -118,6 +149,10 @@ describe.skip("requireCustom", ()=>{
 	});
 
 });
+
+
+// -----------------------------------------------------------------------------
+
 
 describe.skip("DBModel", ()=>{
 
@@ -142,6 +177,10 @@ describe.skip("DBModel", ()=>{
 	});
 
 });
+
+
+// -----------------------------------------------------------------------------
+
 
 describe.skip("Ajax-module", ()=>{
 
@@ -217,6 +256,10 @@ describe.skip("Ajax-module", ()=>{
 
 });
 
+
+// -----------------------------------------------------------------------------
+
+
 describe.skip("FOM", ()=>{
 
 	var db = fom.getDBInstance();
@@ -244,23 +287,111 @@ describe.skip("FOM", ()=>{
 		})
 	});
 
-	it("GandsDataModel", function(done){
-		var gm = fom.create("GandsDataModel");
-		gm.load({
-			"callback": function(){
-				done();
-			}
+});
+
+
+// -----------------------------------------------------------------------------
+
+
+describe("GandsDataModel", function(){
+
+	var gands = fom.create("GandsDataModel");
+
+	describe("GandsDataModel.load()", function(){
+		it("gands.data.length > 0", function(done){
+			gands.load({
+				callback: function(){
+					if (!gands.data.length){
+						throw new Error("!gands.data.length");
+					}
+					done();
+				}
+			})
+		})
+	});
+
+});
+
+
+// -----------------------------------------------------------------------------
+
+
+describe.skip("PrintUtils", function(){
+
+	var PrintUtils = fom._getModule("PrintUtils");
+
+	describe("PrintUtils.getFormats()", function () {
+		it("PrintUtils.getFormats()", function () {
+			assert.ok(
+				Object.keys(PrintUtils.getFormats()).length > 0
+			);
+		});
+	});
+
+	describe("PrintUtils.getFormat", function () {
+		it("PrintUtils.getFormat('ТСПоФмА3') == Object", function () {
+			assert.equal(typeof PrintUtils.getFormat('ТСПоФмА3'), "object");
 		});
 	});
 
 });
 
-describe.skip("Calc", function(){
 
-	it("Calc. CalcUtils", function(){
-		assert.ok(
-			Object.keys(cUtils.getFormats()).length > 0
-		);
+// -----------------------------------------------------------------------------
+
+
+describe("Calc", function(){
+
+	var gands = fom.create("GandsDataModel");
+
+	describe("CalcPrintOffset", function(){
+		beforeEach(function(done) {
+			if (gands.state){
+				done();
+			}
+			gands.load({
+				callback: function() {
+					done();
+				}
+			});
+		});
+		var cpo = fom.create("CalcPrintOffset");
+		it("А4 / 4+0 / sum == 8412.5", function(){
+			var sum = cpo.calc({
+				"amount": 1000,
+				"material": "ТЦБуОф9ж",
+				"format": "ТСПоФмА4",
+				"colorCode": "4+0"
+			});
+			assert.equal(sum, 8412.5);
+		});
+		it("А4 / 4+4 / sum == 15912.5", function(){
+			var sum = cpo.calc({
+				"amount": 1000,
+				"material": "ТЦБуОф9ж",
+				"format": "ТСПоФмА4",
+				"colorCode": "4+4"
+			});
+			assert.equal(sum, 15992.5);
+		});
+		it("А5 / 4+4 / sum == 10715", function(){
+			var sum = cpo.calc({
+				"amount": 1000,
+				"material": "ТЦБуОф9ж",
+				"format": "ТСПоФмА5",
+				"colorCode": "4+4"
+			});
+			assert.equal(sum, 10715);
+		});
+		it("А6 / 4+0 / sum == 3968.5", function(){
+			var sum = cpo.calc({
+				"amount": 800,
+				"material": "ТЦБуОф9ж",
+				"format": "ТСПоФмА6",
+				"colorCode": "4+0"
+			});
+			assert.equal(sum, 3968.5);
+		});
 	});
 
 });

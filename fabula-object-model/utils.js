@@ -147,33 +147,29 @@ _utils.arrayRest = function(arr, n){
 
 
 _utils.objectHasOwnProperty = function(obj, key){
-	if (arguments.length < 2) return false;
-	if (typeof obj != "object") return false;
-	var keys = Object.getOwnPropertyNames(obj);
-	for(var c=0; c<keys.length; c++){
-		if (  keys[c] == key  ){
-			return true;
-		}
-	}
-	return false;
+	return Object.prototype.hasOwnProperty.call(obj, key);
 };
 
 _utils.objectKeysToLowerCase = function(obj){
 	if (typeof obj != "object") return null;
-	var keys = Object.getOwnPropertyNames(obj);
 	var res = {};
-	for(var c=0; c<keys.length; c++){
-		res[keys[c].toLowerCase()] = obj[keys[c]];
+	for(var prop in obj){
+		if (  !Object.prototype.hasOwnProperty.call(obj, key)  ){
+			continue;
+		}
+		res[prop.toLowerCase()] = obj[prop];
 	}
 	return res;
 };
 
 _utils.objectKeysToUpperCase = function(obj){
 	if (typeof obj != "object") return null;
-	var keys = Object.getOwnPropertyNames(obj);
 	var res = {};
-	for(var c=0; c<keys.length; c++){
-		res[keys[c].toUpperCase()] = obj[keys[c]];
+	for(var prop in obj){
+		if (  !Object.prototype.hasOwnProperty.call(obj, key)  ){
+			continue;
+		}
+		res[prop.toUpperCase()] = obj[prop];
 	}
 	return res;
 };

@@ -64,6 +64,12 @@ FabulaObjModel.prototype._setModule("CalcDefaultPrint",  require("./data-models/
 
 FabulaObjModel.prototype._setModule("CalcBrochure",  require("./data-models/calc/CalcBrochure"));
 
+FabulaObjModel.prototype._setModule("CalcPrintOffset",  require("./data-models/calc/CalcPrintOffset"));
+
+FabulaObjModel.prototype._setModule("CalcUtils",  require("./data-models/calc/CalcUtils"));
+
+FabulaObjModel.prototype._setModule("PrintUtils",  require("./data-models/PrintUtils"));
+
 FabulaObjModel.prototype._setModule("utils", require("./utils"));
 
 FabulaObjModel.prototype._setModule("ObjectA", require("./data-models/ObjectA"));

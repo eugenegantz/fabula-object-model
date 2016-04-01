@@ -86,6 +86,7 @@ DefaultPrintCalc.prototype.calc = function(arg){
 		if (
 			salePrice
 			&& gandsRow.gandsExtRef[c].GSExType.toLowerCase().trim() != "цена продажи"
+			&& gandsRow.gandsExtRef[c].GSExType.toLowerCase().trim() != "цена"
 		) {
 			continue;
 		}
