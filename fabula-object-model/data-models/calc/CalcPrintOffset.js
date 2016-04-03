@@ -18,11 +18,11 @@ CPOffset.prototype.calc = function(arg){
 
 	// ------- Материал
 	var material = cUtils.parseMaterial(arg.material);
-	if (  !material  ) throw new Error("!arg.material");
+	if (  !material  ) return new Error("!arg.material");
 
 	// ------- Цветность
 	var colorCode = cUtils.parseColorCode(arg.colorCode);
-	if (!colorCode) throw new Error("!arg.colorCode");
+	if (!colorCode) return new Error("!arg.colorCode");
 
 	// ------- Офсетные пластины
 	var printForm = "ТЦМППЛ01";
@@ -32,7 +32,7 @@ CPOffset.prototype.calc = function(arg){
 
 	// ------- Формат
 	var format = cUtils.parseFormat(arg.format);
-	if (!format) throw new Error("!arg.format");
+	if (!format) return new Error("!arg.format");
 
 	// ------- Формат запечатки
 	var collageFormat =
@@ -41,7 +41,7 @@ CPOffset.prototype.calc = function(arg){
 			: pUtils.getFormat("ТСПоФмА3");
 
 	if (  !collageFormat  ){
-		throw new Error("!collageFormat");
+		return new Error("!collageFormat");
 	}
 
 	// ------------------------------------------------------------

@@ -164,7 +164,7 @@ GandsDataModel.prototype = {
 			// Печатные форматы форматы
 			if (
 				type.indexOf("print-formats") > -1
-				&& this.data[c].GSID.match(/ТСПо/gi)
+				&& this.data[c].GSID.match(/ТСПоФм/gi)
 			) {
 				tmp.push(this.data[c]);
 			}

@@ -10,6 +10,17 @@ module.exports = [
 			pathinfo: true,
 			sourceMapFilename: "[file].map"
 		},
+		'if-loader' : 'version-fom-browser-include',
+		/*
+		module: {
+			preLoaders: [
+				{
+					// the "loader"
+					loader: modPath.resolve(__dirname, "./webpack-loaders/if-loader-master/")
+				}
+			]
+		},
+		*/
 		devtool: "source-map"
 	},
 

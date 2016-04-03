@@ -38,6 +38,12 @@ FabulaObjModel.prototype._getModule = function(name){
 
 // ------------------------------------------------------------------------
 
+/* #if version-fom-browser-include */
+var browser_tag_fn = function(){
+	console.log(true);
+};
+/* #end */
+/* #if version-common */
 FabulaObjModel.prototype._setModule("AgentsDataModel", require("./data-models/AgentsDataModel"));
 
 FabulaObjModel.prototype._setModule("DataModelAdapters", require("./data-models/DataModelAdapters"));
@@ -47,13 +53,13 @@ FabulaObjModel.prototype._setModule("DefaultDataModel", require("./data-models/D
 FabulaObjModel.prototype._setModule("DocDataModel", require("./data-models/DocDataModel"));
 
 FabulaObjModel.prototype._setModule("FirmsDataModel", require("./data-models/FirmsDataModel"));
-
+/* #end */
 FabulaObjModel.prototype._setModule("GandsDataModel", require("./data-models/GandsDataModel"));
 
 FabulaObjModel.prototype._setModule("InterfaceEvents", require("./data-models/InterfaceEvents"));
 
 FabulaObjModel.prototype._setModule("InterfaceFProperty", require("./data-models/InterfaceFProperty"));
-
+/* #if version-common */
 FabulaObjModel.prototype._setModule("MovDataModel	", require("./data-models/MovDataModel"));
 
 FabulaObjModel.prototype._setModule("PathsDataModel", require("./data-models/PathsDataModel"));
@@ -69,7 +75,7 @@ FabulaObjModel.prototype._setModule("CalcPrintOffset",  require("./data-models/c
 FabulaObjModel.prototype._setModule("CalcUtils",  require("./data-models/calc/CalcUtils"));
 
 FabulaObjModel.prototype._setModule("PrintUtils",  require("./data-models/PrintUtils"));
-
+/* #end */
 FabulaObjModel.prototype._setModule("utils", require("./utils"));
 
 FabulaObjModel.prototype._setModule("ObjectA", require("./data-models/ObjectA"));
