@@ -144,7 +144,7 @@ describe.skip("requireCustom", ()=>{
 
 	it("RequireCustom. DBModel", ()=>{
 		assert.ok(
-			Boolean(_use("DBModel"))
+			Boolean(_use("DBAwwS"))
 		);
 	});
 
@@ -156,7 +156,7 @@ describe.skip("requireCustom", ()=>{
 
 describe.skip("DBModel", ()=>{
 
-	var db = new _use("DBModel")
+	var db = require(modPath.join(__root, "./nodejs/DBModel"))
 		.prototype
 		.getInstance({
 			"dburl": "http://127.0.0.1:9000/db?",
@@ -304,6 +304,9 @@ describe("GandsDataModel", function(){
 					if (!gands.data.length){
 						throw new Error("!gands.data.length");
 					}
+					if (!Object.keys(gands._indexData).length){
+						throw new Error("!gands._indexData.length");
+					}
 					done();
 				}
 			})
@@ -316,7 +319,7 @@ describe("GandsDataModel", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("PrintUtils", function(){
+describe("PrintUtils", function(){
 
 	var PrintUtils = fom._getModule("PrintUtils");
 
@@ -348,6 +351,7 @@ describe("Calc", function(){
 		beforeEach(function(done) {
 			if (gands.state){
 				done();
+				return;
 			}
 			gands.load({
 				callback: function() {

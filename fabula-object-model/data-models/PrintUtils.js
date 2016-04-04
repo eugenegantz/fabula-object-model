@@ -11,6 +11,9 @@ PrintUtils._cache = {
 };
 
 
+/**
+ * @ignore
+ * */
 PrintUtils._initFormatCache = function(){
 	var gandsFormat = gands.get({"type":["print-formats"]});
 	var formats = {}, tmp;
@@ -55,6 +58,10 @@ PrintUtils._initFormatCache = function(){
 };
 
 
+/**
+ * Возвращает массив с объектами содержащие информацию о форматах
+ * @return {Object}
+ * */
 PrintUtils.getFormats = function(){
 
 	if (  !this._cache.formats  ) {
@@ -66,6 +73,12 @@ PrintUtils.getFormats = function(){
 };
 
 
+/**
+ * Получить объект формата с ключами размеров ширины, высоты, площади, короткой и длинной стороны
+ * @example {"width": Number, "height": Number, "area": Number, "long": Number, "short": Number}
+ * @param {Object, String} arg
+ * @return {Object}
+ * */
 PrintUtils.getFormat = function(arg){
 
 	var formats = this.getFormats();
@@ -86,6 +99,26 @@ PrintUtils.getFormat = function(arg){
 };
 
 
+/**
+ * Подсчитывает количество форматов (изделий) умещаемых на других форматах (печатном листе)
+ * @param {String} big - формат на который печатают и режут
+ * @param {String} small - формат продукции
+ * */
+PrintUtils.formatFill = function(big, small){
+	big = this.getFormat(big);
+	small = this.getFormat(small);
+	var W = Math.floor(big.long / small.long) * Math.floor(big.short / small.short);
+	var L = Math.floor(big.long / small.short) * Math.floor(big.short / small.long);
+	return W > L ? W : L;
+};
+
+
+/**
+ * Конвертирует величины: mm, cm, m, in
+ * @param {String} from
+ * @param {String} to,
+ * @param {Number} value
+ * */
 PrintUtils.convertLength = function(from, to, value){
 	var scale = {
 		"mm"	:1, // миллиметры - базовая величина

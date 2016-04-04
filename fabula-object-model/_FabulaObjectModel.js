@@ -1,6 +1,23 @@
 
 var FabulaObjModel = function(arg){
+	/*#if browser,node*/
 	this._dbInstance = this.mod.DBModel.prototype.getInstance(arg);
+	/*#end*/
+
+	/*#if browser-s*/
+	if (typeof window == "object" && typeof document == "object"){
+		if (typeof arg != "object"){
+			throw new Error("!arg");
+		}
+
+		if (typeof arg.url != "string" || !arg.url){
+			throw new Error("!arg.url");
+		}
+
+		this.url = arg.url;
+	}
+	/*#end*/
+
 	this.instances.push(this);
 };
 
@@ -38,33 +55,13 @@ FabulaObjModel.prototype._getModule = function(name){
 
 // ------------------------------------------------------------------------
 
-/* #if version-fom-browser-include */
-var browser_tag_fn = function(){
-	console.log(true);
-};
-/* #end */
-/* #if version-common */
-FabulaObjModel.prototype._setModule("AgentsDataModel", require("./data-models/AgentsDataModel"));
-
-FabulaObjModel.prototype._setModule("DataModelAdapters", require("./data-models/DataModelAdapters"));
-
 FabulaObjModel.prototype._setModule("DefaultDataModel", require("./data-models/DefaultDataModel"));
 
-FabulaObjModel.prototype._setModule("DocDataModel", require("./data-models/DocDataModel"));
-
-FabulaObjModel.prototype._setModule("FirmsDataModel", require("./data-models/FirmsDataModel"));
-/* #end */
 FabulaObjModel.prototype._setModule("GandsDataModel", require("./data-models/GandsDataModel"));
 
 FabulaObjModel.prototype._setModule("InterfaceEvents", require("./data-models/InterfaceEvents"));
 
 FabulaObjModel.prototype._setModule("InterfaceFProperty", require("./data-models/InterfaceFProperty"));
-/* #if version-common */
-FabulaObjModel.prototype._setModule("MovDataModel	", require("./data-models/MovDataModel"));
-
-FabulaObjModel.prototype._setModule("PathsDataModel", require("./data-models/PathsDataModel"));
-
-FabulaObjModel.prototype._setModule("TalksDataModel",  require("./data-models/TalksDataModel"));
 
 FabulaObjModel.prototype._setModule("CalcDefaultPrint",  require("./data-models/calc/DefaultPrintCalc"));
 
@@ -72,15 +69,41 @@ FabulaObjModel.prototype._setModule("CalcBrochure",  require("./data-models/calc
 
 FabulaObjModel.prototype._setModule("CalcPrintOffset",  require("./data-models/calc/CalcPrintOffset"));
 
+FabulaObjModel.prototype._setModule("CalcPrintCarton",  require("./data-models/calc/CalcPrintCarton"));
+
+FabulaObjModel.prototype._setModule("CalcPrintDigital",  require("./data-models/calc/CalcPrintDigital"));
+
+FabulaObjModel.prototype._setModule("CalcPrintPostprocCreasing",  require("./data-models/calc/CalcPrintPostprocCreasing"));
+
+FabulaObjModel.prototype._setModule("CalcPrintPostprocRounding",  require("./data-models/calc/CalcPrintPostprocRounding"));
+
+FabulaObjModel.prototype._setModule("CalcPrintPostprocFolding",  require("./data-models/calc/CalcPrintPostprocFolding"));
+
 FabulaObjModel.prototype._setModule("CalcUtils",  require("./data-models/calc/CalcUtils"));
 
 FabulaObjModel.prototype._setModule("PrintUtils",  require("./data-models/PrintUtils"));
-/* #end */
+
 FabulaObjModel.prototype._setModule("utils", require("./utils"));
 
 FabulaObjModel.prototype._setModule("ObjectA", require("./data-models/ObjectA"));
 
-FabulaObjModel.prototype._setModule("DBModel", null);
+/* #if browser,node */
+	FabulaObjModel.prototype._setModule("AgentsDataModel", require("./data-models/AgentsDataModel"));
+
+	FabulaObjModel.prototype._setModule("DataModelAdapters", require("./data-models/DataModelAdapters"));
+
+	FabulaObjModel.prototype._setModule("DocDataModel", require("./data-models/DocDataModel"));
+
+	FabulaObjModel.prototype._setModule("FirmsDataModel", require("./data-models/FirmsDataModel"));
+
+	FabulaObjModel.prototype._setModule("MovDataModel	", require("./data-models/MovDataModel"));
+
+	FabulaObjModel.prototype._setModule("PathsDataModel", require("./data-models/PathsDataModel"));
+
+	FabulaObjModel.prototype._setModule("TalksDataModel",  require("./data-models/TalksDataModel"));
+
+	FabulaObjModel.prototype._setModule("DBModel", null);
+/* #end */
 
 // ------------------------------------------------------------------------
 

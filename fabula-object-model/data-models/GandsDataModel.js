@@ -6,7 +6,7 @@ var ObjectA = require("./ObjectA");
 // Для совместимости
 var getContextDB = function(){
 	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
-	var DBModel = FabulaObjectModel.prototype.DBModel;
+	var DBModel = FabulaObjectModel.prototype._getModule("DBModel");
 
 	if (  this._fabulaInstance ){
 		return this._fabulaInstance.getDBInstance();
@@ -14,6 +14,10 @@ var getContextDB = function(){
 	return DBModel.prototype.getInstance();
 };
 
+
+/**
+ * @constructor
+ * */
 var GandsDataModel = function(){
 	this.init();
 };
@@ -31,6 +35,8 @@ GandsDataModel.prototype = {
 
 		this.state = 0;
 
+		this._indexData = {};
+
 	},
 
 	"instances" : [],
@@ -45,12 +51,17 @@ GandsDataModel.prototype = {
 		return new GandsDataModel();
 	},
 
-	"load" : function(A){
-		if (typeof A == "undefined") A = Object.create(null);
-		var callback = (typeof A.callback == "function" ? A.callback : function(){} );
-		var db = getContextDB.call(this);
+
+	/**
+	 * @param {Object} arg
+	 * @param {Function} arg.callback
+	 * */
+	"load" : function(arg){
+		if (typeof arg == "undefined") arg = Object.create(null);
+		var callback = (typeof arg.callback == "function" ? arg.callback : function(){} );
 		var self = this;
 
+		/*#if browser,node*/
 		// Номеклатура
 		var dbq = [
 			"SELECT * FROM Gands " 		+
@@ -79,170 +90,236 @@ GandsDataModel.prototype = {
 			dbq[0].replace(/[*]/gi, "GSID")									+
 			")"
 		);
+		/*#end*/
 
+		/*  #if browser-s */
+		if (typeof window == "object" && typeof document == "object"){
+			var Ajax = require("./../browser/Ajax");
+			Ajax.req({
+				"url": self._fabulaInstance.url,
+				"method": "POST",
+				"data": {
+					model: "GandsDataModel"
+				},
+				"callback": function(http){
+					self._afterLoad(JSON.parse(http.responseText), callback);
+				},
+				"onerror": function(){
+					callback("http.status = " + http.status);
+				}
+			});
+		}
+		/*  #end */
+
+		/* #if browser,node */
+		var db = getContextDB.call(this);
 		if (db){
 			db.dbquery({
 				"query" : dbq.join("; "),
 				"callback" : function(res){
-					self.data = res[0].recs;
-					self.state = 1;
-
-					var c, L, gandsRef = Object.create(null);
-
-					for(c=0; c<self.data.length; c++){
-						gandsRef[self.data[c].GSID] = self.data[c];
-						self.data[c].gandsExtRef = [];
-						self.data[c].gandsPropertiesRef = [];
-					}
-
-					var gandsExt = res[1].recs;
-
-					for(c=0; c<gandsExt.length; c++){
-						if (  typeof gandsRef[gandsExt[c].GSExID] == "undefined"  ) continue;
-						gandsRef[gandsExt[c].GSExID].gandsExtRef.push(gandsExt[c]);
-					}
-
-					var gandsProps = res[2].recs;
-
-					for(c=0; c<gandsProps.length; c++){
-						if (  typeof gandsRef[gandsProps[c].extID] == "undefined"  ) continue;
-						gandsRef[gandsProps[c].extID].gandsPropertiesRef.push(gandsProps[c]);
-					}
-
-					for(c= 0, L=self.data.length; c<L; c++){
-						if (typeof self.GSUnits[self.data[c].GSID] == "undefined") {
-							self.GSUnits[self.data[c].GSID] = self.data[c].GSUnit
-						}
-					}
-
-					self.dataReferences = new ObjectA(gandsRef);
-
-					// this._indexBuild();
-
-					callback(self.data);
+					self._afterLoad(
+						{
+							"data": res[0].recs,
+							"ext": res[1].recs,
+							"props": res[2].recs
+						},
+						callback
+					);
 				}
 			});
 		}
+		/*  #end */
 	},
 
 
-	"_indexData": {
-		"material-paper": [],
-		"paper": [],
-		"materials:print": [],
-		"carton": [],
-		"envelope": [],
-		"products": [],
-		"print": [],
-		"products:print": []
+	/**
+	 * @ignore
+	 * */
+	"_afterLoad": function(dbres, callback){
+		var self = this;
+		self.data = dbres.data;
+		self.state = 1;
+
+		var c, L, gandsRef = Object.create(null);
+
+		for(c=0; c<self.data.length; c++){
+			gandsRef[self.data[c].GSID] = self.data[c];
+			self.data[c].gandsExtRef = [];
+			self.data[c].gandsPropertiesRef = [];
+		}
+
+		var gandsExt = dbres.ext;
+
+		for(c=0; c<gandsExt.length; c++){
+			if (  typeof gandsRef[gandsExt[c].GSExID] == "undefined"  ) continue;
+			gandsRef[gandsExt[c].GSExID].gandsExtRef.push(gandsExt[c]);
+		}
+
+		var gandsProps = dbres.props;
+
+		for(c=0; c<gandsProps.length; c++){
+			if (  typeof gandsRef[gandsProps[c].extID] == "undefined"  ) continue;
+			gandsRef[gandsProps[c].extID].gandsPropertiesRef.push(gandsProps[c]);
+		}
+
+		for(c= 0, L=self.data.length; c<L; c++){
+			if (typeof self.GSUnits[self.data[c].GSID] == "undefined") {
+				self.GSUnits[self.data[c].GSID] = self.data[c].GSUnit
+			}
+		}
+
+		self.dataReferences = new ObjectA(gandsRef);
+
+		self._buildIndexData();
+
+		callback(null, self.data);
 	},
 
 
-	"_indexHas": function(){
+	"_buildIndexData": function(){
+
+		var match;
+
+		for (var c = 0; c < this.data.length; c++) {
+
+			match = this._groupMatcher(this.data[c]);
+
+			for(var v=0; v<match.length; v++){
+				if (  typeof this._indexData[match[v]] != "object"  ){
+					this._indexData[match[v]] = [];
+				}
+				this._indexData[match[v]].push(this.data[c]);
+			}
+
+		}
 
 	},
 
 
-	"_indexBuild": function(){
+	/**
+	 * @ignore
+	 * */
+	"_groupMatcher": function(row){
 
-	},
-
-
-	"get" : function(A){
-		if (typeof A != "object") A = Object.create(null);
-		var type = (typeof A.type != "object" ? [] : A.type );
-		var cop = typeof A.cop != "object" ? [] : A.cop;
-
-		if (!type.length && !cop.length) return this.data;
-
-		var tmp = [], c, v;
-
-		for (c = 0; c < this.data.length; c++) {
-
-			if (  tmp.indexOf(this.data[c]) > -1  ) continue;
+			var tmp = [];
 
 			// Печатные форматы форматы
-			if (
-				type.indexOf("print-formats") > -1
-				&& this.data[c].GSID.match(/ТСПоФм/gi)
-			) {
-				tmp.push(this.data[c]);
+			if (  row.GSID.match(/ТСПоФм/gi)  ) {
+				tmp.push("print-formats");
 			}
 
 			// Соответсвует ТМЦ / Бумага
 			// Сюда могут быть включены: картон, самокопирка и пр.
 			if (
-				type.indexOf("material-paper") > -1
-				&& this.data[c].GSID.toLowerCase().match(/тцбу/gi)
-				&& this.data[c].GSID.length > 4
+				row.GSID.toLowerCase().match(/тцбу/gi)
+				&& row.GSID.length > 4
 			) {
-				tmp.push(this.data[c]);
+				tmp.push("material-paper");
 			}
 
 			// Выбирает из ТМЦ / Бумага только конкретно бумагу
-			if (
-				type.indexOf("paper") > -1
-				&& this.data[c].GSID.toLowerCase().match(/тцбуме|тцбуоф|тцбуса|тцбуск|тцбуцп|тцбуфб/gi)
-			) {
-				tmp.push(this.data[c]);
+			if (  row.GSID.toLowerCase().match(/тцбуме|тцбуоф|тцбуса|тцбуск|тцбуцп|тцбуфб/gi)  ) {
+				tmp.push("paper");
 			}
 
-			if (
-				type.indexOf("materials:print") > -1
-				&& this.data[c].GSID.match(/тцмп/gi)
-			){
+			if (  row.GSID.match(/тцмп/gi)  ){
 				if (
-					this.data[c].GSID.match(/тцмпбг|тцмпкк|тцмпкл|тцмпкр|тцмпкт|тцмпрс|тцмпс1|тцмпск|тцмпто/gi)
-					|| this.data[c].GSID.length <= 6
+					row.GSID.match(/тцмпбг|тцмпкк|тцмпкл|тцмпкр|тцмпкт|тцмпрс|тцмпс1|тцмпск|тцмпто/gi)
+					|| row.GSID.length <= 6
 				){
-					continue;
+					// return false;
+				} else {
+
 				}
-				tmp.push(this.data[c]);
+				tmp.push("materials:print");
+			}
+
+			if (  row.GSID.toLowerCase().match(/тцбуд1|тцбуд3|тцбукр|тцбупр/gi)  ) {
+				tmp.push("carton");
+			}
+
+			if (  row.GSID.toLowerCase().match(/тцбуко/)  ) {
+				tmp.push("envelope");
 			}
 
 			if (
-				type.indexOf("carton") > -1
-				&& this.data[c].GSID.toLowerCase().match(/тцбуд1|тцбуд3|тцбукр|тцбупр/gi)
+				row.GSCOP.match(/17/)
+				|| row.GSCOP.match(/27/)
 			) {
-				tmp.push(this.data[c]);
+				if (!row.GSCOP.match(/276|176/)) {
+					tmp.push("products");
+				}
+			}
+		
+			if (
+				row.GSCOP.match(/17/)
+				|| row.GSCOP.match(/27/)
+				|| row.GSCOP.match(/07/)
+			) {
+				tmp.push("print");
 			}
 
 			if (
-				type.indexOf("envelope") > -1
-				&& this.data[c].GSID.toLowerCase().match(/тцбуко/)
+				row.GSCOP.match(/17/)
+				|| row.GSCOP.match(/27/)
 			) {
-				tmp.push(this.data[c]);
-			}
-
-			if (type.indexOf("products") > -1) {
-				if (
-					this.data[c].GSCOP.match(/17/)
-					|| this.data[c].GSCOP.match(/27/)
-				) {
-					if (!this.data[c].GSCOP.match(/276|176/)) {
-						tmp.push(this.data[c]);
-					}
+				if (!row.GSCOP.match(/276|176/)) {
+					tmp.push("products:print");
 				}
 			}
+		
+		return tmp;
+	},
 
-			if (type.indexOf("print") > -1) {
-				if (
-					this.data[c].GSCOP.match(/17/)
-					|| this.data[c].GSCOP.match(/27/)
-					|| this.data[c].GSCOP.match(/07/)
-				) {
+
+	/**
+	 * @ignore
+	 * */
+	"_indexHas": function(){
+
+	},
+
+
+	/**
+	 * @ignore
+	 * */
+	"_indexBuild": function(){
+
+	},
+
+
+	/**
+	 * @param {Object} arg
+	 * @param {Array} arg.cop - Массив из RegExp для поиска среди КОПов
+	 * @param {Array} arg.type
+	 * */
+	"get" : function(arg){
+		if (typeof arg != "object") arg = Object.create(null);
+		var type = typeof arg.type != "object" ? [] : arg.type;
+		if (toString.call(arg.group) == "[object Array]") type = arg.group;
+		var cop = typeof arg.cop != "object" ? [] : arg.cop;
+
+		if (!type.length && !cop.length) return this.data;
+
+		var tmp = [], c, v, match;
+
+		if (type.length == 1 && !cop.length){
+			if (  typeof this._indexData[type[0]] != "object"  ){
+				return [];
+			}
+			return this._indexData[type[0]];
+		}
+
+		for (c = 0; c < this.data.length; c++) {
+
+			if (  tmp.indexOf(this.data[c]) > -1  ) continue;
+
+			match = this._groupMatcher(this.data[c]);
+
+			for(v=0; v<match.length; v++){
+				if (  type.indexOf(match[v]) > -1  ){
 					tmp.push(this.data[c]);
-				}
-			}
-
-			if (type.indexOf("products:print") > -1) {
-				if (
-					this.data[c].GSCOP.match(/17/)
-					|| this.data[c].GSCOP.match(/27/)
-				) {
-					if (!this.data[c].GSCOP.match(/276|176/)) {
-						tmp.push(this.data[c]);
-					}
+					break;
 				}
 			}
 

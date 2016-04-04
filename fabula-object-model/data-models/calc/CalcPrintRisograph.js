@@ -1,3 +1,9 @@
-/**
- * Created by AgentRA on 31.03.2016.
- */
+var CPRiso = function(){
+
+};
+
+CPRiso.prototype.calc = function(){
+	return 0;
+};
+
+module.exports = CPRiso;

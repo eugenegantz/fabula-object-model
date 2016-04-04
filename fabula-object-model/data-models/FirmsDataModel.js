@@ -4,7 +4,7 @@
 // Для совместимости
 var getContextDB = function(){
 	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
-	var DBModel = FabulaObjectModel.prototype.DBModel;
+	var DBModel = FabulaObjectModel.prototype._getModule("DBModel");
 
 	if (  this._fabulaInstance ){
 		return this._fabulaInstance.getDBInstance();

@@ -17,6 +17,13 @@ module.exports = {
 
 
 	"createCalc": function(name){
+		if (Array.isArray(name)){
+			var ret = [];
+			for(var c=0; c<name.length; c++){
+				ret.push(this.createCalc(name[c]));
+			}
+			return ret;
+		}
 		return new this.getCalcModel(name)();
 	},
 
@@ -69,6 +76,22 @@ module.exports = {
 		}
 
 		return value;
+	},
+
+
+	"parsePostproc": function(pp){
+		var ret = [], c;
+		if (typeof pp == "string"){
+			ret = [this.createCalc(pp)];
+
+		} else if (  toString.call(pp) == "[object Array]"  ) {
+			for(c=0; c<pp.length; c++){
+				if (typeof pp[c] == "object"){
+					ret.push(pp[c]);
+				}
+			}
+		}
+		return ret;
 	},
 
 
