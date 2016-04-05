@@ -65,7 +65,7 @@ FabulaObjModel.prototype._setModule("InterfaceFProperty", require("./data-models
 
 FabulaObjModel.prototype._setModule("CalcDefaultPrint",  require("./data-models/calc/DefaultPrintCalc"));
 
-FabulaObjModel.prototype._setModule("CalcBrochure",  require("./data-models/calc/CalcBrochure"));
+FabulaObjModel.prototype._setModule("CalcPrintBrochure",  require("./data-models/calc/CalcPrintBrochure"));
 
 FabulaObjModel.prototype._setModule("CalcPrintOffset",  require("./data-models/calc/CalcPrintOffset"));
 

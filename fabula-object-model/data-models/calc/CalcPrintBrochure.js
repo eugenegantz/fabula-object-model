@@ -11,29 +11,9 @@ var CalcBr = function(){
 
 CalcBr.prototype.calc = function(arg){
 
-	arg = {
-		"format": "", // GSID - формат продукции, например, для брошуры это может быть А4
-		"amount": 300,
-		"discount": 0,
-
-		"inner": {
-			"method": null, // opt
-			"amount": 32,
-			"colorCode": "4+4",
-			"sum": 0, // +
-			"postproc": []
-		},
-
-		"cover": {
-			"method": null, // opt
-			"colorCode": "4+4", // opt
-			"amount": 1,
-			"sum": 0,
-			"postproc": []
-		},
-
-		"postproc": []
-	};
+	if (typeof arg != "object"){
+		throw new Error("!arg");
+	}
 
 	// ------- Количество
 	arg.amount = cUtils.parseAmount(arg.amount);
@@ -87,30 +67,26 @@ CalcBr.prototype.calc = function(arg){
 
 	var comp = new cComp([
 		new cComp(
-			[
-				new cComp(
-					cUtils.createCalc(
-						cUtils.parsePostproc(arg.inner.postproc)
-					)
-				),
+			cUtils.parsePostproc(arg.inner.postproc)
+			.concat(
 				cUtils.createCalc(arg.inner.method)
-			],
+			),
 			arg.inner
 		),
 		new cComp(
-			[
-				new cComp(
-					cUtils.createCalc(
-						cUtils.parsePostproc(arg.cover.postproc)
-					)
-				),
-				new cUtils.createCalc(arg.cover.method)
-			],
+			cUtils.parsePostproc(arg.cover.postproc)
+			.concat(
+				cUtils.createCalc(arg.cover.method)
+			),
 			arg.cover
 		)
 	]);
 
 	var sum = comp.calc();
+
+	var discount = !arg.discount ? 0 : +arg.discount;
+
+	sum = Math.round((sum - (sum * discount / 100)) * 1000) / 1000;
 
 	return sum;
 

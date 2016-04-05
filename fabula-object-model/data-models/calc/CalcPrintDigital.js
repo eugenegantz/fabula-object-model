@@ -44,7 +44,7 @@ CPDigital.prototype.calc = function(arg){
 
 	// ------------------------------------------------------------
 
-	var materPrice = 0, rollsPrice = 0;
+	var materPrice = null, rollsPrice = null;
 
 	// ------------------------------------------------------------
 	// Количество и стоимость листов;
@@ -55,30 +55,68 @@ CPDigital.prototype.calc = function(arg){
 		]
 	});
 
+	var selected = {"color": false, "method": false, _break: false};
+
+	// TODO сделать правильную выборку по цвету
+
 	for(c=0; c<gandsMater.length; c++){
-
-		// Получение цены материала
-		if (  gandsMater[c].GSID.match(new RegExp(material, "gi"))  ){
-			materPrice = gandsMater[c].GSCostSale || gandsMater[c].GSCost;
-		}
-
-		// Получение цены печатных пластин
-		if (  gandsMater[c].GSID.match(new RegExp(printForm, "gi"))  ){
-			printFormPrice = gandsMater[c].GSCostSale || gandsMater[c].GSCost;
-		}
 
 		// Получение цены листопрохода
 		if (  gandsMater[c].GSID.match(/ПЗРАЛП/gi)  ){
+
 			for(v=0; v<gandsMater[c].gandsPropertiesRef.length; v++){
-				if (  gandsMater[c].gandsPropertiesRef[v].property.match(/Способ печати/gi)  ){
-					if (  gandsMater[c].gandsPropertiesRef[v].value.match(/офсет/gi)  ){
-						rollsPrice = gandsMater[c].GSCostSale || gandsMater[c].GSCost;
-						break;
+
+				if (
+					gandsMater[c].gandsPropertiesRef[v].property.match(/^Способ печати$/gi)
+					&& gandsMater[c].gandsPropertiesRef[v].value.match(/^цифра$|^цифровая печать$/gi)
+				){
+					selected.method = true;
+				}
+
+				if (  gandsMater[c].gandsPropertiesRef[v].property.match(/^Цветность$/gi)  ){
+					if (
+						colorCode[0] <= 1
+						&& colorCode[1] <= 1
+						&& gandsMater[c].gandsPropertiesRef[v].value.match(/^ЧБ$|^Ч\/Б$/gi)
+					){
+						selected.color = true;
+						selected._break = true;
+					}
+
+					if (
+						!selected.color
+						&& (
+							colorCode[0] >= 1
+							|| colorCode[1] >= 1
+						)
+						&& gandsMater[c].gandsPropertiesRef[v].value.match(/^Полноцвет$|^Цвет$/gi)
+					){
+						selected.color = true;
+						selected._break = colorCode[0] > 1 || colorCode[1] > 1;
 					}
 				}
-			}
-		}
 
+				if (selected.color && selected.method && selected._break) break;
+
+			} // close.loop.gandsProps
+
+			if (selected.color && selected.method){
+				rollsPrice = gandsMater[c].GSCostSale || gandsMater[c].GSCost;
+				if (selected._break) break;
+			}
+
+		} // close.loop.gandsMater
+
+	}
+
+	// Получение цены материала
+	if (  !Gm.dataReferences.has(material)  ){
+		return new Error("!material.found");
+	}
+	materPrice = Gm.dataReferences.get(material).GSCostSale || Gm.dataReferences.get(material).GSCost;
+
+	if (rollsPrice === null){
+		return new Error("!rolls.found");
 	}
 
 	var paperAmount = (amount / format_k) + 250; // + допечатная подготовка

@@ -7,10 +7,13 @@ module.exports = {
 
 	"getCalcModel": function(name){
 		switch (name) {
-			case cConst.OFFSET_PRINT: return require("./CalcPrintOffset");
-			case cConst.CARTON_PRINT: return require("./CalcPrintCarton");
-			case cConst.DIGITAL_PRINT: return require("./CalcPrintDigital");
-			case cConst.RISOGRAPH_PRINT: return require("./CalcPrintRisograph");
+			case cConst.OFFSET_PRINT:						return require("./CalcPrintOffset");
+			case cConst.CARTON_PRINT:					return require("./CalcPrintCarton");
+			case cConst.DIGITAL_PRINT:					return require("./CalcPrintDigital");
+			case cConst.RISOGRAPH_PRINT:				return require("./CalcPrintRisograph");
+			case cConst.POSTPROC_CREASING:			return require("./CalcPrintPostprocCreasing");
+			case cConst.POSTPROC_FOLDING:				return require("./CalcPrintPostprocFolding");
+			case cConst.POSTPROC_ROUNDING:			return require("./CalcPrintPostprocRounding");
 			default: return void 0;
 		}
 	},
@@ -24,7 +27,8 @@ module.exports = {
 			}
 			return ret;
 		}
-		return new this.getCalcModel(name)();
+		var tmp = this.getCalcModel(name);
+		return new tmp();
 	},
 
 
@@ -36,31 +40,41 @@ module.exports = {
 	},
 
 
-	"parseColorCode": function(value){
-		if (typeof value != "string"  ){
-			return void 0;
+	"parseColorCode": function(value) {
+		if (toString.call(value) == "[object Array]") {
+			if (
+				value.length == 2
+				&& !isNaN(value[0])
+				&& !isNaN(value[1])
+			) {
+				return value;
+			}
+
+		} else if (typeof value == "string") {
+			value = value.trim();
+
+			if (!value) {
+				return void 0;
+			}
+
+			var colorCode = value.split("+");
+
+			if (colorCode.length != 2) {
+				return void 0;
+			}
+
+			colorCode[0] = +colorCode[0];
+			colorCode[1] = +colorCode[1];
+
+			if (isNaN(colorCode[0]) || isNaN(colorCode[1])) {
+				return void 0;
+			}
+
+			return colorCode;
+
 		}
 
-		value = value.trim();
-
-		if (!value){
-			return void 0;
-		}
-
-		var colorCode = value.split("+");
-
-		if (colorCode.length != 2){
-			return void 0;
-		}
-
-		colorCode[0] = +colorCode[0];
-		colorCode[1] = +colorCode[1];
-
-		if (  isNaN(colorCode[0]) || isNaN(colorCode[1])  ){
-			return void 0;
-		}
-
-		return colorCode;
+		return void 0;
 	},
 
 

@@ -175,6 +175,57 @@ describe("Calc", function(){
 
 	var gands = fom.create("GandsDataModel");
 
+	describe("CalcPrintDigital", function(){
+		beforeEach(function(done) {
+			if (gands.state){
+				done();
+				return;
+			}
+			gands.load({
+				callback: function() {
+					done();
+				}
+			});
+		});
+		var cpd = fom.create("CalcPrintDigital");
+		it("A4 / 4+4 / ТЦБуОф9ж / sum == 45832.5", function(){
+			var sum = cpd.calc({
+				amount: 1000,
+				material: "ТЦБуОф9ж",
+				format: "ТСПоФмА4",
+				colorCode: "4+4"
+			});
+			assert.equal(sum, 45832.5);
+		});
+		it("A4 / 4+0 / ТЦБуОф9ж / sum == 23332.5 ", function(){
+			var sum = cpd.calc({
+				amount: 1000,
+				material: "ТЦБуОф9ж",
+				format: "ТСПоФмА4",
+				colorCode: "4+0"
+			});
+			assert.equal(sum, 23332.5);
+		});
+		it("A4 / 1+0 / ТЦБуОф9ж / sum == 17332.5 ", function(){
+			var sum = cpd.calc({
+				amount: 1000,
+				material: "ТЦБуОф9ж",
+				format: "ТСПоФмА4",
+				colorCode: "1+0"
+			});
+			assert.equal(sum, 17332.5);
+		});
+		it("A4 / 1+0 / ТЦБуОф9ж / sum == 33832.5", function(){
+			var sum = cpd.calc({
+				amount: 1000,
+				material: "ТЦБуОф9ж",
+				format: "ТСПоФмА4",
+				colorCode: "1+1"
+			});
+			assert.equal(sum, 33832.5);
+		});
+	});
+
 	describe("CalcPrintOffset", function(){
 		beforeEach(function(done) {
 			if (gands.state){
@@ -223,6 +274,74 @@ describe("Calc", function(){
 				"colorCode": "4+0"
 			});
 			assert.equal(sum, 3968.5);
+		});
+	});
+
+	describe("CalcPrintBrochure", function(){
+		beforeEach(function(done) {
+			if (gands.state){
+				done();
+				return;
+			}
+			gands.load({
+				callback: function() {
+					done();
+				}
+			});
+		});
+		var cpb = fom.create("CalcPrintBrochure");
+		var cpo = fom.create("CalcPrintOffset");
+		var cpc = fom.create("CalcPrintCarton");
+
+		var brArg = {
+			"format": "ТСПоФмА4", // GSID - формат продукции, например, для брошуры это может быть А4
+			"amount": 300,
+			"discount": 0,
+
+			"inner": {
+				"method": null, // opt
+				"amount": 32,
+				"colorCode": "4+4",
+				"sum": 0, // +
+				"material": "ТЦБуОф9ж",
+				"postproc": []
+			},
+
+			"cover": {
+				"method": null, // opt
+				"colorCode": "4+4", // opt
+				"amount": 1,
+				"sum": 0,
+				"material": "ТЦБуД3Бж",
+				"postproc": []
+			},
+
+			"postproc": []
+		};
+
+		it("offset / А4 / 4+4 / ТЦБуОф9ж / sum == 106765.5", function(){
+			var sum = cpo.calc({
+				"amount": brArg.amount * brArg.inner.amount,
+				"material": brArg.inner.material,
+				"format": brArg.format,
+				"colorCode": brArg.cover.colorCode
+			});
+			assert.equal(sum, 106765.5);
+		});
+		it("carton / А4 / 4+4 / ТЦБуД3Бж / sum == 18160", function(){
+			var sum = cpc.calc({
+				"amount": brArg.amount,
+				"material": brArg.cover.material,
+				"format": brArg.format,
+				"colorCode": brArg.cover.colorCode
+			});
+			assert.equal(sum, 18160);
+		});
+		it("brochure / A4 / 4+4 / sum == " + (106765.5 + 18160), function(){
+			assert.equal(
+				cpb.calc(brArg),
+				106765.5 + 18160
+			);
 		});
 	});
 
