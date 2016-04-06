@@ -2,7 +2,6 @@ var modFs = require("fs");
 var modPath = require("path");
 
 // ---------------------------------------------------------------
-// Ссылки на зависимости
 
 var deps = modFs.readFileSync(modPath.join(__dirname, "./dependencies.json"));
 deps = JSON.parse(deps);
@@ -72,7 +71,7 @@ var requireCustom = function(name){
 requireCustom.paths = [__dirname];
 
 /**
- * Установка пути для поиска модулей
+ * пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
  * @param {String} path
  * */
 requireCustom.addPath = function(path){

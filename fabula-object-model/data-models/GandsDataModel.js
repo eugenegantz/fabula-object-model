@@ -172,7 +172,7 @@ GandsDataModel.prototype = {
 
 		self._buildIndexData();
 
-		callback(null, self.data);
+		callback(null, self);
 	},
 
 

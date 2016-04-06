@@ -1,3 +1,6 @@
+var cConst = require("./CalcConsts");
+var cDef = require("./DefaultPrintCalc").prototype.getInstance();
+
 var CPOffset = function(){};
 
 CPOffset.prototype.calc = function(arg){
@@ -50,7 +53,7 @@ CPOffset.prototype.calc = function(arg){
 
 	// ------------------------------------------------------------
 
-	var printFormPrice = 0, materPrice = 0, rollsPrice = 0;
+	var printFormPrice = 0, materPrice = 0, rollsPrice = 0, tmp;
 
 	// ------------------------------------------------------------
 	// Количество и стоимость листов;
@@ -63,22 +66,17 @@ CPOffset.prototype.calc = function(arg){
 
 	for(c=0; c<gandsMater.length; c++){
 
-		// Получение цены материала
-		if (  gandsMater[c].GSID.match(new RegExp(material, "gi"))  ){
-			materPrice = gandsMater[c].GSCostSale || gandsMater[c].GSCost;
-		}
-
-		// Получение цены печатных пластин
-		if (  gandsMater[c].GSID.match(new RegExp(printForm, "gi"))  ){
-			printFormPrice = gandsMater[c].GSCostSale || gandsMater[c].GSCost;
-		}
-
 		// Получение цены листопрохода
 		if (  gandsMater[c].GSID.match(/ПЗРАЛП/gi)  ){
 			for(v=0; v<gandsMater[c].gandsPropertiesRef.length; v++){
 				if (  gandsMater[c].gandsPropertiesRef[v].property.match(/Способ печати/gi)  ){
 					if (  gandsMater[c].gandsPropertiesRef[v].value.match(/офсет/gi)  ){
-						rollsPrice = gandsMater[c].GSCostSale || gandsMater[c].GSCost;
+						tmp = cDef.calc({
+							"salePrice": true,
+							"amount": amount,
+							"GSID": gandsMater[c].GSID
+						});
+						rollsPrice = tmp.sum; //.sum gandsMater[c].GSCostSale || gandsMater[c].GSCost;
 						break;
 					}
 				}
@@ -87,7 +85,20 @@ CPOffset.prototype.calc = function(arg){
 
 	}
 
-	var paperAmount = (amount / format_k) + 250; // + допечатная подготовка
+	// Получение цены материала
+	if (  !Gm.dataReferences.has(material)  ){
+		return new Error("!material.found");
+	}
+	materPrice = Gm.dataReferences.get(material).GSCostSale || Gm.dataReferences.get(material).GSCost;
+
+	// Получение цены печатных пластин
+	if (  Gm.dataReferences.has(printForm)  ){
+		printFormPrice = Gm.dataReferences.get(printForm).GSCostSale || Gm.dataReferences.get(printForm).GSCost;
+	}
+
+	// ------------------------------------------------------------
+
+	var paperAmount = (amount / format_k) + cConst.OFFSET_PREPRINT_PAPER_AMOUNT; // + допечатная подготовка
 	var paperSum = paperAmount * materPrice;
 
 	// ------------------------------------------------------------
@@ -104,9 +115,11 @@ CPOffset.prototype.calc = function(arg){
 
 	var sum = paperSum + rollsSum + printFormSum;
 
-	var discount = !isNaN(arg.discount) ? +arg.discount: 0;
+	var discount = !isNaN(arg.discount) ? +arg.discount : 0;
 
-	return Math.round((sum - (sum * (discount / 100))) * 1000) / 1000;
+	sum = sum - (sum * (discount / 100));
+
+	return Math.round(sum * 1000) / 1000;
 };
 
 module.exports = CPOffset;

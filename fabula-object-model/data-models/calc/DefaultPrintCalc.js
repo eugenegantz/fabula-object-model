@@ -8,6 +8,9 @@ var DefaultPrintCalc = function(){
 DefaultPrintCalc.prototype.instances = [];
 
 
+/**
+ * @return {DefaultPrintCalc}
+ * */
 DefaultPrintCalc.prototype.getInstance = function(){
 	return this.instances.length ? this.instances[0] : new DefaultPrintCalc();
 };

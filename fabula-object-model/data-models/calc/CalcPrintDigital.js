@@ -133,7 +133,9 @@ CPDigital.prototype.calc = function(arg){
 
 	var discount = !isNaN(arg.discount) ? +arg.discount: 0;
 
-	return Math.round((sum - (sum * (discount / 100))) * 1000) / 1000;
+	sum = sum - (sum * (discount / 100));
+
+	return Math.round(sum * 1000) / 1000;
 };
 
 module.exports = CPDigital;

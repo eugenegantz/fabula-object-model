@@ -15,6 +15,8 @@ CalcBr.prototype.calc = function(arg){
 		throw new Error("!arg");
 	}
 
+	arg = JSON.parse(JSON.stringify(arg));
+
 	// ------- Количество
 	arg.amount = cUtils.parseAmount(arg.amount);
 	if (!arg.amount) throw new Error("!arg.amount");
@@ -86,7 +88,9 @@ CalcBr.prototype.calc = function(arg){
 
 	var discount = !arg.discount ? 0 : +arg.discount;
 
-	sum = Math.round((sum - (sum * discount / 100)) * 1000) / 1000;
+	sum = sum - (sum * discount / 100);
+
+	sum = Math.round(sum * 1000) / 1000;
 
 	return sum;
 

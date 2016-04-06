@@ -1,3 +1,9 @@
-/**
- * Created by AgentRA on 06.04.2016.
- */
+var dpc = require("./DefaultPrintCalc").prototype.getInstance();
+
+var CPPostproc = function(){
+	this._postprocType	= null;
+};
+
+CPPostproc.calc = function(){
+
+};

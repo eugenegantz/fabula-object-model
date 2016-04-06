@@ -242,7 +242,7 @@ describe("Calc", function(){
 		it("А4 / 4+0 / sum == 8412.5", function(){
 			var sum = cpo.calc({
 				"amount": 1000,
-				"material": "ТЦБуОф9ж",
+				"material": "ТЦБуМеТ0",
 				"format": "ТСПоФмА4",
 				"colorCode": "4+0"
 			});
@@ -251,7 +251,7 @@ describe("Calc", function(){
 		it("А4 / 4+4 / sum == 15912.5", function(){
 			var sum = cpo.calc({
 				"amount": 1000,
-				"material": "ТЦБуОф9ж",
+				"material": "ТЦБуМеТ0",
 				"format": "ТСПоФмА4",
 				"colorCode": "4+4"
 			});
@@ -260,7 +260,7 @@ describe("Calc", function(){
 		it("А5 / 4+4 / sum == 10715", function(){
 			var sum = cpo.calc({
 				"amount": 1000,
-				"material": "ТЦБуОф9ж",
+				"material": "ТЦБуМеТ0",
 				"format": "ТСПоФмА5",
 				"colorCode": "4+4"
 			});
@@ -269,11 +269,70 @@ describe("Calc", function(){
 		it("А6 / 4+0 / sum == 3968.5", function(){
 			var sum = cpo.calc({
 				"amount": 800,
-				"material": "ТЦБуОф9ж",
+				"material": "ТЦБуМеТ0",
 				"format": "ТСПоФмА6",
 				"colorCode": "4+0"
 			});
 			assert.equal(sum, 3968.5);
+		});
+	});
+
+	describe("CalcPrintPostprocCreasing", function(){
+		var cppc = fom.create("CalcPrintPostprocCreasing");
+		it("amount = 1000 / value = 1", function(){
+			var sum = cppc.calc({
+				"amount": 1000,
+				"value": 1,
+				"salePrice": true
+			});
+			assert.equal(sum, 500);
+		});
+		it("amount = 1000 / value = 2", function(){
+			var sum = cppc.calc({
+				"amount": 1000,
+				"value": 2,
+				"salePrice": true
+			});
+			assert.equal(sum, 1000);
+		});
+		it("amount = 1000 / salePrice = 0 / value = 2", function(){
+			var sum = cppc.calc({
+				"amount": 1000,
+				"value": 2,
+				"salePrice": false
+			});
+			assert.equal(sum, 500);
+		});
+		it("amount = 1000 / value = 1 / discount = 25%", function(){
+			var sum = cppc.calc({
+				"amount": 1000,
+				"value": 1,
+				"discount": 25,
+				"salePrice": true
+			});
+			assert.equal(sum, 375);
+		});
+	});
+
+	describe.skip("CalcPrintPostprocFolding", function(){
+
+	});
+
+	describe("CalcPrintPostprocRounding", function(){
+		var cppr = fom.create("CalcPrintPostprocRounding");
+		it("amount = 1000", function(){
+			var sum = cppr.calc({
+				"amount": 1000,
+				"salePrice": 1
+			});
+			assert.equal(sum, 250);
+		});
+		it("amount = 1000 / salePrice = 0", function(){
+			var sum = cppr.calc({
+				"amount": 1000,
+				"salePrice": 0
+			});
+			assert.equal(sum, 200);
 		});
 	});
 
@@ -337,10 +396,41 @@ describe("Calc", function(){
 			});
 			assert.equal(sum, 18160);
 		});
+
+
+		it("offset / А4 / 4+4 / ТЦБуОф9ж / discount = 25% / sum == 80074.125", function(){
+			var sum = cpo.calc({
+				"amount": brArg.amount * brArg.inner.amount,
+				"material": brArg.inner.material,
+				"format": brArg.format,
+				"colorCode": brArg.cover.colorCode,
+				"discount": 25
+			});
+			assert.equal(sum, 80074.125);
+		});
+		it("carton / А4 / 4+4 / ТЦБуД3Бж / discount = 25% / sum == 13620", function(){
+			var sum = cpc.calc({
+				"amount": brArg.amount,
+				"material": brArg.cover.material,
+				"format": brArg.format,
+				"colorCode": brArg.cover.colorCode,
+				"discount": 25
+			});
+			assert.equal(sum, 13620);
+		});
+
+
 		it("brochure / A4 / 4+4 / sum == " + (106765.5 + 18160), function(){
 			assert.equal(
 				cpb.calc(brArg),
 				106765.5 + 18160
+			);
+		});
+		it("brochure / A4 / 4+4 / discount = 25% / sum == " + (80074.125 + 13620), function(){
+			brArg.discount = 25;
+			assert.equal(
+				cpb.calc(brArg),
+				80074.125 + 13620
 			);
 		});
 	});
