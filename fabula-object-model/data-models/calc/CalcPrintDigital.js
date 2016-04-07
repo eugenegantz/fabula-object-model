@@ -1,3 +1,5 @@
+var cDef = require("./DefaultPrintCalc").prototype.getInstance();
+
 var CPDigital = function(){};
 
 CPDigital.prototype.calc = function(arg){
@@ -38,16 +40,14 @@ CPDigital.prototype.calc = function(arg){
 		return new Error("!collageFormat");
 	}
 
+
 	// ------------------------------------------------------------
 	// Количестов продукции умещаемых на листе запечатки
+
 	var format_k = Math.floor(collageFormat.area / format.area);
 
 	// ------------------------------------------------------------
 
-	var materPrice = null, rollsPrice = null;
-
-	// ------------------------------------------------------------
-	// Количество и стоимость листов;
 	var gandsMater = Gm.get({
 		"type":["material-paper","materials:print"],
 		"cop":[
@@ -55,9 +55,24 @@ CPDigital.prototype.calc = function(arg){
 		]
 	});
 
-	var selected = {"color": false, "method": false, _break: false};
 
-	// TODO сделать правильную выборку по цвету
+	// ------------------------------------------------------------
+	// Количество и стоимость листов;
+
+	if (  !Gm.dataReferences.has(material)  ){
+		return new Error("!material.found");
+	}
+	var materPrice = Gm.dataReferences.get(material).GSCostSale || Gm.dataReferences.get(material).GSCost;
+
+	var paperAmount = (amount / format_k) + 250; // + допечатная подготовка
+	var paperSum = paperAmount * materPrice;
+
+
+	// ------------------------------------------------------------
+	// Количество листопроходов
+
+	var selected = {"color": false, "method": false, _break: false};
+	var rollsPrice0 = null;
 
 	for(c=0; c<gandsMater.length; c++){
 
@@ -101,7 +116,16 @@ CPDigital.prototype.calc = function(arg){
 			} // close.loop.gandsProps
 
 			if (selected.color && selected.method){
-				rollsPrice = gandsMater[c].GSCostSale || gandsMater[c].GSCost;
+				// rollsPrice = gandsMater[c].GSCostSale || gandsMater[c].GSCost;
+				rollsPrice0 = cDef.calc({
+						"salePrice": true,
+						"amount": paperAmount,
+						"GSID": gandsMater[c].GSID
+					}).sum || cDef.calc({
+						"salePrice": false,
+						"amount": paperAmount,
+						"GSID": gandsMater[c].GSID
+					}).sum;
 				if (selected._break) break;
 			}
 
@@ -109,22 +133,12 @@ CPDigital.prototype.calc = function(arg){
 
 	}
 
-	// Получение цены материала
-	if (  !Gm.dataReferences.has(material)  ){
-		return new Error("!material.found");
-	}
-	materPrice = Gm.dataReferences.get(material).GSCostSale || Gm.dataReferences.get(material).GSCost;
-
-	if (rollsPrice === null){
+	if (rollsPrice0 === null){
 		return new Error("!rolls.found");
 	}
 
-	var paperAmount = (amount / format_k) + 250; // + допечатная подготовка
-	var paperSum = paperAmount * materPrice;
+	var rollsSum = rollsPrice0 * (colorCode[0] > 0 && colorCode[1] > 0 ? 2 : 1);
 
-	// ------------------------------------------------------------
-	// Количество листопроходов
-	var rollsSum = (paperAmount * rollsPrice) * (colorCode[0] > 0 && colorCode[1] > 0 ? 2 : 1);
 
 	// ------------------------------------------------------------
 	// Результат
@@ -135,7 +149,7 @@ CPDigital.prototype.calc = function(arg){
 
 	sum = sum - (sum * (discount / 100));
 
-	return Math.round(sum * 1000) / 1000;
+	return Math.round(sum * 100) / 100;
 };
 
 module.exports = CPDigital;

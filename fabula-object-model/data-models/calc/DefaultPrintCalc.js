@@ -60,9 +60,9 @@ DefaultPrintCalc.prototype.calc = function(arg){
 	var gandsRow = gandsM.dataReferences.get(argGSID);
 
 	var prices = {
-		"price": salePrice ? gandsRow.GSCostSale : gandsRow.GSCost,
-		"gsCost": gandsRow.GSCost,
-		"gsCostSale": gandsRow.GSCostSale
+		"price": salePrice ? gandsRow.GSCostSale || 0 : gandsRow.GSCost || 0,
+		"gsCost": gandsRow.GSCost || 0,
+		"gsCostSale": gandsRow.GSCostSale || 0
 	};
 
 	prices.sum = prices.price * argAmount;

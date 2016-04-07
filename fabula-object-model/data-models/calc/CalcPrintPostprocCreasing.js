@@ -44,7 +44,7 @@ CPCreasing.prototype.calc = function(arg){
 
 	sum = sum.sum - (sum.sum * discount / 100);
 
-	return Math.round(sum * 1000) / 1000;
+	return Math.round(sum * 100) / 100;
 };
 
 module.exports = CPCreasing;

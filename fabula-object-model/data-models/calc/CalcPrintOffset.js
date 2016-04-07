@@ -53,10 +53,10 @@ CPOffset.prototype.calc = function(arg){
 
 	// ------------------------------------------------------------
 
-	var printFormPrice = 0, materPrice = 0, rollsPrice = 0, tmp;
+	var printFormPrice = 0, rollsSum0 = 0;
 
 	// ------------------------------------------------------------
-	// Количество и стоимость листов;
+
 	var gandsMater = Gm.get({
 		"type":["material-paper","materials:print"],
 		"cop":[
@@ -64,36 +64,15 @@ CPOffset.prototype.calc = function(arg){
 		]
 	});
 
-	for(c=0; c<gandsMater.length; c++){
-
-		// Получение цены листопрохода
-		if (  gandsMater[c].GSID.match(/ПЗРАЛП/gi)  ){
-			for(v=0; v<gandsMater[c].gandsPropertiesRef.length; v++){
-				if (  gandsMater[c].gandsPropertiesRef[v].property.match(/Способ печати/gi)  ){
-					if (  gandsMater[c].gandsPropertiesRef[v].value.match(/офсет/gi)  ){
-						tmp = cDef.calc({
-							"salePrice": true,
-							"amount": amount,
-							"GSID": gandsMater[c].GSID
-						});
-						rollsPrice = tmp.sum; //.sum gandsMater[c].GSCostSale || gandsMater[c].GSCost;
-						break;
-					}
-				}
-			}
-		}
-
-	}
-
 	// Получение цены материала
 	if (  !Gm.dataReferences.has(material)  ){
 		return new Error("!material.found");
 	}
-	materPrice = Gm.dataReferences.get(material).GSCostSale || Gm.dataReferences.get(material).GSCost;
+	var materPrice = Gm.dataReferences.get(material).GSCostSale || Gm.dataReferences.get(material).GSCost || 0;
 
 	// Получение цены печатных пластин
 	if (  Gm.dataReferences.has(printForm)  ){
-		printFormPrice = Gm.dataReferences.get(printForm).GSCostSale || Gm.dataReferences.get(printForm).GSCost;
+		printFormPrice = Gm.dataReferences.get(printForm).GSCostSale || Gm.dataReferences.get(printForm).GSCost || 0;
 	}
 
 	// ------------------------------------------------------------
@@ -102,13 +81,40 @@ CPOffset.prototype.calc = function(arg){
 	var paperSum = paperAmount * materPrice;
 
 	// ------------------------------------------------------------
+
+	for(c=0; c<gandsMater.length; c++){
+
+		// Получение цены листопрохода
+		if (  gandsMater[c].GSID.match(/ПЗРАЛП/gi)  ){
+			for(v=0; v<gandsMater[c].gandsPropertiesRef.length; v++){
+				if (  gandsMater[c].gandsPropertiesRef[v].property.match(/Способ печати/gi)  ){
+					if (  gandsMater[c].gandsPropertiesRef[v].value.match(/офсет/gi)  ){
+						rollsSum0 = cDef.calc({
+								"salePrice": true,
+								"amount": paperAmount,
+								"GSID": gandsMater[c].GSID
+							}).sum || cDef.calc({
+								"salePrice": false,
+								"amount": paperAmount,
+								"GSID": gandsMater[c].GSID
+							}).sum;
+						// rollsPrice = tmp; //.sum gandsMater[c].GSCostSale || gandsMater[c].GSCost;
+						break;
+					}
+				}
+			}
+		}
+
+	}
+
+	// ------------------------------------------------------------
 	// Количество и стоимость пластин
 	// var printFormAmount = (colorCode[0] + colorCode[1]) * amount;
 	var printFormSum = (colorCode[0] + colorCode[1]) * printFormPrice;
 
 	// ------------------------------------------------------------
 	// Количество листопроходов
-	var rollsSum = (paperAmount * rollsPrice) * (colorCode[0] > 0 && colorCode[1] > 0 ? 2 : 1);
+	var rollsSum = rollsSum0 * (colorCode[0] > 0 && colorCode[1] > 0 ? 2 : 1);
 
 	// ------------------------------------------------------------
 	// Результат
@@ -119,7 +125,7 @@ CPOffset.prototype.calc = function(arg){
 
 	sum = sum - (sum * (discount / 100));
 
-	return Math.round(sum * 1000) / 1000;
+	return Math.round(sum * 100) / 100;
 };
 
 module.exports = CPOffset;

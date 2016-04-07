@@ -96,13 +96,20 @@ module.exports = {
 	"parsePostproc": function(pp){
 		var ret = [], c;
 		if (typeof pp == "string"){
-			ret = [this.createCalc(pp)];
+			ret = [{"m": this.createCalc(pp), "arg": {}}];
 
 		} else if (  toString.call(pp) == "[object Array]"  ) {
 			for(c=0; c<pp.length; c++){
-				if (typeof pp[c] == "object"){
-					ret.push(pp[c]);
-				}
+				ret = ret.concat(this.parsePostproc(pp[c]));
+			}
+
+		} else if (typeof pp == "object") {
+			if (typeof pp.calc == "function"){
+				ret = [{"m": pp, "arg": {}}];
+
+			} else if (typeof pp.type == "string") {
+				ret = [{"m": this.createCalc(pp.type), "arg": pp}];
+
 			}
 		}
 		return ret;

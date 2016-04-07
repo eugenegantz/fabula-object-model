@@ -1,5 +1,5 @@
 var fom = FabulaObjectModel.prototype.getInstance({
-	"url": "http://localhost:8100/fom-api/"
+	"url": "http://" + location.hostname + ":8100/fom-api/"
 });
 
 
@@ -79,12 +79,13 @@ describe(
 // -----------------------------------------------------------------------------
 
 
-describe(
+describe.skip(
 	"InterfaceEvents",
 	function(){
 		var st = false;
 
 		var InterfaceEvents = fom._getModule("InterfaceEvents");
+		if (!InterfaceEvents) return;
 		var ie = new InterfaceEvents();
 
 		ie.on(
@@ -239,41 +240,41 @@ describe("Calc", function(){
 			});
 		});
 		var cpo = fom.create("CalcPrintOffset");
-		it("А4 / 4+0 / sum == 8412.5", function(){
+		it("А4 / 4+0 / sum == 2968.67", function(){
 			var sum = cpo.calc({
 				"amount": 1000,
 				"material": "ТЦБуМеТ0",
 				"format": "ТСПоФмА4",
 				"colorCode": "4+0"
 			});
-			assert.equal(sum, 8412.5);
+			assert.equal(sum, 2968.67);
 		});
-		it("А4 / 4+4 / sum == 15912.5", function(){
+		it("А4 / 4+4 / sum == 3687.33", function(){
 			var sum = cpo.calc({
 				"amount": 1000,
 				"material": "ТЦБуМеТ0",
 				"format": "ТСПоФмА4",
 				"colorCode": "4+4"
 			});
-			assert.equal(sum, 15992.5);
+			assert.equal(sum, 3687.33);
 		});
-		it("А5 / 4+4 / sum == 10715", function(){
+		it("А5 / 4+4 / sum == 2558.67", function(){
 			var sum = cpo.calc({
 				"amount": 1000,
 				"material": "ТЦБуМеТ0",
 				"format": "ТСПоФмА5",
 				"colorCode": "4+4"
 			});
-			assert.equal(sum, 10715);
+			assert.equal(sum, 2558.67);
 		});
-		it("А6 / 4+0 / sum == 3968.5", function(){
+		it("А6 / 4+0 / sum == 1559.67", function(){
 			var sum = cpo.calc({
-				"amount": 800,
+				"amount": 1000,
 				"material": "ТЦБуМеТ0",
 				"format": "ТСПоФмА6",
 				"colorCode": "4+0"
 			});
-			assert.equal(sum, 3968.5);
+			assert.equal(sum, 1559.67);
 		});
 	});
 
@@ -315,7 +316,7 @@ describe("Calc", function(){
 	});
 
 	describe.skip("CalcPrintPostprocFolding", function(){
-
+		// TODO folding
 	});
 
 	describe("CalcPrintPostprocRounding", function(){
@@ -325,7 +326,7 @@ describe("Calc", function(){
 				"amount": 1000,
 				"salePrice": 1
 			});
-			assert.equal(sum, 250);
+			assert.equal(sum, 350);
 		});
 		it("amount = 1000 / salePrice = 0", function(){
 			var sum = cppr.calc({
@@ -351,6 +352,7 @@ describe("Calc", function(){
 		var cpb = fom.create("CalcPrintBrochure");
 		var cpo = fom.create("CalcPrintOffset");
 		var cpc = fom.create("CalcPrintCarton");
+		var cppc = fom.create("CalcPrintPostprocCreasing");
 
 		var brArg = {
 			"format": "ТСПоФмА4", // GSID - формат продукции, например, для брошуры это может быть А4
@@ -362,7 +364,7 @@ describe("Calc", function(){
 				"amount": 32,
 				"colorCode": "4+4",
 				"sum": 0, // +
-				"material": "ТЦБуОф9ж",
+				"material": "ТЦБуМеТ0",
 				"postproc": []
 			},
 
@@ -371,34 +373,47 @@ describe("Calc", function(){
 				"colorCode": "4+4", // opt
 				"amount": 1,
 				"sum": 0,
-				"material": "ТЦБуД3Бж",
-				"postproc": []
+				"material": "ТЦДК0000",
+				"postproc": [
+					{
+						"type": "CREASING",
+						"value": 2
+					}
+				]
 			},
 
 			"postproc": []
 		};
 
-		it("offset / А4 / 4+4 / ТЦБуОф9ж / sum == 106765.5", function(){
+		it("offset / А4 / 4+4 / ТЦБуМеТ0 / sum == 20238", function(){
 			var sum = cpo.calc({
 				"amount": brArg.amount * brArg.inner.amount,
 				"material": brArg.inner.material,
 				"format": brArg.format,
 				"colorCode": brArg.cover.colorCode
 			});
-			assert.equal(sum, 106765.5);
+			assert.equal(sum, 20238);
 		});
-		it("carton / А4 / 4+4 / ТЦБуД3Бж / sum == 18160", function(){
+		it("carton / А4 / 4+4 / ТЦДК0000 / sum == 16907.2", function(){
 			var sum = cpc.calc({
 				"amount": brArg.amount,
 				"material": brArg.cover.material,
 				"format": brArg.format,
 				"colorCode": brArg.cover.colorCode
 			});
-			assert.equal(sum, 18160);
+			assert.equal(sum, 16907.2);
+		});
+		it("creasing / amount = 1000 / value = 2 / sum = 300", function(){
+			var sum = cppc.calc({
+				"amount": brArg.amount,
+				"value": 2,
+				"salePrice": true
+			});
+			assert.equal(sum, 300);
 		});
 
 
-		it("offset / А4 / 4+4 / ТЦБуОф9ж / discount = 25% / sum == 80074.125", function(){
+		it("offset / А4 / 4+4 / ТЦБуМеТ0 / discount = 25% / sum == 15178.5", function(){
 			var sum = cpo.calc({
 				"amount": brArg.amount * brArg.inner.amount,
 				"material": brArg.inner.material,
@@ -406,9 +421,9 @@ describe("Calc", function(){
 				"colorCode": brArg.cover.colorCode,
 				"discount": 25
 			});
-			assert.equal(sum, 80074.125);
+			assert.equal(sum, 15178.5);
 		});
-		it("carton / А4 / 4+4 / ТЦБуД3Бж / discount = 25% / sum == 13620", function(){
+		it("carton / А4 / 4+4 / ТЦДК0000 / discount = 25% / sum == 12680.4", function(){
 			var sum = cpc.calc({
 				"amount": brArg.amount,
 				"material": brArg.cover.material,
@@ -416,21 +431,29 @@ describe("Calc", function(){
 				"colorCode": brArg.cover.colorCode,
 				"discount": 25
 			});
-			assert.equal(sum, 13620);
+			assert.equal(sum, 12680.4);
+		});
+		it("creasing / amount = 1000 / value = 2 / discount = 25%, sum = 225", function(){
+			var sum = cppc.calc({
+				"amount": brArg.amount,
+				"value": 2,
+				"salePrice": true,
+				"discount": 25
+			});
+			assert.equal(sum, 225);
 		});
 
-
-		it("brochure / A4 / 4+4 / sum == " + (106765.5 + 18160), function(){
+		it("brochure / A4 / 4+4 / sum == " + (20238 + 16907.2 + 300), function(){
 			assert.equal(
 				cpb.calc(brArg),
-				106765.5 + 18160
+				20238 + 16907.2 + 300
 			);
 		});
-		it("brochure / A4 / 4+4 / discount = 25% / sum == " + (80074.125 + 13620), function(){
+		it("brochure / A4 / 4+4 / discount = 25% / sum == " + (15178.5 + 12680.4 + 225), function(){
 			brArg.discount = 25;
 			assert.equal(
 				cpb.calc(brArg),
-				80074.125 + 13620
+				15178.5 + 12680.4 + 225
 			);
 		});
 	});

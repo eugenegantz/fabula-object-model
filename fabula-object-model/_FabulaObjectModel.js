@@ -55,13 +55,7 @@ FabulaObjModel.prototype._getModule = function(name){
 
 // ------------------------------------------------------------------------
 
-FabulaObjModel.prototype._setModule("DefaultDataModel", require("./data-models/DefaultDataModel"));
-
 FabulaObjModel.prototype._setModule("GandsDataModel", require("./data-models/GandsDataModel"));
-
-FabulaObjModel.prototype._setModule("InterfaceEvents", require("./data-models/InterfaceEvents"));
-
-FabulaObjModel.prototype._setModule("InterfaceFProperty", require("./data-models/InterfaceFProperty"));
 
 FabulaObjModel.prototype._setModule("CalcDefaultPrint",  require("./data-models/calc/DefaultPrintCalc"));
 
@@ -88,6 +82,12 @@ FabulaObjModel.prototype._setModule("utils", require("./utils"));
 FabulaObjModel.prototype._setModule("ObjectA", require("./data-models/ObjectA"));
 
 /* #if browser,node */
+	FabulaObjModel.prototype._setModule("DefaultDataModel", require("./data-models/DefaultDataModel"));
+
+	FabulaObjModel.prototype._setModule("InterfaceEvents", require("./data-models/InterfaceEvents"));
+
+	FabulaObjModel.prototype._setModule("InterfaceFProperty", require("./data-models/InterfaceFProperty"));
+
 	FabulaObjModel.prototype._setModule("AgentsDataModel", require("./data-models/AgentsDataModel"));
 
 	FabulaObjModel.prototype._setModule("DataModelAdapters", require("./data-models/DataModelAdapters"));

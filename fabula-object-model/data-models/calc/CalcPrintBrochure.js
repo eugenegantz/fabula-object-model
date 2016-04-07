@@ -26,7 +26,7 @@ CalcBr.prototype.calc = function(arg){
 	arg.inner.amount = arg.inner.amount * arg.amount;
 
 	arg.cover.amount = cUtils.parseAmount(arg.cover.amount);
-	if (!arg.cover.amount) throw new Error("!arg.cover.amount");
+	if (!arg.cover.amount) arg.cover.amount = 1;
 	arg.cover.amount = arg.cover.amount * arg.amount;
 
 	// ------- Материал
@@ -49,6 +49,10 @@ CalcBr.prototype.calc = function(arg){
 	arg.inner.format = arg.format;
 	arg.cover.format = arg.format;
 
+	// ------- Послепечатная обработка
+	arg.inner._postproc = cUtils.parsePostproc(arg.inner.postproc);
+	arg.cover._postproc = cUtils.parsePostproc(arg.cover.postproc);
+
 	// -------------------------------------------------------------------------------------
 
 	arg.inner.method =
@@ -69,20 +73,38 @@ CalcBr.prototype.calc = function(arg){
 
 	var comp = new cComp([
 		new cComp(
-			cUtils.parsePostproc(arg.inner.postproc)
-			.concat(
-				cUtils.createCalc(arg.inner.method)
-			),
+			cUtils.createCalc(arg.inner.method),
 			arg.inner
 		),
 		new cComp(
-			cUtils.parsePostproc(arg.cover.postproc)
-			.concat(
-				cUtils.createCalc(arg.cover.method)
-			),
+			cUtils.createCalc(arg.cover.method),
 			arg.cover
 		)
 	]);
+
+	var c;
+
+	for(c=0; c<arg.inner._postproc.length; c++){
+		arg.inner._postproc[c].arg.amount = arg.inner.amount;
+		arg.inner._postproc[c].arg.salePrice = 1;
+		comp.addComponent(
+			new cComp(
+				arg.inner._postproc[c].m,
+				arg.inner._postproc[c].arg
+			)
+		);
+	}
+
+	for(c=0; c<arg.cover._postproc.length; c++){
+		arg.cover._postproc[c].arg.amount = arg.cover.amount;
+		arg.cover._postproc[c].arg.salePrice = 1;
+		comp.addComponent(
+			new cComp(
+				arg.cover._postproc[c].m,
+				arg.cover._postproc[c].arg
+			)
+		);
+	}
 
 	var sum = comp.calc();
 
@@ -90,7 +112,7 @@ CalcBr.prototype.calc = function(arg){
 
 	sum = sum - (sum * discount / 100);
 
-	sum = Math.round(sum * 1000) / 1000;
+	sum = Math.round(sum * 100) / 100;
 
 	return sum;
 

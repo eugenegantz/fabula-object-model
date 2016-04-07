@@ -201,72 +201,122 @@ GandsDataModel.prototype = {
 	 * */
 	"_groupMatcher": function(row){
 
-			var tmp = [];
+		var tmp = [];
 
-			// Печатные форматы форматы
-			if (  row.GSID.match(/ТСПоФм/gi)  ) {
-				tmp.push("print-formats");
-			}
+		// Печатные форматы форматы
+		if (  row.GSID.match(/ТСПоФм/gi)  ) {
+			tmp.push("print-formats");
+		}
 
-			// Соответсвует ТМЦ / Бумага
-			// Сюда могут быть включены: картон, самокопирка и пр.
+		// Соответсвует ТМЦ / Бумага
+		// Сюда могут быть включены: картон, самокопирка и пр.
+		if (
+			row.GSID.toLowerCase().match(/тцбу/gi)
+			&& row.GSID.length > 4
+		) {
+			tmp.push("material-paper");
+		}
+
+		// Выбирает из ТМЦ / Бумага только конкретно бумагу
+		if (  row.GSID.toLowerCase().match(/тцбуме|тцбуоф|тцбуса|тцбуск|тцбуцп|тцбуфб/gi)  ) {
+			tmp.push("paper");
+		}
+
+		// materials:paper:offset
+		if (  row.GSID.match(/тцбуоф/gi)  ){
+			tmp.push("materials:paper:offset");
+		}
+
+		// materials:paper:coated
+		if (  row.GSID.match(/тцбуме/gi)  ){
+			tmp.push("materials:paper:coated");
+		}
+
+		// materials:carton
+		if (  row.GSID.match(/тцбукм|тцдк/gi)  ){
+			tmp.push("materials:carton")
+		}
+
+		// materials:carton:regular
+		if (  row.GSID.match(/тцбукм/gi)  ){
+			tmp.push("materials:carton:regular")
+		}
+
+		// paper:carton:design
+		if (  row.GSID.match(/тцдк/gi)  ){
+			tmp.push("materials:carton:design")
+		}
+
+		// production:lamination
+		if (  row.GSID.match(/пзрала/gi)  ){
+			tmp.push("production:laminating");
+		}
+
+		// production:cutting
+		if (  row.GSID.match(/пзрапз/gi)  ){
+			tmp.push("production:cutting");
+		}
+
+		// production:creasing
+		if (  row.GSID.match(/пзраби/gi)  ){
+			tmp.push("production:creasing");
+		}
+
+		// production:rounding
+		if (  row.GSID.match(/пзрапо/gi)  ){
+			tmp.push("production:rounding");
+		}
+
+		// production:folding
+		if (  row.GSID.match(/пзраф/gi)  ){
+			tmp.push("production:folding");
+		}
+
+		if (  row.GSID.match(/тцмп/gi)  ){
 			if (
-				row.GSID.toLowerCase().match(/тцбу/gi)
-				&& row.GSID.length > 4
-			) {
-				tmp.push("material-paper");
-			}
+				row.GSID.match(/тцмпбг|тцмпкк|тцмпкл|тцмпкр|тцмпкт|тцмпрс|тцмпс1|тцмпск|тцмпто/gi)
+				|| row.GSID.length <= 6
+			){
+				// return false;
+			} else {
 
-			// Выбирает из ТМЦ / Бумага только конкретно бумагу
-			if (  row.GSID.toLowerCase().match(/тцбуме|тцбуоф|тцбуса|тцбуск|тцбуцп|тцбуфб/gi)  ) {
-				tmp.push("paper");
 			}
+			tmp.push("materials:print");
+		}
 
-			if (  row.GSID.match(/тцмп/gi)  ){
-				if (
-					row.GSID.match(/тцмпбг|тцмпкк|тцмпкл|тцмпкр|тцмпкт|тцмпрс|тцмпс1|тцмпск|тцмпто/gi)
-					|| row.GSID.length <= 6
-				){
-					// return false;
-				} else {
+		if (  row.GSID.toLowerCase().match(/тцбуд1|тцбуд3|тцбукр|тцбупр/gi)  ) {
+			tmp.push("carton");
+		}
 
-				}
-				tmp.push("materials:print");
-			}
+		if (  row.GSID.toLowerCase().match(/тцбуко/)  ) {
+			tmp.push("envelope");
+		}
 
-			if (  row.GSID.toLowerCase().match(/тцбуд1|тцбуд3|тцбукр|тцбупр/gi)  ) {
-				tmp.push("carton");
+		if (
+			row.GSCOP.match(/17/)
+			|| row.GSCOP.match(/27/)
+		) {
+			if (!row.GSCOP.match(/276|176/)) {
+				tmp.push("products");
 			}
+		}
 
-			if (  row.GSID.toLowerCase().match(/тцбуко/)  ) {
-				tmp.push("envelope");
-			}
+		if (
+			row.GSCOP.match(/17/)
+			|| row.GSCOP.match(/27/)
+			|| row.GSCOP.match(/07/)
+		) {
+			tmp.push("print");
+		}
 
-			if (
-				row.GSCOP.match(/17/)
-				|| row.GSCOP.match(/27/)
-			) {
-				if (!row.GSCOP.match(/276|176/)) {
-					tmp.push("products");
-				}
+		if (
+			row.GSCOP.match(/17/)
+			|| row.GSCOP.match(/27/)
+		) {
+			if (!row.GSCOP.match(/276|176/)) {
+				tmp.push("products:print");
 			}
-		
-			if (
-				row.GSCOP.match(/17/)
-				|| row.GSCOP.match(/27/)
-				|| row.GSCOP.match(/07/)
-			) {
-				tmp.push("print");
-			}
-
-			if (
-				row.GSCOP.match(/17/)
-				|| row.GSCOP.match(/27/)
-			) {
-				if (!row.GSCOP.match(/276|176/)) {
-					tmp.push("products:print");
-				}
-			}
+		}
 		
 		return tmp;
 	},
@@ -288,6 +338,11 @@ GandsDataModel.prototype = {
 	},
 
 
+	"_isDraft": function(row){
+		return Boolean(row.GSName.match(/^[*]/gi) || row.GSKindName.match(/^[*]/gi));
+	},
+
+
 	/**
 	 * @param {Object} arg
 	 * @param {Array} arg.cop - Массив из RegExp для поиска среди КОПов
@@ -295,24 +350,41 @@ GandsDataModel.prototype = {
 	 * */
 	"get" : function(arg){
 		if (typeof arg != "object") arg = Object.create(null);
-		var type = typeof arg.type != "object" ? [] : arg.type;
+		var type = toString.call(arg.type) == "[object Array]" ? arg.type : [];
 		if (toString.call(arg.group) == "[object Array]") type = arg.group;
-		var cop = typeof arg.cop != "object" ? [] : arg.cop;
+		var cop = toString.call(arg.cop) == "[object Array]" ? arg.cop : [];
+		var flags = toString.call(arg.flags) == "[object Array]" ? arg.flags : [];
+		var useDraft = typeof arg.useDraft == "undefined" ? true : Boolean(arg.useDraft);
 
 		if (!type.length && !cop.length) return this.data;
 
 		var tmp = [], c, v, match;
 
-		if (type.length == 1 && !cop.length){
+		if (
+			type.length == 1
+			&& !cop.length
+			&& !flags.length
+			&& useDraft
+		){
 			if (  typeof this._indexData[type[0]] != "object"  ){
 				return [];
 			}
 			return this._indexData[type[0]];
 		}
 
+		var flagsRegEx = new RegExp(flags.join("|"));
+
 		for (c = 0; c < this.data.length; c++) {
 
 			if (  tmp.indexOf(this.data[c]) > -1  ) continue;
+
+			if (  this._isDraft(this.data[c]) && !useDraft  ){
+				continue;
+			}
+
+			if (  flags.length && !this.data[c].GSFlag.match(flagsRegEx)  ){
+				continue;
+			}
 
 			match = this._groupMatcher(this.data[c]);
 
