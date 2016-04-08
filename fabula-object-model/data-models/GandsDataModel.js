@@ -58,7 +58,8 @@ GandsDataModel.prototype = {
 	 * */
 	"load" : function(arg){
 		if (typeof arg == "undefined") arg = Object.create(null);
-		var callback = (typeof arg.callback == "function" ? arg.callback : function(){} );
+		var useCache = typeof arg.useCache == "undefined" ? true : Boolean(arg.useCache);
+		var callback = typeof arg.callback == "function" ? arg.callback : function(){};
 		var self = this;
 
 		/*#if browser,node*/
@@ -99,7 +100,10 @@ GandsDataModel.prototype = {
 				"url": self._fabulaInstance.url,
 				"method": "POST",
 				"data": {
-					model: "GandsDataModel"
+					model: "GandsDataModel",
+					"argument": {
+						"useCache": useCache
+					}
 				},
 				"callback": function(http){
 					self._afterLoad(JSON.parse(http.responseText), callback);

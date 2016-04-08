@@ -315,8 +315,26 @@ describe("Calc", function(){
 		});
 	});
 
-	describe.skip("CalcPrintPostprocFolding", function(){
-		// TODO folding
+	describe("CalcPrintPostprocFolding", function(){
+		var cFold = fom.create("CalcPrintPostprocFolding");
+		it("Folding / amount = 1000 / value = 4", function(){
+			var sum = cFold.calc({
+				"amount": 1000,
+				"paperDensity": 130,
+				"value": 4,
+				"salePrice": 1
+			});
+			assert.equal(sum, 340);
+		});
+		it("Folding / amount = 1000 / value = 4", function(){
+			var sum = cFold.calc({
+				"amount": 1000,
+				"paperDensity": 200,
+				"value": 4,
+				"salePrice": 1
+			});
+			assert.equal(sum, 8000);
+		});
 	});
 
 	describe("CalcPrintPostprocRounding", function(){
