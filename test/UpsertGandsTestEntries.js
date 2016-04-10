@@ -12,7 +12,7 @@ var db = fom.create("DBModel");
 
 // Материалы
 (function(){
-	return;
+	// return;
 	var _insert = {
 		"ТЦДК00": {
 			"GSID": "ТЦДК00",
@@ -100,7 +100,7 @@ var db = fom.create("DBModel");
 
 // Форматы
 (function(){
-	return;
+	// return;
 	var _insert = {
 		"ТСПоФм": {
 			"GSID": "ТСПоФм",
@@ -205,7 +205,7 @@ var db = fom.create("DBModel");
 
 // Свойства
 (function(){
-	return;
+	// return;
 	var _insert = {
 		"Размер_ТСПоФмА1": {
 			"property": "Размер",

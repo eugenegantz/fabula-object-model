@@ -360,6 +360,27 @@ _utils.awwsBase64 = {
 };
 
 
+_utils.detectEnvironment = function(){
+	var _env = (function(){
+		return toString.call(this);
+	})();
+	if (  _env == "[object global]"  ){
+		return "node";
+
+	} else if (  _env == "[object Window]"){
+		return "browser";
+
+	} else {
+		return void 0;
+	}
+};
+
+
+_utils.isBrowser = function(){
+	return this.detectEnvironment() === "browser";
+};
+
+
 /**
  * @param {*} value
  * @return {String}
@@ -374,7 +395,7 @@ _utils.getType = function(value){
 	} else if (  value === null  ) {
 		return "null";
 
-	} else if (  value == "[object Date]"  ) {
+	} else if (  toString.call(value) == "[object Date]"  ) {
 		return "date";
 
 	} else {

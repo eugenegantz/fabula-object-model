@@ -1,4 +1,5 @@
 var IEvent = require("./IEvent");
+var _utils = require("./../utils");
 
 // Хак для nodejs
 if (typeof CustomEvent == "undefined") var CustomEvent = IEvent;
@@ -107,22 +108,24 @@ EventsInterface.prototype = {
 
 
 	/**
-	 * ������� �������
 	 * @param {String} name
 	 * @param {Object=} param
 	 * */
 	"_createEvent": function(name, param){
-		if (  typeof document != "object"  ){
-			return new IEvent(name);
+		var event;
+
+		if (  !_utils.isBrowser()  ){
+			event = new IEvent(name);
+
+		} else {
+			var EventConstructor = CustomEvent || Event;
+			event = new EventConstructor(name);
+
 		}
-		var EventConstructor = CustomEvent || Event;
-		var event = new EventConstructor(name);
 
 		if (typeof param == "object"){
 			for(var prop in param){
-				if (  param.hasOwnProperty  ){
-					if (  !param.hasOwnProperty(prop)  ) continue;
-				}
+				if (  !Object.prototype.hasOwnProperty.call(param, prop)  ) continue;
 				event[prop] = param[prop];
 			}
 		}
