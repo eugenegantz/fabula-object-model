@@ -2,6 +2,7 @@
 // Номенклатура
 
 var ObjectA = require("./ObjectA");
+var _utils = require("./../utils");
 
 // Для совместимости
 var getContextDB = function(){
@@ -344,6 +345,108 @@ GandsDataModel.prototype = {
 
 	"_isDraft": function(row){
 		return Boolean(row.GSName.match(/^[*]/gi) || row.GSKindName.match(/^[*]/gi));
+	},
+
+
+	/**
+	 * Получить родительскую запись
+	 * @param {Object | String} row
+	 * return {Object}
+	 * */
+	"getParent": function(row){
+		if (
+			_utils.getType(row) == "object"
+			&& row.GSID
+		){
+			return this.dataReferences.get(row.GSID.slice(0, -2))
+
+		} else if (  typeof row == "string"  ) {
+			row = this.dataReferences.get(row);
+			if (row && row.GSID.length >= 4){
+				return this.dataReferences.get(row.GSID.slice(0, -2))
+			}
+
+		}
+		return void 0;
+	},
+
+
+	/**
+	 * Получить свойства записи. Собственные и наследуемые
+	 * @param {Object | String} row - код либо запись номенклатуры
+	 * @param {Array | String=} props - массив свойств
+	 * @parma {Object=} options - параметры выборки
+	 * @return {undefined | Array}
+	 * */
+	"getProperty": function(row, props, options){
+		var ret = [];
+
+		if (  _utils.getType(row) == "object" && row.GSID  ){
+			row = this.dataReferences.get( row.GSID);
+
+		} else if (  _utils.getType(row) == "string"  ) {
+			row = this.dataReferences.get(row);
+			if (!row) return ret;
+
+		} else {
+			return void 0;
+
+		}
+
+		if (_utils.getType(props) == "array"){
+
+		} else if (typeof props == "string") {
+			props = [props];
+		} else {
+			props = [];
+		}
+
+		var props_ = [], row_ = row, c;
+
+		for(c=0; c<props.length; c++){
+			if (typeof props[c] != "string") continue;
+			props_[c] = props[c].toLowerCase();
+		}
+
+		var v=0;
+
+		do {
+			if (!props_.length){
+				ret = ret.concat(row_.gandsPropertiesRef);
+
+			} else {
+				for (c = 0; c < row_.gandsPropertiesRef.length; c++) {
+					if (props_.indexOf(row_.gandsPropertiesRef[c].property.toLowerCase()) > -1) {
+						ret.push(row_.gandsPropertiesRef[c]);
+					}
+				}
+
+			}
+			if (++v > 100) break;
+		} while(  row_ = this.getParent(row_)  );
+
+		if (_utils.getType(options) != "object"){
+			options = {};
+		}
+
+		if (options.onlyPriority){
+			var priorProps = {};
+			for(c=0; c<ret.length; c++){
+				if (
+					typeof priorProps[ret[c].property] != "object"
+					|| priorProps[ret[c].property].extID.length < ret[c].extID.length
+				){
+					priorProps[ret[c].property] = ret[c];
+				}
+			}
+			ret = [];
+			for(var prop in priorProps){
+				if (!priorProps.hasOwnProperty(prop)) continue;
+				ret.push(priorProps[prop]);
+			}
+		}
+
+		return ret;
 	},
 
 

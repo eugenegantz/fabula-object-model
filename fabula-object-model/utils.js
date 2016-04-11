@@ -154,7 +154,7 @@ _utils.objectKeysToLowerCase = function(obj){
 	if (typeof obj != "object") return null;
 	var res = {};
 	for(var prop in obj){
-		if (  !Object.prototype.hasOwnProperty.call(obj, key)  ){
+		if (  !Object.prototype.hasOwnProperty.call(obj, prop)  ){
 			continue;
 		}
 		res[prop.toLowerCase()] = obj[prop];
@@ -166,7 +166,7 @@ _utils.objectKeysToUpperCase = function(obj){
 	if (typeof obj != "object") return null;
 	var res = {};
 	for(var prop in obj){
-		if (  !Object.prototype.hasOwnProperty.call(obj, key)  ){
+		if (  !Object.prototype.hasOwnProperty.call(obj, prop)  ){
 			continue;
 		}
 		res[prop.toUpperCase()] = obj[prop];

@@ -37,9 +37,7 @@ describe("fabula-object-model", function(){
 
 });
 
-describe(
-	"ObjectA",
-	function(){
+describe("ObjectA", function(){
 
 		var ObjectA = fom._getModule("ObjectA");
 
@@ -103,16 +101,13 @@ describe(
 
 		})();
 
-	}
-);
+	});
 
 
 // -----------------------------------------------------------------------------
 
 
-describe(
-	"InterfaceEvents",
-	function(){
+describe("InterfaceEvents", function(){
 		var st = false;
 
 		var InterfaceEvents = fom._getModule("InterfaceEvents");
@@ -133,8 +128,7 @@ describe(
 			});
 		});
 
-	}
-);
+	});
 
 
 // -----------------------------------------------------------------------------
@@ -336,267 +330,523 @@ describe("DefaultDataModel", function(){
 
 describe("MovDataModel", function(){
 
-	var done = assert.async(7);
-
-	var dbAwws = DBModel.prototype.getInstance({"dburl": "ws://" + location.hostname + ":8200/db"});
-	// var dbAwws = DBModel.prototype.getInstance({"dburl": "http://" + location.hostname + ":8100/db"});
-
-	var result = {
-		"insert": {
-			"d": "Запись",
-			"st": false
-		},
-		"insert_children": {
-			"d": "Запись. Подчиненные задачи",
-			"st": false
-		},
-		"insert_children_mmpid": {
-			"d": "Запись. Подчиненные задачи. Сверка поля MMPID",
-			"st": false
-		},
-		"insert_fields": {
-			"d": "Запись. Поля",
-			"st": false
-		},
-		"insert_properties": {
-			"d": "Запись. Свойства",
-			"st": false
-		},
-		"update": {
-			"d": "Обновление",
-			"st": false
-		},
-		"update_properties": {
-			"d": "Обновление. Свойства",
-			"st": false
-		},
-		"update_chilren": {
-			"d": "Обновление. Подчиненные задачи",
-			"st": false
-		},
-		"update_fields": {
-			"d": "Обновление. Поля",
-			"st": false
-		},
-		"load": {
-			"d": "Инициализация",
-			"st": false
-		},
-		"load_fields": {
-			"d": "Инициализация. Поля",
-			"st": false
-		}
-	};
+	var db = fom.create("DBModel");
 
 	var stand = {
+		MMID: null,
+		mov: null
+	};
 
-		"MMID": null,
+	describe(".save() / .insert()", function(){
+		var self = stand;
 
-		"mov": null,
+		this.timeout(3000);
 
-		"insert": function(){
-			var self = this;
+		it(".save(...) / .insert()", function(done){
+			stand.mov = fom.create("MovDataModel");
+			stand.mov.set("Amount",999);
+			stand.mov.set("MMFlag","9");
 
-			this.mov = new MovDataModel();
-			this.mov.set("Amount",999);
-			this.mov.set("MMFlag","9");
-
-			this.mov._property = this.mov._property.concat([
+			stand.mov.addProperty([
 				{"property":"Макет исходящий","value":"100"},
 				{"property":"Макет исходящий","value":"200"}
 			]);
 
-			this.mov.addChildMov({
+			stand.mov.addChildMov({
 				"GSID": "РУПОДП02",
 				"Sum": 100,
 				"Amount": 999,
 				"MMFlag": "9"
 			});
 
-			this.mov.addChildMov({
+			stand.mov.addChildMov({
 				"GSID": "РУПОДП02",
 				"Sum": 200,
 				"Amount": 999,
 				"MMFlag": "9"
 			});
 
-			this.mov.save({
+			stand.mov.save({
 				"callback": function(err){
 
-					done();
+					var MMID = stand.MMID = self.mov.get("MMID");
 
-					stand.MMID = self.mov.get("MMID");
-
-					var MMID = stand.MMID;
-
-					result.insert.st = !err;
+					if (err) {
+						done(err);
+						return;
+					}
 
 					(function(){
 						for(var c=0; c<self.mov.childrenMovs.length; c++){
 							if (  self.mov.childrenMovs[c].get("MMPID") != MMID  ){
-								result.insert_children_mmpid.st = false;
+								done(new Error("CMov.MMPID != this.MMID"));
 								return false;
 							}
 						}
-						result.insert_children_mmpid.st = true;
 					})();
 
-					dbAwws.dbquery({
+					db.dbquery({
 						"query": [
-							"SELECT MMID, MMFlag, Amount FROM Movement WHERE MMID = " + self.mov.get("MMID"),
-							"SELECT pid FROM Property WHERE pid = " + self.mov.get("MMID"),
-							"SELECT MMID FROM Movement WHERE MMPID = " + self.mov.get("MMID")
+							"SELECT MMID, MMFlag, Amount FROM Movement WHERE MMID = " + stand.mov.get("MMID"),
+							"SELECT pid FROM Property WHERE pid = " + stand.mov.get("MMID"),
+							"SELECT MMID FROM Movement WHERE MMPID = " + stand.mov.get("MMID")
 						].join("; "),
 						"callback": function(dbres){
-							done();
-
 							var mov = dbres[0].recs;
 							var props = dbres[1].recs;
 							var children = dbres[2].recs;
 
-							result.insert_properties.st = props.length == 2;
-							result.insert_children.st = children.length == 2;
-							result.insert_fields.st = mov[0].MMFlag == "9" && mov[0].Amount == 999;
+							if (props.length != 2){
+								done(new Error("props.length != 2"));
+								return;
+							}
 
-							self.load();
+							if (children.length != 2){
+								done(new Error("children.length != 2"));
+								return;
+							}
 
+							if (mov[0].MMFlag != "9" || mov[0].Amount != 999){
+								done(new Error("mov[0].MMFlag != '9' || mov[0].Amount != 999"));
+								return;
+							}
+
+							done();
 						}
 					});
 
 				}
 			});
-			return true;
-		},
+		});
 
-		"load": function(){
+	});
 
-			var self = this;
 
-			var MMID = this.mov.get("MMID");
+	describe(".load()", function(){
 
-			this.mov = new MovDataModel();
-			this.mov.set("MMID", MMID);
-			this.mov.load({
+		it(".load() // prev mov", function(done){
+			var MMID = stand.mov.get("MMID");
+			stand.mov = fom.create("MovDataModel");
+			stand.mov.set("MMID", MMID);
+			stand.mov.load({
 				"callback": function(err){
+					if (err){
+						done(err);
+						return;
+					}
 					done();
-					result.load.st = !err;
-					self.update();
 				}
 			});
+		});
 
+		it(".load() // concrete fields", function(done){
 			// ------------------------------------------------------
 			// Инициализация конкретных полей
-
-			var mov2 = new MovDataModel();
-			mov2.set("MMID", this.mov.get("MMID"));
+			var mov2 = fom.create("MovDataModel");
+			mov2.set("MMID", stand.mov.get("MMID"));
 			mov2.load({
 				"fields": "MMID,MMFlag",
 				"callback": function(err,obj){
+					if (  mov2.get("MMFlag") != "9" || obj.get("Sum")  ){
+						done(new Error("MMFlag != 9 || obj.get(Sum)"));
+						return;
+					}
 					done();
-					result.load_fields.st = mov2.get("MMFlag") == "9" && !obj.get("Sum");
 				}
 			});
+		});
 
-		},
+	});
 
-		"update": function(){
-			var self = this;
 
-			self.mov.set("MMFlag","8");
-			self.mov.set("Amount",888);
-			self.mov.set("Sum",1200);
+	describe(".update()", function(){
 
-			self.mov.removeChilldMov({"Sum":200});
-			self.mov.addChildMov(new MovDataModel());
-			self.mov.appendChildMov({
+		it(".save(...) / .update() / prev loaded", function(){
+			stand.mov.set("MMFlag","8");
+			stand.mov.set("Amount",888);
+			stand.mov.set("Sum",1200);
+
+			stand.mov.removeChilldMov({"Sum":200});
+			stand.mov.addChildMov(fom.create("MovDataModel"));
+			stand.mov.appendChildMov({
 				"GSID": "РУПОДП02",
 				"Sum": 300,
 				"Amount": 999,
 				"MMFlag": "7"
 			});
 
-			for(var c=0; c<self.mov._property.length; c++){
-				if (  self.mov._property[c].value == "100"  ){
-					self.mov._property[c].value = 900;
+			for(var c=0; c<stand.mov._property.length; c++){
+				if (  stand.mov._property[c].value == "100"  ){
+					stand.mov._property[c].value = 900;
 				}
-				if (  self.mov._property[c].value == "200"  ){
-					self.mov._property[c] = null;
+				if (  stand.mov._property[c].value == "200"  ){
+					stand.mov._property[c] = null;
 				}
 			}
 
-			self.mov._property.push({"property":"Макет исходящий","value":"300"});
+			stand.mov._property.push({"property":"Макет исходящий","value":"300"});
 
-			self.mov.save({
+			stand.mov.save({
 				"callback": function(err){
-					done();
 
-					result.update.st = !err;
+					if (err){
+						done(err);
+						return;
+					}
 
-					dbAwws.dbquery({
+					db.dbquery({
 						"query": [
-							"SELECT pid FROM Property WHERE value IN ('900','300') AND pid = " + self.mov.get("MMID"),
-							"SELECT MMID FROM Movement WHERE MMPID = " + self.mov.get("MMID"),
-							"SELECT MMID FROM Movement WHERE MMFlag = '8' AND [Amount] = 888 AND [Sum] = 1200 AND  MMID = " + self.mov.get("MMID")
+							"SELECT pid FROM Property WHERE value IN ('900','300') AND pid = " + stand.mov.get("MMID"),
+							"SELECT MMID FROM Movement WHERE MMPID = " + stand.mov.get("MMID"),
+							"SELECT MMID FROM Movement WHERE MMFlag = '8' AND [Amount] = 888 AND [Sum] = 1200 AND  MMID = " + stand.mov.get("MMID")
 						].join("; "),
 						"callback": function(dbres){
-							done();
 
 							var props = dbres[0].recs;
 							var movsChildren = dbres[1].recs;
 							var movs = dbres[2].recs;
 
-							result.update_chilren.st = movsChildren.length == 3;
-							result.update_fields.st = movs.length > 0;
-							result.update_properties.st = props.length == 2;
+							if (movsChildren.length != 3){
+								done(new Error("movsChildren.length != 3"));
+								return;
+							}
+							if (!movs.length){
+								done("!movs.length");
+								return;
+							}
+							if(props.length != 2){
+								done(new Error("props.length != 2"));
+								return;
+							}
 
-							self.test();
-
+							done();
 						}
 					});
 
 
 				}
 			});
-		},
-
-		"test": function(){
-
-			for(var prop in result){
-				if (  !result.hasOwnProperty(prop)  ) continue;
-				assert.ok(
-					result[prop].st,
-					!result[prop].d ? prop : result[prop].d
-				);
-			}
-
-			this.clear();
-
-		},
+		});
 
 
-		"clear": function(){
-			if (this.mov){
-				var MMID = this.mov.get("MMID");
-				dbAwws.dbquery({
-					"query": [
-						"DELETE FROM Movement WHERE MMID = " + MMID,
-						"DELETE FROM Property WHERE pid = " + MMID,
-						"DELETE FROM Movement WHERE MMPID = " + MMID,
-						"DELETE FROM Property WHERE pid IN (SELECT MMID FROM Movement WHERE MMPID = "+MMID+")"
-					].join("; "),
-					"callback": function(){
-						done();
-					}
-				});
-			}
+	});
+
+
+	after(function(done){
+		if (stand.mov){
+			var MMID = stand.mov.get("MMID");
+			db.dbquery({
+				"query": [
+					"DELETE FROM Movement WHERE MMID = " + MMID,
+					"DELETE FROM Property WHERE pid = " + MMID,
+					"DELETE FROM Movement WHERE MMPID = " + MMID,
+					"DELETE FROM Property WHERE pid IN (SELECT MMID FROM Movement WHERE MMPID = "+MMID+")"
+				].join("; "),
+				"callback": function(){
+					done();
+				}
+			});
 		}
+	});
 
+});
+
+
+// -----------------------------------------------------------------------------
+
+
+describe("DocDataModel", function(){
+
+	var db = fom.create("DBModel");
+
+	var stand = {
+		"doc": fom.create("DocDataModel")
 	};
 
-	// ---------------------------------------------------------------
-	// BEGIN
+	describe(".getNewDocID()", function(){
+		this.timeout(6000);
 
-	stand.insert();
+		it(".getNewDocID()", function(done){
+			var doc = fom.create("DocDataModel");
+			doc.getNewDocID({
+				"companyID": "РА",
+				"docType":"РеУС",
+				"callback": function(err, DocID){
+					if (err){
+						done(new Error(err));
+						return;
+					}
+					if (!DocID){
+						done(new Error("!DocID"));
+						return;
+					}
+					done();
+				}
+			});
+		});
+	});
+
+	describe("childMovs", function(){
+		this.timeout(6000);
+
+		it("childMovs", function(){
+			var doc= fom.create("DocDataModel");
+			var mov;
+			var count = 0;
+			for(var c=6; c<19; c++){
+				mov = fom.create("MovDataModel");
+				mov.set("MMFlag", c);
+				mov.set("Sum", c * 100);
+				mov.set("Sum2", Math.round(Math.random() * 1000));
+				doc.addMov(mov);
+				count++;
+			}
+
+			assert.equal(doc.movs.length, count);
+
+			doc.deleteMov({"Sum": 9 * 100, "MMFlag": 9});
+			doc.deleteMov({"Sum": 8 * 100, "MMFlag": 8});
+			doc.deleteMov({"Sum": 7 * 100, "MMFlag": 10});
+
+			assert.equal(doc.movs.length, count - 2);
+			assert.equal(doc.getMov({"Sum": 10 * 100, "MMFlag": 10}).length, 1);
+		});
+	});
+
+	describe(".save() / .insert()", function(){
+		this.timeout(6000);
+
+		it(".save(...) / .insert()", function(done){
+			stand.doc.set("Agent", 999);
+			stand.doc.set("Manager", 999);
+			stand.doc.set("Sum1", 0);
+			stand.doc.set("Person","test_person");
+			stand.doc.set("Company", "РА");
+			stand.doc.set("DocType", "РеУС");
+
+			var lorem_ipsum = "" +
+				"Lorem Ipsum is simply dummy text of the printing and typesetting industry. " +
+				"Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, " +
+				"when an unknown printer took a galley of type and scrambled it to make a type specimen book. " +
+				"It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. " +
+				"It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, " +
+				"and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.";
+
+			stand.doc.addProperty(stand.doc.splitProperty({"uid":null,"extclass":null,"extid":null,"pid":null,"property":"Примечание","value":lorem_ipsum}));
+			stand.doc.addProperty({"property":"test","value":"test"});
+
+			stand.doc.addMov(fom.create("MovDataModel"));
+			stand.doc.addMov(fom.create("MovDataModel"));
+			stand.doc.addMov(fom.create("MovDataModel"));
+
+			stand.doc.save({
+				"callback": function(err){
+
+					if (err){
+						done(err);
+						return;
+					}
+
+					db.dbquery({
+						"query": [
+							"SELECT pid FROM Property WHERE ExtID = '" + stand.doc.get("DocID") + "' ",
+							"SELECT MMID FROM Movement WHERE Doc = '" + stand.doc.get("DocID") + "' ",
+							"SELECT Agent, Manager FROM DOCS WHERE DocID = '" + stand.doc.get("DocID") + "' "
+						].join("; "),
+						"callback": function(dbres){
+							if (  dbres[0].recs.length != 9  ){
+								done(new Error("props.length != 9"));
+								return;
+							}
+							if (  dbres[1].recs.length != 3  ){
+								done("movs.length != 3");
+								return;
+							}
+							if (  dbres[2].recs[0].Agent != 999 || dbres[2].recs[0].Manager != 999  ){
+								done(new Error("doc.Agent != 999 || doc.Manager != 999"));
+								return;
+							}
+
+							for(var c=0; c<dbres.length; c++){
+								if (  dbres[c].info.errors.length  ){
+									done(dbres[c].info.errors);
+									return;
+								}
+							}
+
+							done();
+						}
+					});
+
+				}
+			});
+		});
+	});
+
+
+	describe(".load()", function(){
+		this.timeout(6000);
+
+		it(".load() // prev doc", function(done){
+			var doc = stand.doc.get("DocID");
+
+			stand.doc = fom.create("DocDataModel");
+			stand.doc.set("DocID", doc);
+
+			stand.doc.load({
+				"taskModel": fom._getModule("MovDataModel"),
+				"callback": function(err){
+					// Fi6ру47661, 28505, Анатолий +73519036679
+
+					// ---------------------------------------------------------------
+					if (err){
+						done(err);
+						return;
+					}
+					if (  stand.doc.get("DocID") != doc  ){
+						done(new Error("doc.DocID != expected.DocID"));
+						return;
+					}
+					if (  stand.doc.get("Sum1")  ){
+						done(new Error("doc.Sum1"));
+						return;
+					}
+					if (  stand.doc.get("Person") != "test_person"  ){
+						done(new Error("doc.person != test_person"));
+						return;
+					}
+					if (  !stand.doc.movs.length  ){
+						done(new Error("!doc.movs.length"));
+						return;
+					}
+
+					done();
+				}
+			});
+		});
+	});
+
+
+	describe("doc / events", function(){
+		this.timeout(6000);
+
+		it("doc / events", function(){
+			var doc = fom.create("DocDataModel");
+
+			doc.set("DocID","РА5по12345");
+			assert.equal(doc.get("DocType"), "ПоЗа");
+			assert.equal(doc.get("Company"), "РА");
+
+			doc.set("DocType","ЗРГа");
+			assert.ok(Boolean(doc.get("DocID").match(/зг/g)));
+
+			doc.set("Company","Ел");
+			assert.ok(Boolean(doc.get("DocID").match(/Ел/g)));
+		});
+	});
+
+
+	describe(".save() / .update()", function(){
+		this.timeout(6000);
+
+		it(".save() / .update()", function(done){
+			stand.doc.set("DocType", "ЗРГа");
+			stand.doc.set("Company","Ел");
+			stand.doc.set("Manage",888);
+
+			stand.doc.save({
+				"callback": function(err){
+
+					if (err){
+						done(err);
+						return;
+					}
+
+					db.dbquery({
+						"query": [
+							"SELECT DocType, Company, DocID FROM DOCS WHERE DocID = '"+stand.doc.get("DocID")+"' ",
+
+							"SELECT pid" +
+							" FROM Property " +
+							" WHERE " +
+								" pid = 0 " +
+								" AND ExtClass = 'DOCS' " +
+								" AND property IN ('Примечание','test','test2') " +
+								" AND ExtID = '" + stand.doc.get("DocID") + "' ",
+
+							"SELECT MMID, MMFlag, Doc FROM Movement WHERE Doc = '"+stand.doc.get("DocID")+"' "
+						].join(";"),
+						"callback": function(dbres){
+
+							var doc = dbres[0].recs[0];
+							var props = dbres[1].recs;
+							var movs = dbres[2].recs;
+
+							if (  doc.DocType != stand.doc.get("DocType")  ){
+								done(new Error("doc.DocType != expected.DocType"));
+								return;
+							}
+
+							if (  doc.Company != stand.doc.get("Company")  ){
+								done(new Error("doc.Company != expected.Company"));
+								return;
+							}
+
+							if (  !Boolean(stand.doc.get("DocID").match(/Ел/g))  ){
+								done(new Error("doc.DocID.match(/Ел/g)"));
+								return;
+							}
+
+							if (  !Boolean(doc.DocID.match(/Ел/g))  ){
+								done(new Error("doc.DocID.match(/Ел/g)"));
+								return;
+							}
+
+							if (  props.length != 9  ){
+								done(new Error("movs.length != 9"));
+								return;
+							}
+
+							if (  !movs.length  ){
+								done(new Error("!movs.length"));
+								return;
+							}
+
+							if (  !movs[0].Doc.match(/Ел/g)  ){
+								done(new Error("!mov.Doc.match(/Ел/g)"));
+								return;
+							}
+
+							done();
+
+						}
+					});
+
+				}
+			});
+		});
+	});
+
+	after(function(done){
+		var doc = stand.doc.get("DocID");
+		if (!doc) return;
+		db.dbquery({
+			"query": [
+				"DELETE FROM DOCS WHERE DocID = '" + doc + "' ",
+				"DELETE FROM Movement WHERE Doc = '" + doc + "' ",
+				"DELETE FROM Property " +
+				" WHERE " +
+					" ExtClass = 'DOCS' " +
+					" AND ExtID = '" + doc + "' " +
+					" OR pid IN (" +
+					"SELECT MMID FROM Movement WHERE Doc = '" + doc + "' " +
+				")"
+			].join("; "),
+			"callback": function(){
+				done();
+			}
+		});
+	});
 
 });
 
@@ -794,22 +1044,61 @@ describe("FOM", ()=>{
 
 describe("GandsDataModel", function(){
 
-	var gands = fom.create("GandsDataModel");
+	var gm = fom.create("GandsDataModel");
 
-	describe("GandsDataModel.load()", function(){
+	describe(".load()", function(){
 		it("gands.data.length > 0", function(done){
-			gands.load({
+			gm.load({
 				callback: function(){
-					if (!gands.data.length){
+					if (!gm.data.length){
 						throw new Error("!gands.data.length");
 					}
-					if (!Object.keys(gands._indexData).length){
+					if (!Object.keys(gm._indexData).length){
 						throw new Error("!gands._indexData.length");
 					}
 					done();
 				}
 			})
-		})
+		});
+	});
+
+	describe(".getParent()", function(){
+
+		beforeEach(function(done) {
+			if (gm.state){
+				done();
+				return;
+			}
+			gm.load({
+				callback: function() {
+					done();
+				}
+			});
+		});
+
+		it(".getParent(ТЦДК0000) / String", function(){
+			var parent = gm.getParent("ТЦДК0000");
+			assert.equal(parent.GSID, "ТЦДК00");
+		});
+
+		it(".getParent(ТЦДК0000) / Object / gands-row", function(){
+			var row = gm.dataReferences.get("ТЦДК0000");
+			var parent = gm.getParent(row);
+			assert.equal(parent.GSID, "ТЦДК00");
+		});
+
+	});
+
+	describe(".getProperty()", function(){
+		it(".getProperty(ГППО00ДИ, [материал]).length > 0", function(){
+			assert.ok(gm.getProperty("ГППО00ДИ", ["материал"]).length > 0);
+		});
+		it(".getProperty(ГППО00ДИ).length > 0", function(){
+			assert.ok(gm.getProperty("ГППО00ДИ").length > 0);
+		});
+		it(".getProperty(ГППО00ДИ, null, {onlyPriority: true}).length > 0", function(){
+			assert.ok(gm.getProperty("ГППО00ДИ", null, {onlyPriority: true}).length > 0);
+		});
 	});
 
 });

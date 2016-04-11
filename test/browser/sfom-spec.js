@@ -112,22 +112,61 @@ describe.skip(
 
 describe("GandsDataModel", function(){
 
-	var gands = fom.create("GandsDataModel");
+	var gm = fom.create("GandsDataModel");
 
-	describe("GandsDataModel.load()", function(){
+	describe(".load()", function(){
 		it("gands.data.length > 0", function(done){
-			gands.load({
+			gm.load({
 				callback: function(){
-					if (!gands.data.length){
+					if (!gm.data.length){
 						throw new Error("!gands.data.length");
 					}
-					if (!Object.keys(gands._indexData).length){
+					if (!Object.keys(gm._indexData).length){
 						throw new Error("!gands._indexData.length");
 					}
 					done();
 				}
 			})
-		})
+		});
+	});
+
+	describe(".getParent()", function(){
+
+		beforeEach(function(done) {
+			if (gm.state){
+				done();
+				return;
+			}
+			gm.load({
+				callback: function() {
+					done();
+				}
+			});
+		});
+
+		it(".getParent(ТЦДК0000) / String", function(){
+			var parent = gm.getParent("ТЦДК0000");
+			assert.equal(parent.GSID, "ТЦДК00");
+		});
+
+		it(".getParent(ТЦДК0000) / Object / gands-row", function(){
+			var row = gm.dataReferences.get("ТЦДК0000");
+			var parent = gm.getParent(row);
+			assert.equal(parent.GSID, "ТЦДК00");
+		});
+
+	});
+
+	describe(".getProperty()", function(){
+		it(".getProperty(ГППО00ДИ, [материал]).length > 0", function(){
+			assert.ok(gm.getProperty("ГППО00ДИ", ["материал"]).length > 0);
+		});
+		it(".getProperty(ГППО00ДИ).length > 0", function(){
+			assert.ok(gm.getProperty("ГППО00ДИ").length > 0);
+		});
+		it(".getProperty(ГППО00ДИ, null, {onlyPriority: true}).length > 0", function(){
+			assert.ok(gm.getProperty("ГППО00ДИ", null, {onlyPriority: true}).length > 0);
+		});
 	});
 
 });
