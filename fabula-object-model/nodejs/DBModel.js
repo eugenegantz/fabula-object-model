@@ -1,8 +1,9 @@
 "use strict";
 
-var _use = require("./RequireCustom");
-var modAjax = require("./Ajax");
-var modDBAwwS = _use("DBAwwS");
+// var _use = require("./RequireCustom");
+// var modAjax = require("./Ajax");
+// var modDBAwwS = _use("DBAwwS");
+var modDBAwwS = require("eg-db-awws");
 
 /**
  * @constructor

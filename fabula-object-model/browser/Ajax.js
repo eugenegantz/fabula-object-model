@@ -148,4 +148,6 @@ Ajax.req = function(arg){
 
 };
 
+Ajax.request = Ajax.req;
+
 module.exports = Ajax;

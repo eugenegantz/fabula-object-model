@@ -15,6 +15,9 @@ var getContextDB = function(){
 };
 
 // TODO пересмотреть алиасы
+/**
+ * @constructor
+ * */
 var DocDataModel = function(){
 	DefaultDataModel.call(this);
 	InterfaceFProperty.call(this);
@@ -140,6 +143,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @return {Array}
 		 * @param {Object=} fieldsArg
 		 * @param {Object=} propertyArg
+		 * @memberof DocDataModel
 		 * */
 		"getMov": function (fieldsArg, propertyArg) {
 
@@ -187,6 +191,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * Добавить задачу в заявку
+		 * @param {MovDataModel} mov - экземпляр задачи
+		 * @memberof DocDataModel
+		 * */
 		"addMov": function (mov) {
 			// TODO необходимо проверять тип
 			mov.set("DocDataObject", this);
@@ -197,6 +206,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * Удалить задачу из заявки
+		 * @param {Object} keyValue - найти и удалить задачу по след. значениям
+		 * @memberof DocDataModel
+		 * */
 		"deleteMov": function (keyValue) {
 			if (typeof keyValue != "object") return null;
 
@@ -229,21 +243,39 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * Удалить все задачи в заявке
+		 * @memberof DocDataModel
+		 * */
 		"deleteAllMovs": function () {
 			this.movs = []
 		},
 
-
+		/**
+		 * Удалить задачу из заявки
+		 * @borrows deleteMov
+		 * @memberof DocDataModel
+		 * */
 		"removeMov": function () {
 			return this.deleteMov.apply(this, arguments);
 		},
 
 
+		/**
+		 * @borrows deleteAllMovs
+		 * @memberof DocDataModel
+		 * */
 		"removeAllMovs": function () {
 			return this.deleteAllMovs();
 		},
 
 
+		/**
+		 * Сохранить (Добавить/обновить)
+		 * @param {Object} arg
+		 * @param {Function} arg.callback
+		 * @memberof DocDataModel
+		 * */
 		"save": function(arg){
 			var saveMethod = null, self = this, selfArguments = arguments;
 

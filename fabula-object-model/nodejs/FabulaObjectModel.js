@@ -1,6 +1,6 @@
 var F = require("./../_FabulaObjectModel");
 
-require("./../browser/cascade");
+require("eg-promise-cascade");
 
 // Модуль БД для nodejs
 F.prototype._setModule("DBModel", require("./DBModel"));

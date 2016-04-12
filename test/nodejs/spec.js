@@ -11,10 +11,8 @@ var __root = modPath.join(__dirname, "./../../fabula-object-model");
 
 // ------------------------------------------------------------------------------------
 
-var Ajax = require(modPath.join(__root, "./nodejs/Ajax.js"));
+var Ajax = require("eg-node-ajax");
 var cUtils = require(modPath.join(__root, "./data-models/calc/CalcUtils.js"));
-var _use = require(modPath.join(__root, "./nodejs/RequireCustom"));
-_use.addPath(__root);
 
 // ------------------------------------------------------------------------------------
 
@@ -271,6 +269,34 @@ describe("InterfaceFProperty", function(){
 // -----------------------------------------------------------------------------
 
 
+describe("DBModel", ()=>{
+
+	var db = require(modPath.join(__root, "./nodejs/DBModel"))
+		.prototype
+		.getInstance({
+			"dburl": "http://127.0.0.1:9000/db?",
+			"dbname": "well.demo",
+			"dbsrc": "main"
+		});
+
+	it("DBModel.dbquery / SELECT NOW();", (done)=>{
+		db.dbquery({
+			"query": "SELECT NOW();",
+			"callback": (dbres)=>{
+				if (  dbres.recs.length != 1 ){
+					throw new Error("dbres.recs.length != 1");
+				}
+				done();
+			}
+		});
+	});
+
+});
+
+
+// -----------------------------------------------------------------------------
+
+
 describe("DefaultDataModel", function(){
 
 	var defDm = fom.create("DefaultDataModel"); // new DefaultDataModel();
@@ -461,7 +487,7 @@ describe("MovDataModel", function(){
 
 	describe(".update()", function(){
 
-		it(".save(...) / .update() / prev loaded", function(){
+		it(".save(...) / .update() / prev loaded", function(done){
 			stand.mov.set("MMFlag","8");
 			stand.mov.set("Amount",888);
 			stand.mov.set("Sum",1200);
@@ -883,47 +909,6 @@ describe("utils", function(){
 	});
 
 	// TODO parseArg, getType, DBSecureStr, split, trim
-
-});
-
-
-// -----------------------------------------------------------------------------
-
-describe("requireCustom", ()=>{
-
-	it("RequireCustom. DBModel", ()=>{
-		assert.ok(
-			Boolean(_use("DBAwwS"))
-		);
-	});
-
-});
-
-
-// -----------------------------------------------------------------------------
-
-
-describe("DBModel", ()=>{
-
-	var db = require(modPath.join(__root, "./nodejs/DBModel"))
-		.prototype
-		.getInstance({
-			"dburl": "http://127.0.0.1:9000/db?",
-			"dbname": "well.demo",
-			"dbsrc": "main"
-		});
-
-	it("DBModel.dbquery / SELECT NOW();", (done)=>{
-		db.dbquery({
-			"query": "SELECT NOW();",
-			"callback": (dbres)=>{
-				if (  dbres.recs.length != 1 ){
-					throw new Error("dbres.recs.length != 1");
-				}
-				done();
-			}
-		});
-	});
 
 });
 

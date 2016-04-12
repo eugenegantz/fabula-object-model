@@ -5,12 +5,24 @@ var _utils = require("./../utils");
 if (typeof CustomEvent == "undefined") var CustomEvent = IEvent;
 if (typeof Event == "undefined") var Event = IEvent;
 
+
+/**
+ * @interface
+ * @requires IEvent
+ * @requires ./../utils
+ * */
 var EventsInterface = function(){
 	this._events = {};
 };
 
 EventsInterface.prototype = {
 
+
+	/**
+	 * Запускает указанное событие
+	 * @param {String} eventName - название события
+	 * @param {CustomEvent | IEvent=} e - объект события
+	 * */
 	"trigger": function(eventName, e){
 
 		if (typeof eventName != "string") return false;
@@ -53,6 +65,11 @@ EventsInterface.prototype = {
 	},
 
 
+	/**
+	 * Устанавливает событие
+	 * @param {String} eventName - название события
+	 * @param {Function} fx - функция выполняемая при запуске события
+	 * */
 	"on": function(eventName, fx){
 		// var c, self = this;
 
@@ -85,6 +102,11 @@ EventsInterface.prototype = {
 	},
 
 
+	/**
+	 * Удалить событие
+	 * @param {String} eventName - название события
+	 * @param {*=} _unique_id - уникальный маркер события. Необходим если нужно удалить конкретный держатель события
+	 * */
 	"_removeListener": function(eventName, _unique_id){
 		if (typeof _unique_id == "undefined"){
 			this._events[eventName] = [];
@@ -108,6 +130,8 @@ EventsInterface.prototype = {
 
 
 	/**
+	 * Создать объект события
+	 * @return {IEvent | CustomEvent}
 	 * @param {String} name
 	 * @param {Object=} param
 	 * */
@@ -134,6 +158,11 @@ EventsInterface.prototype = {
 	},
 
 
+	/**
+	 * Получить держатели событий
+	 * @param {String} eventName
+	 * @return {Array}
+	 * */
 	"getListeners": function(eventName){
 		if (typeof eventName != "string"){
 			return [];
@@ -145,6 +174,11 @@ EventsInterface.prototype = {
 	},
 
 
+	/**
+	 * Установить событие, функция которой должна выполниться один раз
+	 * @param {String} eventName
+	 * @param {Function} fx
+	 * */
 	"once": function(eventName, fx){
 		if (
 			typeof fx != "function"

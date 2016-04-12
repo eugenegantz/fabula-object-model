@@ -1,7 +1,10 @@
 // ------------------------------------------------------
 // Данные из базы о собственных филиалах
 
-// Для совместимости
+/**
+ * Для совместимости
+ * @ignore
+ * */
 var getContextDB = function(){
 	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
 	var DBModel = FabulaObjectModel.prototype._getModule("DBModel");
@@ -13,6 +16,9 @@ var getContextDB = function(){
 };
 
 
+/**
+ * @constructor
+ * */
 var CompanesDataModel = function(){
 	this.init();
 };
@@ -30,12 +36,24 @@ CompanesDataModel.prototype = {
 
 	},
 
+
+	/**
+	 * Массив экземпляров класса
+	 * */
 	"instances" : [],
 
+
+	/**
+	 * Получить экземпляр класса
+	 * */
 	"getInstance" : function(){
 		return this.instances.length ? this.instances[0] : new CompanesDataModel();
 	},
 
+
+	/**
+	 * Инициализация данных из БД
+	 * */
 	"load" : function(A){
 		if (typeof A == "undefined") A = Object.create(null);
 		var callback = (typeof A.callback == "function" ? A.callback : function(){} );
@@ -53,6 +71,10 @@ CompanesDataModel.prototype = {
 		}
 	},
 
+
+	/**
+	 * Получить инициализированные данные
+	 * */
 	"get" : function(){
 		return this.data;
 	}

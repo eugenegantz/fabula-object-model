@@ -2,7 +2,7 @@
 // FabulaObjectModel
 (function(){
 	require("./polyfills");
-	require("./cascade");
+	require("eg-promise-cascade");
 	var F = require("./../_FabulaObjectModel");
 
 	// Установка модуля БД для браузера

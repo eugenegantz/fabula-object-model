@@ -39,6 +39,12 @@ var _objectsPrototyping = function(){
 	return main;
 };
 
+
+/**
+ * Предлагает методы для удобной работы с данными. Задуман как основа для расширения других классов.
+ * @constructor
+ * @implements InterfaceEvents
+ * */
 var DefaultDataModel = function(){
 
 	this.props 						= Object.create(null);
@@ -84,6 +90,7 @@ DefaultDataModel.prototype = _objectsPrototyping(
 		 * @param {String} purpose
 		 * @param {String} key - старый ключ
 		 * @param {String,Function} alias - новый ключ
+		 * 	@memberof DefaultDataModel
 		 * */
 		"setAlias": function(purpose, key, alias){
 			// key - старый ключ
@@ -124,8 +131,9 @@ DefaultDataModel.prototype = _objectsPrototyping(
 
 		/**
 		 * @param {String} key
-		 * @param {Object} arg
-		 * @param {*} useEvent
+		 * @param {Object=} arg
+		 * @param {*=} useEvent
+		 * @memberof DefaultDataModel
 		 * */
 		"get" : function(key, arg, useEvent){
 
@@ -178,8 +186,9 @@ DefaultDataModel.prototype = _objectsPrototyping(
 		/**
 		 * @param {String} key - ключ
 		 * @param value - значение
-		 * @param {Object} arg - доп. аргументы, к примеру, на случай если ключ возвращается из функции.
-		 * @param {*} useEvent
+		 * @param {Object=} arg - доп. аргументы, к примеру, на случай если ключ возвращается из функции.
+		 * @param {*=} useEvent
+		 * @memberof DefaultDataModel
 		 * */
 		"set" : function(key, value, arg, useEvent){
 
@@ -260,18 +269,25 @@ DefaultDataModel.prototype = _objectsPrototyping(
 		},
 
 
+		/**
+		 * Возвращает массив с измененными ключами
+		 * @return {Array}
+		 * @memberof DefaultDataModel
+		 * */
 		"getChanged": function(){
 			var tmp = [];
 			for(var prop in this.propsChanged){
-				if (typeof this.propsChanged.hasOwnProperty == "function"){
-					if (!this.propsChanged.hasOwnProperty(prop)) continue;
-				}
+				if (  !Object.prototype.hasOwnProperty.call(this.propsChanged, prop)  ) continue;
 				tmp.push(prop);
 			}
 			return tmp;
 		},
 
 
+		/**
+		 * Очищает историю изменений
+		 * 	@memberof DefaultDataModel
+		 * */
 		"clearChanged": function(){
 			this.propsChanged = Object.create(null);
 		}

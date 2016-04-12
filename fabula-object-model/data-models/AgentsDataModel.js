@@ -1,7 +1,10 @@
 // ------------------------------------------------------
 // Данные из базы об агентах
 
-// Для совместимости
+/**
+ * Для совместимости
+ * @ignore
+ * */
 var getContextDB = function(){
 	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
 	var DBModel = FabulaObjectModel.prototype._getModule("DBModel");
@@ -12,6 +15,10 @@ var getContextDB = function(){
 	return DBModel.prototype.getInstance();
 };
 
+
+/**
+ * @constructor
+ * */
 var AgentsDataModel = function(){
 	this.init();
 };
@@ -29,8 +36,16 @@ AgentsDataModel.prototype = {
 
 	},
 
+
+	/**
+	 * Массив экземпляров класса
+	 * */
 	"instances" : [],
 
+
+	/**
+	 * Получить экземпляр класса
+	 * */
 	"getInstance" : function(){
 		if (this.instances.length){
 			return this.instances[0];
@@ -38,6 +53,10 @@ AgentsDataModel.prototype = {
 		return new AgentsDataModel();
 	},
 
+
+	/**
+	 * Инициализация данных из БД
+	 * */
 	"load" : function(A){
 		if (typeof A == "undefined") A = Object.create(null);
 		var callback = (typeof A.callback == "function" ? A.callback : function(){} );
@@ -55,6 +74,10 @@ AgentsDataModel.prototype = {
 		}
 	},
 
+
+	/**
+	 * Получить инициализированные данные
+	 * */
 	"get" : function(){
 		return this.data;
 	}
