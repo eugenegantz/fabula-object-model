@@ -36,6 +36,8 @@ GandsDataModel.prototype = {
 
 		this.state = 0;
 
+		this._init_timestamp = null;
+
 		this._indexData = {};
 
 	},
@@ -130,6 +132,7 @@ GandsDataModel.prototype = {
 						},
 						callback
 					);
+					self._init_timestamp = Date.now();
 				}
 			});
 		}

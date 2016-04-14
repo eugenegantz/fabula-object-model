@@ -5,13 +5,17 @@ var gands = require("./GandsDataModel").prototype.getInstance();
 
 var PrintUtils = Object.create(null);
 
-
+/**
+ * @ignore
+ * */
 PrintUtils._cache = {
-	"formats": null
+	"formats": null,
+	"_init_timestamp": null
 };
 
 
 /**
+ * Кеширование форматов
  * @ignore
  * */
 PrintUtils._initFormatCache = function(){
@@ -32,6 +36,8 @@ PrintUtils._initFormatCache = function(){
 			tmp[1] = tmp[1].trim();
 
 			tmp = formats[gandsFormat[c].GSID.toLowerCase()] = {
+				"GSID": gandsFormat[c].GSID,
+				"id": gandsFormat[c].GSID,
 				"height": +tmp[1],
 				"width": +tmp[0],
 				"name": gandsFormat[c].GSName
@@ -53,6 +59,7 @@ PrintUtils._initFormatCache = function(){
 
 	}
 
+	this._cache._init_timestamp = gands._init_timestamp;
 	this._cache.formats = formats;
 
 };
@@ -64,7 +71,10 @@ PrintUtils._initFormatCache = function(){
  * */
 PrintUtils.getFormats = function(){
 
-	if (  !this._cache.formats  ) {
+	if (
+		!this._cache.formats
+		|| gands._init_timestamp != this._cache._init_timestamp
+	) {
 		this._initFormatCache();
 	}
 
@@ -74,7 +84,7 @@ PrintUtils.getFormats = function(){
 
 
 /**
- * Получить объект формата с ключами размеров ширины, высоты, площади, короткой и длинной стороны
+ * Получить объект формата с ключами: ширина, высота, площадь, короткая и длинная стороны
  * @example {"width": Number, "height": Number, "area": Number, "long": Number, "short": Number}
  * @param {Object, String} arg
  * @return {Object}

@@ -164,6 +164,15 @@ var db = fom.create("DBModel");
 			"GSKindName": "Формат",
 			"GSName": "A6",
 			"Sort4": 90
+		},
+		"ТСПоФмВ1": {
+			"GSID": "ТСПоФмВ1",
+			"GSID4": "ТСПо",
+			"Tick": 0,
+			"GSCOP": "",
+			"GSKindName": "Формат",
+			"GSName": "90x50",
+			"Sort4": 90
 		}
 	};
 	db.dbquery({
@@ -242,6 +251,12 @@ var db = fom.create("DBModel");
 			"extclass": "GANDS",
 			"extid": "ТСПоФмА6",
 			"value": "105x148"
+		},
+		"Размер_ТСПоФмВ1": {
+			"property": "Размер",
+			"extclass": "GANDS",
+			"extid": "ТСПоФмВ1",
+			"value": "50x90"
 		}
 	};
 	db.dbquery({
