@@ -17,6 +17,7 @@ var getContextDB = function(){
 // TODO пересмотреть алиасы
 /**
  * @constructor
+ * @augments DefaultDataModel
  * */
 var DocDataModel = function(){
 	DefaultDataModel.call(this);
@@ -189,11 +190,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			return [];
 
 		},
-
-
+	
+	
 		/**
 		 * Добавить задачу в заявку
-		 * @param {MovDataModel} mov - экземпляр задачи
+		 * @param {MovDataModel} mov  экземпляр задачи
 		 * @memberof DocDataModel
 		 * */
 		"addMov": function (mov) {
@@ -204,11 +205,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			}
 			this.movs.push(mov);
 		},
-
-
+	
+	
 		/**
 		 * Удалить задачу из заявки
-		 * @param {Object} keyValue - найти и удалить задачу по след. значениям
+		 * @param {Object} keyValue  найти и удалить задачу по след. значениям
 		 * @memberof DocDataModel
 		 * */
 		"deleteMov": function (keyValue) {
@@ -241,8 +242,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return true;
 		},
-
-
+	
+	
 		/**
 		 * Удалить все задачи в заявке
 		 * @memberof DocDataModel
@@ -250,7 +251,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"deleteAllMovs": function () {
 			this.movs = []
 		},
-
+	
+	
 		/**
 		 * Удалить задачу из заявки
 		 * @borrows deleteMov
@@ -259,8 +261,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"removeMov": function () {
 			return this.deleteMov.apply(this, arguments);
 		},
-
-
+	
+	
 		/**
 		 * @borrows deleteAllMovs
 		 * @memberof DocDataModel
@@ -268,8 +270,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"removeAllMovs": function () {
 			return this.deleteAllMovs();
 		},
-
-
+	
+	
 		/**
 		 * Сохранить (Добавить/обновить)
 		 * @param {Object} arg
@@ -359,7 +361,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				}
 			)
-			.then(
+				.then(
 				function(){
 					saveMethod.apply(self, selfArguments);
 				}
@@ -385,6 +387,10 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			var ownProps = this.getProperty(null);
 
 			var dbq = [];
+
+			// -------------------------------------------------------------------------------------------
+
+			self.trigger("beforeInsert");
 
 			// -------------------------------------------------------------------------------------------
 			// Поля по-умолчанию
@@ -562,6 +568,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			Promise.cascade(promises, {"stackSize":1,"interval":1000})
 				.then(function(){
 					callback(null);
+					self.trigger("afterInsert");
 				})
 				.catch(function(err){
 					callback(err);
@@ -577,7 +584,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @param {Object} parentArg					// Аргументы сохранения родительской заявки, если такая есть
 		 * @param {Object} childrenArg					// Аргумент сохр. подчиненной заявки, если такие есть
 		 * @param {Object} movArg						// Аргументы сохранения подчиненных задач // см. MovDataModel
-		* */
+		 * */
 		"update": function(ownArg, parentArg, childrenArg, movArg){
 			var self = this;
 
@@ -605,19 +612,23 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				}) || [];
 
 			/*
-			var includeMovs = _utils.parseArg({
-					"value": typeof ownArg.includeMovs == "undefined"? null : ownArg.includeMovs,
-					"into":			"array",
-					"isInt":			true,
-					"toInt":			true,
-					"kickEmpty":	true,
-					"delimiters":	[",",";"]
-				}) || [];
-			*/
+			 var includeMovs = _utils.parseArg({
+			 "value": typeof ownArg.includeMovs == "undefined"? null : ownArg.includeMovs,
+			 "into":			"array",
+			 "isInt":			true,
+			 "toInt":			true,
+			 "kickEmpty":	true,
+			 "delimiters":	[",",";"]
+			 }) || [];
+			 */
 
 			// var onlyChanged = typeof ownArg.onlyChanged == "undefined" ? true : Boolean(ownArg.onlyChanged);
 
 			var dbawws = getContextDB.call(this); // DBModel.prototype.getInstance();
+
+			// ----------------------------------------------------------------------------
+
+			self.trigger("beforeUpdate");
 
 			// ----------------------------------------------------------------------------
 			// Запись полей
@@ -627,9 +638,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					"SELECT uid, property, [value], ExtID  " +
 					" FROM Property " +
 					" WHERE " +
-						" pid = 0" +
-						" AND ExtClass = 'DOCS' " +
-						" AND ExtID IN (SELECT DocID FROM DOCS WHERE ID = "+self.get("ID")+")",
+					" pid = 0" +
+					" AND ExtClass = 'DOCS' " +
+					" AND ExtID IN (SELECT DocID FROM DOCS WHERE ID = "+self.get("ID")+")",
 
 					"SELECT MMID FROM Movement WHERE Doc IN (SELECT DocID FROM DOCS WHERE ID = "+self.get("ID")+") "
 				].join("; "),
@@ -649,7 +660,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						lowName,
 						type,
 						c,
-						//tmp = [],
+					//tmp = [],
 						prop,
 						lowerName;
 
@@ -696,7 +707,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					var dbPropRef = {};
 					var selfPropRef = {};
 					var property;
-					tmp = [];
+					var tmp = [];
 
 					for(c=0; c<self._property.length; c++){
 						if (typeof self._property[c] != "object" || !self._property[0]) continue;
@@ -789,14 +800,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 							dbq.push(
 								"UPDATE Property " +
 								" SET " +
-									[
-										"[value]=\""+_utils.DBSecureStr(selfPropRef[dbProps[c].uid].value)+"\"",
-										"[ExtID]='"+self.get("DocID")+"'",
-										"[ExtClass]='DOCS'"
-									].join(", ")+
+								[
+									"[value]=\""+_utils.DBSecureStr(selfPropRef[dbProps[c].uid].value)+"\"",
+									"[ExtID]='"+self.get("DocID")+"'",
+									"[ExtClass]='DOCS'"
+								].join(", ")+
 								" WHERE " +
-									" property = '"+dbProps[c].property+"' " +
-									" AND uid = "+ dbProps[c].uid
+								" property = '"+dbProps[c].property+"' " +
+								" AND uid = "+ dbProps[c].uid
 							);
 						}
 					}
@@ -875,7 +886,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 								return;
 							}
 							if (  self.movs[cc].get("Doc1") != self.get("DocID")  ){
-								self.movs[cc].set("Doc", self.get("DocID"));
+								if (  self.movs[cc].get("Doc") != self.get("DocID")  ){
+									self.movs[cc].set("Doc", self.get("DocID"));
+								}
 							}
 
 							promises.push(
@@ -908,6 +921,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						.then(
 						function(){
 							callback(null);
+							self.trigger("afterUpdate");
 						}
 					)
 						.catch(

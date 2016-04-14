@@ -49,6 +49,10 @@ var propUtils = {
 	}
 };
 
+
+/**
+ * @interface
+ * */
 var InterfaceFProperty = function(){
 	this._property = [];
 	this._changedFProperty = [];
@@ -56,6 +60,9 @@ var InterfaceFProperty = function(){
 	InterfaceEvents.call(this);
 };
 
+/**
+ * @abstract
+ * */
 InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 	InterfaceEvents.prototype,
 	{
@@ -63,7 +70,7 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"_interfaceFPropertyFields": {
 			"uid"			:{"type":"integer"},
 			"pid"			:{"type":"integer"},
-			"sort"			:{"type":"integer"},
+			"sort"		:{"type":"integer"},
 			"value"		:{"type":"string"},
 			"valuetype":{"type":"string"},
 			"extclass"	:{"type":"string"},
@@ -160,6 +167,10 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * Добавить свойство
+		 * @param {Object} property - объект-свойства. Ключи в объекте соответсвуют полям в таблице Property
+		 * */
 		"addProperty": function(property){
 
 			var existsFields = [], prop, type, value, lowName;
@@ -221,12 +232,20 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			this._property.push(property);
 		},
 
-
+		/**
+		 * @alias addProperty
+		 * */
 		"appendProperty": function(){
 			this.addProperty.apply(this, arguments);
+			this.appendProperty()
 		},
 
 
+		/**
+		 * Обновить свойство
+		 * @param {object} getKeyValue - искомое свойство
+		 * @param {Object} setKeyValue - свойство на замену
+		 * */
 		"updateProperty": function(getKeyValue, setKeyValue){
 			if (typeof getKeyValue != "object" || !getKeyValue) return;
 			if (typeof setKeyValue != "object" || !setKeyValue) return;
@@ -258,6 +277,11 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * Обновляет существующее или записывает новое свойсто с указанными ключами
+		 * @param {object} getKeyValue - искомое свойство
+		 * @param {Object} insProperty - свойство на замену
+		 * */
 		"upsertProperty": function(getKeyValue, insProperty){
 			var filterProps = function(pr){
 				var tmp = [];
@@ -332,8 +356,9 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		/**
+		 * Получить свойство
 		 * @return {Array}
-		 * @param {Object} keyValue
+		 * @param {Object} keyValue - искомое свойство
 		 * */
 		"getProperty": function(keyValue){
 			var props = [];
@@ -396,16 +421,27 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * Получить измененные свойства
+		 * @return {Object}
+		 * */
 		"getChangedProperty": function(){
 			return this._changedFProperty;
 		},
 
 
+		/**
+		 * Очистить историю изменений свойств
+		 * */
 		"clearChangedProperty": function(){
 			this._changedFProperty = [];
 		},
 
 
+		/**
+		 * Удалить свойство
+		 * @param {Object} keyValue - искомое свойство на удаление
+		 * */
 		"removeProperty": function(keyValue){
 			var props = [];
 
@@ -474,6 +510,9 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			return isDeleted;
 		},
 
+		/**
+		 * @alias removeProperty
+		 * */
 		"deleteProperty": function(){
 			return this.removeProperty.apply(this, arguments);
 		}

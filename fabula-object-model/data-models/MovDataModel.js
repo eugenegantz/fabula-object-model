@@ -16,9 +16,11 @@ var getContextDB = function(){
 };
 
 // TODO пересмотреть алиасы
-/*
-* @Constructor
-* */
+/**
+ * @constructor
+ * @augments DefaultDataModel
+ * @implements InterfaceFProperty
+**/
 var MovDataModel = function(){
 
 	// this.instances.push(this);
@@ -122,14 +124,14 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		"_eventSetGS": function(){
 			/*
-			* Планировалось привязать к событию "set:gs"
-			* Для автоматического присваивания кода операции
-			* (Поле CodeOp в Movement, поле GSCOP в GANDS)
-			* Это требует асинх загрузки GandsDataModel.
-			* Нет гарантии успешной выборки GSCOP из GANDS при отсутствии
-			* задержек между инициализацией экземпляра и присваиванием.
-			* => Было решено переложить данный функционал на внешние контроллеры
-			* */
+			 * Планировалось привязать к событию "set:gs"
+			 * Для автоматического присваивания кода операции
+			 * (Поле CodeOp в Movement, поле GSCOP в GANDS)
+			 * Это требует асинх загрузки GandsDataModel.
+			 * Нет гарантии успешной выборки GSCOP из GANDS при отсутствии
+			 * задержек между инициализацией экземпляра и присваиванием.
+			 * => Было решено переложить данный функционал на внешние контроллеры
+			 * */
 		},
 
 
@@ -437,7 +439,7 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				// Получение свойств подчиненных записей
 				" SELECT uid, pid, ExtClass, ExtID, property, value " +
 				" FROM Property WHERE pid IN (" +
-					" SELECT MMID FROM Movement WHERE MMPID = " + MMID + " " +
+				" SELECT MMID FROM Movement WHERE MMPID = " + MMID + " " +
 				" ) "
 			];
 
@@ -560,7 +562,7 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			defaultFields.gsdate.value = "NOW()";
 
 			var values = [], fields = [];
-			var value, c, prop, type, lowName;
+			var value, c, prop, tmp, type, lowName;
 
 			// -----------------------------------------------------------------
 
@@ -572,19 +574,15 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				if (  !defaultFields.hasOwnProperty(prop)  ) continue;
 				lowName = prop.toLowerCase();
 
-				value = defaultFields[prop].value || this.get(prop);
+				value = this.get(prop) || defaultFields[prop].value || null;
 
 				if (!value) continue;
 
-				if (value instanceof Date){
-					value = ""
-						+ [value.getDate(), value.getMonth()-1, value.getFullYear()].join(".")
-						+ " "
-						+ [value.getHours(),value.getMinutes(),value.getSeconds()].join(";");
-				}
-
 				if (  defaultFields[prop].type == "S"  ) {
 					values.push(!value ? "NULL" : "\""+_utils.DBSecureStr(value)+"\"");
+
+				} else if (  defaultFields[prop].type == "D"  ) {
+					values.push("CDate(\"" + _utils.DBSecureDate(value) + "\")");
 
 				} else {
 					values.push(!value ? "NULL" : value);
@@ -746,7 +744,7 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @param {Array}			arg.excludeMovs				// Применить изменения только в перечисленных задачах // НЕ РАБОТАЕТ
 		 * @param {Function}		arg.callback(err)				// callback
 		 * */
-		 "update": function(arg){
+		"update": function(arg){
 			if (typeof arg != "object") arg = {};
 
 			var dbawws = getContextDB.call(this); // DBModel.prototype.getInstance();
@@ -762,24 +760,22 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			// var saveParent = typeof arg.saveParent == "undefined" ? true : Boolean(arg.saveParent);
 
 			var excludeMovs = _utils.parseArg({
-				"value":			typeof arg.excludeMovs == "undefined"? null : arg.excludeMovs,
-				"into":			"array",
-				"isInt":			true,
-				"toInt":			true,
-				"kickEmpty":	true,
-				"delimiters":	[",",";"]
-			}) || [];
+					"value":			typeof arg.excludeMovs == "undefined"? null : arg.excludeMovs,
+					"into":			"array",
+					"isInt":			true,
+					"toInt":			true,
+					"kickEmpty":	true,
+					"delimiters":	[",",";"]
+				}) || [];
 
-			/*
 			var includeMovs = _utils.parseArg({
-				"value": typeof arg.includeMovs == "undefined"? null : arg.includeMovs,
-				"into":			"array",
-				"isInt":			true,
-				"toInt":			true,
-				"kickEmpty":	true,
-				"delimiters":	[",",";"]
-			}) || [];
-			*/
+					"value": typeof arg.includeMovs == "undefined"? null : arg.includeMovs,
+					"into":			"array",
+					"isInt":			true,
+					"toInt":			true,
+					"kickEmpty":	true,
+					"delimiters":	[",",";"]
+				}) || [];
 
 			var MMID = this.get("MMID");
 
@@ -910,14 +906,14 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 								dbq.push(
 									"UPDATE Property " +
 									" SET " +
-										[
-											"[value]=\""+_utils.DBSecureStr(objPropRef[dbProps[c].uid].value)+"\"",
-											"[ExtClass]='DOCS'",
-											"[ExtID]="+(!self.get("Doc") ? "NULL" : "\""+self.get("Doc")+"\"")
-										].join(", ") +
+									[
+										"[value]=\""+_utils.DBSecureStr(objPropRef[dbProps[c].uid].value)+"\"",
+										"[ExtClass]='DOCS'",
+										"[ExtID]="+(!self.get("Doc") ? "NULL" : "\""+self.get("Doc")+"\"")
+									].join(", ") +
 									" WHERE " +
-										" property = '"+dbProps[c].property+"' " +
-										" AND uid = " + dbProps[c].uid
+									" property = '"+dbProps[c].property+"' " +
+									" AND uid = " + dbProps[c].uid
 								);
 							}
 
@@ -988,15 +984,11 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 							value = self.get(lowName);
 							type = defaultFields[lowName].type;
 
-							if (value instanceof Date){
-								value = ""
-									+ [value.getDate(), value.getMonth()-1, value.getFullYear()].join(".")
-									+ " "
-									+ [value.getHours(),value.getMinutes(),value.getSeconds()].join(";");
-							}
+							if (  "D" == type  ) {
+								values.push(("["+lowName+"]=") + (!value ? "NULL" : 'CDATE(\'' + _utils.DBSecureDate(value)) + '\')');
 
-							if (  type == "S"  ) {
-								values.push(("["+lowName+"]=") + (!value ? "NULL" : '\''+_utils.DBSecureStr(value)+'\''));
+							} else if (  "S" == type  ) {
+								values.push(("["+lowName+"]=") + (!value ? "NULL" : '\'' + _utils.DBSecureStr(value) + '\''));
 
 							} else {
 								values.push(("["+lowName+"]=") + (!value ? "NULL" : value));

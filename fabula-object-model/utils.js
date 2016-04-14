@@ -5,7 +5,8 @@ _utils.DBSecureStr = function(str){
 	if (typeof str != "string") return str;
 	var a = [
 		[new RegExp(/["']/g),""],
-		["№","N"]
+		[new RegExp(/[№]/gi),"N"]
+		// [new RegExp(/[\n\v\r]/gi),""]
 	];
 	for(var c=0; c< a.length; c++){
 		str = str.replace(
@@ -14,6 +15,40 @@ _utils.DBSecureStr = function(str){
 		);
 	}
 	return str;
+};
+
+
+/**
+ * Служебный метод. Используется в процессе записи даты в поля.
+ * Необходим для безопасной записи полей DateTime
+ * @param {Date, String} date - дата для записи
+ * @param {*=false} strict - Выбрасывать ошибки?
+ * @return String В формате YYYY.MM.DD HH:mm:ss
+ * */
+_utils.DBSecureDate = function(date, strict){
+	strict = Boolean(strict);
+
+	if (typeof date == "string"){
+		date = new Date(date.replace(/[-.]/gi, "/"));
+	}
+
+	if (  isNaN(date.getTime())  ){
+		if (strict) throw new Error("Wrong date format");
+		date = new Date();
+	}
+
+	if (date instanceof Date == false){
+		if (strict) throw new Error("Only \"Date\" and \"String\" types");
+		date = new Date();
+	}
+
+	return ""
+		+ date.getFullYear()
+		+ "." + (date.getMonth() + 1)
+		+ "." + date.getDate()
+		+ " " + date.getHours()
+		+ ":" + date.getMinutes()
+		+ ":" + date.getSeconds();
 };
 
 /**
