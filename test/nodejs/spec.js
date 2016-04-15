@@ -35,7 +35,7 @@ describe("fabula-object-model", function(){
 
 });
 
-describe.skip("ObjectA", function(){
+describe("ObjectA", function(){
 
 		var ObjectA = fom._getModule("ObjectA");
 
@@ -105,7 +105,7 @@ describe.skip("ObjectA", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("InterfaceEvents", function(){
+describe("InterfaceEvents", function(){
 		var st = false;
 
 		var InterfaceEvents = fom._getModule("InterfaceEvents");
@@ -132,7 +132,7 @@ describe.skip("InterfaceEvents", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("InterfaceFProperty", function(){
+describe("InterfaceFProperty", function(){
 
 	var fp = fom.create("InterfaceFProperty"); // new InterfaceFProperty();
 
@@ -297,7 +297,7 @@ describe("DBModel", ()=>{
 // -----------------------------------------------------------------------------
 
 
-describe.skip("DefaultDataModel", function(){
+describe("DefaultDataModel", function(){
 
 	var defDm = fom.create("DefaultDataModel"); // new DefaultDataModel();
 
@@ -354,7 +354,7 @@ describe.skip("DefaultDataModel", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("MovDataModel", function(){
+describe("MovDataModel", function(){
 
 	var db = fom.create("DBModel");
 
@@ -581,7 +581,7 @@ describe.skip("MovDataModel", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("DocDataModel", function(){
+describe("DocDataModel", function(){
 
 	var db = fom.create("DBModel");
 
@@ -880,7 +880,7 @@ describe.skip("DocDataModel", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("utils", function(){
+describe("utils", function(){
 
 	var _utils = fom.create("utils");
 
@@ -916,7 +916,7 @@ describe.skip("utils", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("Ajax-module", ()=>{
+describe("Ajax-module", ()=>{
 
 	it("Ajax._xFormParam", ()=>{
 		var a = Ajax._xFormParam({
@@ -994,7 +994,7 @@ describe.skip("Ajax-module", ()=>{
 // -----------------------------------------------------------------------------
 
 
-describe.skip("FOM", ()=>{
+describe("FOM", ()=>{
 
 	var db = fom.getDBInstance();
 
@@ -1092,7 +1092,7 @@ describe("GandsDataModel", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("PrintUtils", function(){
+describe("PrintUtils", function(){
 
 	var PrintUtils = fom._getModule("PrintUtils");
 

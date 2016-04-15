@@ -3,7 +3,7 @@
 	"main": "./nodejs/FabulaObjectModel.js",
 	"version": "0.8.0",
 	"dependencies": {
-		"eg-db-awws": "//192.168.3.109/Eg/repo/eg-db-awws/",
-		"eg-promise-cascade": "//192.168.3.109/Eg/repo/eg-promise-cascade/"
+		"eg-db-awws": "https://github.com/eugenegantz/eg-db-awws.git",
+		"eg-promise-cascade": "https://github.com/eugenegantz/promise.cascade.git"
 	}
 }
