@@ -59,6 +59,8 @@ FabulaObjModel.prototype._setModule("GandsDataModel", require("./data-models/Gan
 
 FabulaObjModel.prototype._setModule("CalcDefaultPrint",  require("./data-models/calc/DefaultPrintCalc"));
 
+FabulaObjModel.prototype._setModule("CalcPrintDefault",  require("./data-models/calc/DefaultPrintCalc"));
+
 FabulaObjModel.prototype._setModule("CalcPrintBrochure",  require("./data-models/calc/CalcPrintBrochure"));
 
 FabulaObjModel.prototype._setModule("CalcPrintOffset",  require("./data-models/calc/CalcPrintOffset"));
@@ -72,6 +74,8 @@ FabulaObjModel.prototype._setModule("CalcPrintPostprocCreasing",  require("./dat
 FabulaObjModel.prototype._setModule("CalcPrintPostprocRounding",  require("./data-models/calc/CalcPrintPostprocRounding"));
 
 FabulaObjModel.prototype._setModule("CalcPrintPostprocFolding",  require("./data-models/calc/CalcPrintPostprocFolding"));
+
+FabulaObjModel.prototype._setModule("CalcPrintPostprocLaminating",  require("./data-models/calc/CalcPrintPostprocLaminating"));
 
 FabulaObjModel.prototype._setModule("CalcUtils",  require("./data-models/calc/CalcUtils"));
 
@@ -89,6 +93,10 @@ FabulaObjModel.prototype._setModule("ObjectA", require("./data-models/ObjectA"))
 	FabulaObjModel.prototype._setModule("InterfaceFProperty", require("./data-models/InterfaceFProperty"));
 
 	FabulaObjModel.prototype._setModule("AgentsDataModel", require("./data-models/AgentsDataModel"));
+
+	FabulaObjModel.prototype._setModule("CompanesDataModel", require("./data-models/CompanesDataModel"));
+
+	FabulaObjModel.prototype._setModule("CompaniesDataModel", require("./data-models/CompanesDataModel"));
 
 	FabulaObjModel.prototype._setModule("DataModelAdapters", require("./data-models/DataModelAdapters"));
 

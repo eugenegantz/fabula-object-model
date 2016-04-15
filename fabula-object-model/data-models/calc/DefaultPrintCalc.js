@@ -42,7 +42,7 @@ DefaultPrintCalc.prototype.calc = function(arg){
 		typeof arg.GSID != "string"
 		|| !arg.GSID
 	){
-		throw new Error("arg.GSID suppose to be String");
+		throw new Error("arg.GSID suppose to be not empty String");
 	}
 
 	var argGSID = arg.GSID;
@@ -76,23 +76,25 @@ DefaultPrintCalc.prototype.calc = function(arg){
 	for(var c=0; c<gandsRow.gandsExtRef.length; c++) {
 		loopPrice = +gandsRow.gandsExtRef[c].GSExNum;
 		loopAmount = +gandsRow.gandsExtRef[c].GSExSort;
-
-		// Цена покупки
-		if (
-			!salePrice
-			&& gandsRow.gandsExtRef[c].GSExType.toLowerCase().trim() == "цена продажи"
-		) {
-			continue;
-		}
+		var _cont = 0;
 
 		// Цена продажи
 		if (
 			salePrice
-			&& gandsRow.gandsExtRef[c].GSExType.toLowerCase().trim() != "цена продажи"
-			&& gandsRow.gandsExtRef[c].GSExType.toLowerCase().trim() != "цена"
-		) {
-			continue;
+			&& gandsRow.gandsExtRef[c].GSExType.toLowerCase().trim() == "цена продажи"
+		){
+			_cont = 1;
 		}
+
+		// Цена покупки
+		if (
+			!salePrice
+			&& gandsRow.gandsExtRef[c].GSExType.toLowerCase().trim() == "цена покупки"
+		){
+			_cont = 1;
+		}
+
+		if (!_cont) continue;
 
 		// ------------------------------------------------------------
 		// Автор блока: Миланин Альберт
@@ -106,10 +108,10 @@ DefaultPrintCalc.prototype.calc = function(arg){
 				try {
 					if (cost == 0) {
 						cost = loopPrice / ( loopAmount || 1 ) * argAmount;
-
+						// cost = round2(rC[i].Summa / (rC[i].Kol || 1) * r.Amount, 3);
 					} else {
 						cost = cost + ( loopPrice - cost ) * ( argAmount - kol ) / ( loopAmount - kol );
-
+						// cost = round2( cost + (rC[i].Summa-cost)*( r.Amount - kol)/ ( rC[i].Kol-kol), 3);
 					}
 
 					kol = argAmount;

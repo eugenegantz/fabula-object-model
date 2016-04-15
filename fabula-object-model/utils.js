@@ -484,7 +484,7 @@ _utils.parseArg = function(arg){
 			? arg.trim
 			: (
 			typeof arg.trim == "string"
-				? arg.split("")
+				? arg.trim.split("")
 				: null
 		)
 	);

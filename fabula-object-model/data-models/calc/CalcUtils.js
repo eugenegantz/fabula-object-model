@@ -5,6 +5,34 @@ var gands = require("./../GandsDataModel").prototype.getInstance();
 
 module.exports = {
 
+
+	/**
+	 * @param {Object} arg
+	 * @param {String} arg.GSID - номенклатурный номер
+	 * */
+	"detectCalcModel": function(arg){
+		var c, arr = [
+			{"Mod": require("./CalcPrintPostprocLaminating")}
+		];
+
+		for(c=0; c<arr.length; c++){
+			if (  arr[c].Mod.prototype.getGSID  ){
+				arr[c].GSID = arr[c].Mod.prototype.getGSID();
+			}
+		}
+
+		if (typeof arg.GSID == "string" && arg.GSID){
+			for(c=0; c<arr.length; c++){
+				if (arr[c].GSID.indexOf(arg.GSID) > -1){
+					return arr[c].Mod;
+				}
+			}
+		}
+
+		return void 0;
+	},
+
+
 	"getCalcModel": function(name){
 		switch (name) {
 			case cConst.OFFSET_PRINT:						return require("./CalcPrintOffset");
@@ -124,7 +152,9 @@ module.exports = {
 			if (  isNaN(value.height) || isNaN(value.width)  ){
 				return void 0;
 			}
-			value.area = value.width * value.height;
+			if (!value.area) value.area = value.width * value.height;
+			if (!value.long) value.long = value.width > value.height ? value.width : value.height;
+			if (!value.short) value.short = value.width < value.height ? value.width : value.height;
 			return value;
 		} else {
 			return void 0;

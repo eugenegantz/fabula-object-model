@@ -43,17 +43,7 @@ PrintUtils._initFormatCache = function(){
 				"name": gandsFormat[c].GSName
 			};
 
-			tmp.area = tmp.height * tmp.width;
-
-			tmp.long =
-				tmp.width > tmp.height
-					? tmp.width
-					: tmp.height;
-
-			tmp.short =
-				tmp.width < tmp.height
-					? tmp.width
-					: tmp.height;
+			this._applyShortLongArea(tmp);
 
 		}
 
@@ -115,8 +105,22 @@ PrintUtils.getFormat = function(arg){
  * @param {String} small - формат продукции
  * */
 PrintUtils.formatFill = function(big, small){
-	big = this.getFormat(big);
-	small = this.getFormat(small);
+	if (typeof big == "object"){
+		this._applyShortLongArea(big);
+
+	} else {
+		big = this.getFormat(big);
+
+	}
+
+	if (  typeof small == "object"  ){
+		this._applyShortLongArea(small)
+
+	} else {
+		small = this.getFormat(small);
+
+	}
+
 	var W = Math.floor(big.long / small.long) * Math.floor(big.short / small.short);
 	var L = Math.floor(big.long / small.short) * Math.floor(big.short / small.long);
 	return W > L ? W : L;
@@ -157,5 +161,16 @@ PrintUtils.convertLength = function(from, to, value){
 
 	return (parseFloat(value) * scale[from]) / scale[to];
 };
+
+
+PrintUtils._applyShortLongArea = function(a){
+	if (a.width || a.height){
+		if (!a.area) a.area = a.width * a.height;
+		if (!a.long) a.long = a.width > a.height ? a.width : a.height;
+		if (!a.short) a.short = a.width < a.height ? a.width : a.height;
+	}
+	return a;
+};
+
 
 module.exports = PrintUtils;

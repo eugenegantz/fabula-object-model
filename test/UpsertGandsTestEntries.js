@@ -173,7 +173,54 @@ var db = fom.create("DBModel");
 			"GSKindName": "Формат",
 			"GSName": "90x50",
 			"Sort4": 90
+		},
+		"ТСПоФм01": {
+			"GSID": "ТСПоФм01",
+			"GSID4": "ТСПо",
+			"Tick": 0,
+			"GSCOP": "",
+			"GSKindName": "Формат",
+			"GSName": "70x100",
+			"Sort4": 90
+		},
+		"ТСПоФм02": {
+			"GSID": "ТСПоФм02",
+			"GSID4": "ТСПо",
+			"Tick": 0,
+			"GSCOP": "",
+			"GSKindName": "Формат",
+			"GSName": "90x100",
+			"Sort4": 90
+		},
+		"ТСПоФм03": {
+			"GSID": "ТСПоФм03",
+			"GSID4": "ТСПо",
+			"Tick": 0,
+			"GSCOP": "",
+			"GSKindName": "Формат",
+			"GSName": "100x140",
+			"Sort4": 90
+		},
+		"ТСПоФмЕ1": {
+			"GSID": "ТСПоФмЕ1",
+			"GSID4": "ТСПо",
+			"Tick": 0,
+			"GSCOP": "",
+			"GSKindName": "Формат",
+			"GSName": "Euro",
+			"Sort4": 90
+		},
+		"ТСПоФмЕ2": {
+			"GSID": "ТСПоФмЕ2",
+			"GSID4": "ТСПо",
+			"Tick": 0,
+			"GSCOP": "",
+			"GSKindName": "Формат",
+			"GSName": "Euro x2",
+			"Sort4": 90
 		}
+
+
 	};
 	db.dbquery({
 		query: "SELECT GSID FROM GANDS WHERE GSID LIKE 'ТСПо%' ",
@@ -257,7 +304,39 @@ var db = fom.create("DBModel");
 			"extclass": "GANDS",
 			"extid": "ТСПоФмВ1",
 			"value": "50x90"
+		},
+		"Размер_ТСПоФм01": {
+			"property": "Размер",
+			"extclass": "GANDS",
+			"extid": "ТСПоФм01",
+			"value": "70x100"
+		},
+		"Размер_ТСПоФм02": {
+			"property": "Размер",
+			"extclass": "GANDS",
+			"extid": "ТСПоФм02",
+			"value": "90x100"
+		},
+		"Размер_ТСПоФм03": {
+			"property": "Размер",
+			"extclass": "GANDS",
+			"extid": "ТСПоФм03",
+			"value": "100x140"
+		},
+		"Размер_ТСПоФмЕ1": {
+			"property": "Размер",
+			"extclass": "GANDS",
+			"extid": "ТСПоФмЕ1",
+			"value": "99x210"
+		},
+		"Размер_ТСПоФмЕ2": {
+			"property": "Размер",
+			"extclass": "GANDS",
+			"extid": "ТСПоФмЕ2",
+			"value": "200x210"
 		}
+
+
 	};
 	db.dbquery({
 		query: "SELECT property, extclass, extid FROM Property WHERE ExtClass = 'GANDS' AND property LIKE 'Размер' ",
