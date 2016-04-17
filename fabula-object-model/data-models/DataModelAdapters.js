@@ -266,7 +266,7 @@ Adapters.MovTaskAdapter = function(mov){
 		throw new Error("arguments.length == 0");
 	}
 
-	if (mov instanceof MovDataModel === false){
+	if (mov instanceof MovDataModel == false){
 		throw new Error("1st argument suppose to be \"MovDataModel\"");
 	}
 
@@ -381,7 +381,9 @@ Adapters.MovTaskAdapter.prototype = {
 
 		this.mov.removeProperty({"Property": "Комментарий"});
 
-		if (  comment.trim()  ){
+		comment = comment.replace(/[\n\v\r]/gi,"").trim();
+
+		if (  comment  ){
 			this.mov.addProperty(
 				this.mov.splitProperty({"Property":"Комментарий","value":comment})
 			);
@@ -391,7 +393,7 @@ Adapters.MovTaskAdapter.prototype = {
 	"setPostproc": function(postproc){
 
 		var mov = this._getSelfObj();
-		var child, c;
+		var child, c, v, tmp;
 		var postproc_ = [];
 
 		for(c=0; c<postproc.length; c++){
@@ -462,7 +464,7 @@ Adapters.DocAdapter = function(doc){
 	if (!arguments.length){
 		throw new Error("!arguments.length");
 	}
-	if (  doc instanceof DocDataModel === false ){
+	if (  doc instanceof DocDataModel == false ){
 		throw new Error("1st argument suppose to be \"DocDataModel\"");
 	}
 	this.doc = doc;
@@ -491,9 +493,10 @@ Adapters.DocAdapter.prototype = {
 	"deleteProperty": Adapters._deleteProperty,
 
 	"getGrossSum": function(){
-		var movs = this.doc.movs;
+		var movs = this.doc.getMov();
 		var sum = 0;
 		for(var c=0; c<movs.length; c++){
+			if (  movs[c].get("ParentDoc")  ) continue;
 			sum += movs[c].get("Sum");
 		}
 		return sum;
@@ -508,9 +511,11 @@ Adapters.DocAdapter.prototype = {
 			throw new Error("type != \"String\"");
 		}
 
+		note = note.replace(/[\n\v\r]/gi,"").trim();
+
 		this.doc.removeProperty({"Property": "Примечание"});
 
-		if (note.trim()){
+		if (note){
 			this.doc.addProperty(
 				this.doc.splitProperty({"Property":"Примечание","value":note})
 			);

@@ -1027,7 +1027,7 @@ describe("FOM", ()=>{
 // -----------------------------------------------------------------------------
 
 
-describe("GandsDataModel", function(){
+describe.only("GandsDataModel", function(){
 
 	var gm = fom.create("GandsDataModel");
 
@@ -1128,7 +1128,7 @@ describe("PrintUtils", function(){
 // -----------------------------------------------------------------------------
 
 
-describe("Calc", function(){
+describe.only("Calc", function(){
 
 	var gands = fom.create("GandsDataModel");
 
@@ -1473,6 +1473,10 @@ describe("Calc", function(){
 			var res = lam.formatFill({width:500, height:800});
 			assert.equal(res, 0);
 		});
+		it(".formatFill(90,50) == 24", function(){
+			var res = lam.formatFill({width:90, height:50});
+			assert.equal(res, 24);
+		});
 		it(".calcAmount(1000, A4) == 500", function(){
 			var res = lam.calcAmount({amount: 1000, format: "ТСПоФмА4"});
 			assert.equal(res, 500);
@@ -1480,6 +1484,10 @@ describe("Calc", function(){
 		it(".calcAmount(1000, [297,210]) == 500", function(){
 			var res = lam.calcAmount({amount: 1000, format: {"width": 297, "height": 210}});
 			assert.equal(res, 500);
+		});
+		it(".calcAmount(1000, [90,50]) == 42", function(){
+			var res = lam.calcAmount({amount: 1000, format: {"width": 90, "height": 50}});
+			assert.equal(res, 42);
 		});
 
 		it(".calc(amount=1000, side=1, salePrice=false) == 765", function(){
@@ -1491,7 +1499,7 @@ describe("Calc", function(){
 			});
 			assert.equal(res, 765);
 		});
-		it(".calc(amount=1000, side=1, salePrice=true) == 2880", function(){
+		it(".calc(amount=1000, side=1, salePrice=true) == 1530", function(){
 			var res = lam.calc({
 				"amount": 1000,
 				"side": 1,
@@ -1500,7 +1508,7 @@ describe("Calc", function(){
 			});
 			assert.equal(res, 1530);
 		});
-		it(".calc(amount=1000, side=2, salePrice=false) == 1790", function(){
+		it(".calc(amount=1000, side=2, salePrice=false) == 940", function(){
 			var res = lam.calc({
 				"amount": 1000,
 				"side": 2,

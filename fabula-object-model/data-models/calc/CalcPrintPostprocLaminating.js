@@ -32,11 +32,13 @@ cLam.prototype.isOwnGSID = function(GSID){
  * @param {Number} arg.amount - тираж продукции
  * */
 cLam.prototype.calcAmount = function(arg){
+	var full = typeof arg.full == "undefined" ? true : Boolean(arg.full);
 	var format = cUtils.parseFormat(arg.format);
 	if (!format) return 0;
 	var filled = this.formatFill(format);
 	if (!filled) return 0;
-	return arg.amount / filled;
+	var ret = arg.amount / filled;
+	return full ? Math.ceil(ret) : ret;
 };
 
 

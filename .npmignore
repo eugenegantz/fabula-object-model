@@ -1,0 +1,11 @@
+.idea
+bundles
+sfom
+test/browser
+test/formats
+webpack-loaders
+webpack.config.js
+*.bat
+*.7z
+*.zip
+*.rar

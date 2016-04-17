@@ -1,5 +1,0 @@
-{
-	"name": "fabula-object-model",
-	"main": "./nodejs/FabulaObjectModel.js",
-	"version": "0.8.0"
-}
