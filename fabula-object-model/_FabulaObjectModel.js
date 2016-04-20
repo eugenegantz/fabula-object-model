@@ -145,7 +145,23 @@ FabulaObjModel.prototype.create = function(name, arg){
 			obj = method.prototype.getInstance();
 
 		} else {
-			obj = new method();
+			// Костыль для передачи множества аргументов в конструктор
+			if (arguments.length > 2){
+				method = method
+					.bind
+					.apply(
+						method,
+						[].concat(
+							method,
+							Array.prototype.slice.call(arguments, 1)
+						)
+					);
+				obj = new method();
+
+			} else {
+				obj = new method(arg);
+
+			}
 
 		}
 	}

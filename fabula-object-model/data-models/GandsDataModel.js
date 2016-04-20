@@ -111,7 +111,7 @@ GandsDataModel.prototype = {
 				"callback": function(http){
 					self._afterLoad(JSON.parse(http.responseText), callback);
 				},
-				"onerror": function(){
+				"onerror": function(http){
 					callback("http.status = " + http.status);
 				}
 			});
@@ -411,8 +411,6 @@ GandsDataModel.prototype = {
 			props_[c] = props[c].toLowerCase();
 		}
 
-		var v=0;
-
 		do {
 			if (!props_.length){
 				ret = ret.concat(row_.gandsPropertiesRef);
@@ -425,7 +423,6 @@ GandsDataModel.prototype = {
 				}
 
 			}
-			if (++v > 100) break;
 		} while(  row_ = this.getParent(row_)  );
 
 		if (_utils.getType(options) != "object"){

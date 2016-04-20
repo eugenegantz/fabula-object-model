@@ -12,7 +12,7 @@ var ObjectA = function(obj){
 
 	if (!arguments.length) return;
 
-	if (typeof obj != "object") {
+	if (typeof obj != "object" || !obj) {
 		throw new Error("Argument suppose to be type \"Object\"");
 	}
 
