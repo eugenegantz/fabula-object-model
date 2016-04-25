@@ -378,7 +378,7 @@ GandsDataModel.prototype = {
 	 * Получить свойства записи. Собственные и наследуемые
 	 * @param {Object | String} row - код либо запись номенклатуры
 	 * @param {Array | String=} props - массив свойств
-	 * @parma {Object=} options - параметры выборки
+	 * @param {Object=} options - параметры выборки
 	 * @return {undefined | Array}
 	 * */
 	"getProperty": function(row, props, options){
@@ -389,12 +389,13 @@ GandsDataModel.prototype = {
 
 		} else if (  _utils.getType(row) == "string"  ) {
 			row = this.dataReferences.get(row);
-			if (!row) return ret;
 
 		} else {
+			// TODO throw error
 			return void 0;
-
 		}
+
+		if (!row) return ret;
 
 		if (_utils.getType(props) == "array"){
 

@@ -19,27 +19,4 @@ describe("FOM", function(){
 		assert.ok(  mov instanceof fom.mod.MovDataModel  );
 	});
 
-	it("MovDataModel", function(done){
-		db.dbquery({
-			"query": "SELECT TOP 5 MMID FROM Movement ORDER BY GSDate DESC",
-			"callback": function(dbres){
-				var mov = fom.create("MovDataModel");
-
-				if (!dbres.recs.length){
-					throw new Error("!dbres.recs.length");
-				}
-
-				mov.set("MMID", dbres.recs[0].MMID);
-				mov.load({
-					callback: function(){
-						if (!mov.get("GS")){
-							throw new Error('!mov.get("GS")');
-						}
-						done();
-					}
-				});
-			}
-		})
-	});
-
 });

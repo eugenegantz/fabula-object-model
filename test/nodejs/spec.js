@@ -1027,7 +1027,7 @@ describe("FOM", ()=>{
 // -----------------------------------------------------------------------------
 
 
-describe.only("GandsDataModel", function(){
+describe("GandsDataModel", function(){
 
 	var gm = fom.create("GandsDataModel");
 
@@ -1128,7 +1128,7 @@ describe("PrintUtils", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.only("Calc", function(){
+describe("Calc", function(){
 
 	var gands = fom.create("GandsDataModel");
 
