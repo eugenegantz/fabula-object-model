@@ -44,7 +44,7 @@ DBModel.prototype = {
 		this.dburl 		= typeof arg.dburl == "string" ? arg.dburl : location.origin + "/db/";	// http://fabula.net.ru/db?
 		this.dbname 	= typeof arg.dbname == "string" ? arg.dbname : null;				// well.2015
 		this.dbsrc 		= typeof arg.dbsrc == "string" ? arg.dbsrc : null;						// main, common, stat
-		this.lastError 	= "";
+		// this.lastError 	= "";
 		this.errors 		= [];
 		this.logs		= [];
 
@@ -206,14 +206,18 @@ DBModel.prototype = {
 		var dbsrc			= typeof arg.dbsrc == "string" ? arg.dbsrc : this.dbsrc;
 		var callback		= typeof arg.callback == "function" ? arg.callback : new Function();
 
-		var http = new XMLHttpRequest();
-		http.open("POST",dburl, true);
-		http.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+		var Ajax = require("./Ajax");
 
-		// --------------------------------------------------------
-
-		http.onreadystatechange = function(){
-			if (  this.readyState == 4  ){
+		Ajax.req({
+			"url": dburl,
+			"method": "POST",
+			"vars": {
+				"query": dbquery,
+				"dbsrc": !dbsrc ? "" : dbsrc,
+				"dbname": !dbname ? "" : dbname,
+				"format": "awws"
+			},
+			callback: function(err, http){
 				var dbres = {
 					"err": "",
 					"t": 0,
@@ -222,31 +226,20 @@ DBModel.prototype = {
 					"res": []
 				};
 
-				if (  this.status != 200  ){
+				if (err){
+					dbres.err = err;
+
+				} else if (  http.status != 200  ){
 					dbres.err = "status != 200"
 
 				} else {
 					dbres = JSON.parse(this.responseText);
-
 				}
 
 				callback(self._convert(dbres));
-
 			}
-		};
+		});
 
-		// --------------------------------------------------------
-
-		var form = [
-			"query=" + encodeURIComponent(dbquery),
-			"dbsrc=" + encodeURIComponent(!dbsrc ? "" : dbsrc),
-			"dbname=" + encodeURIComponent(!dbname ? "" : dbname),
-			"format=" + encodeURIComponent("awws")
-		];
-
-		form = form.join("&");
-
-		http.send(form);
 	},
 
 

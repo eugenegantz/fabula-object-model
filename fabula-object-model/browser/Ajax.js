@@ -79,14 +79,12 @@ Ajax._xFormParam = function(value, parent){
  * @param {String} arg.url
  * @param {String} arg.method
  * @param {Function} arg.callback
- * @param {Function} arg.onerror
  * */
 Ajax.req = function(arg){
 
 	if (typeof arg != "object") return;
 
 	var callback		= typeof arg.callback == "function" ? arg.callback : new Function();
-	var errCallback = typeof arg.onerror == "function" ? arg.onerror : new Function();
 
 	var method		= typeof arg.method == "string" ? arg.method.toUpperCase() : "GET";
 
@@ -102,6 +100,8 @@ Ajax.req = function(arg){
 	} else if (  typeof arg.data == "object" ){
 		data = this._xFormParam(arg.data);
 
+	} else if (  typeof arg.vars == "object"  ){
+		data =  this._xFormParam(arg.vars);
 	}
 
 	var http;
@@ -128,14 +128,27 @@ Ajax.req = function(arg){
 		data = null;
 	}
 
+	/*
+	// В Internet explorer не работает
+	// По мнению MSDN: Raised when there is an error that prevents the completion of the cross-domain request.
 	http.onerror = function(){
-		errCallback.call(http, http);
+		http.error = "XMLHttpRequest error";
+		http.errno = 1;
+		callback.call(http, http.error, http);
 	};
+	*/
 
 	http.onreadystatechange = function(){
 		if (  http.readyState === 4  ){
 			if (  http.status == 200  ){
-				callback.call(http, http);
+				callback.call(http, null, http);
+
+			} else if (
+				// фикс для IE, где onerror имеет другое поведение
+				http.status != 200
+				&& typeof http.onerror != "function"
+			) {
+				callback.call(http, "XMLHttpRequest.status: " + http.status, http);
 			}
 		}
 	};

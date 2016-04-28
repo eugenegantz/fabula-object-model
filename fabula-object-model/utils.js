@@ -421,16 +421,16 @@ _utils.isBrowser = function(){
  * @return {String}
  * */
 _utils.getType = function(value){
-	if (  toString.call(value) == "[object Array]"  ){
+	if (  Object.prototype.toString.call(value) == "[object Array]"  ){
 		return "array";
 
-	} else if (  toString.call(value) == "[object Object]"  )  {
+	} else if (  Object.prototype.toString.call(value) == "[object Object]"  )  {
 		return "object";
 
 	} else if (  value === null  ) {
 		return "null";
 
-	} else if (  toString.call(value) == "[object Date]"  ) {
+	} else if (  Object.prototype.toString.call(value) == "[object Date]"  ) {
 		return "date";
 
 	} else {

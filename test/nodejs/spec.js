@@ -105,6 +105,68 @@ describe("ObjectA", function(){
 // -----------------------------------------------------------------------------
 
 
+describe("ObjectB", function(){
+
+	var ObjectB = fom._getModule("ObjectB");
+
+	var obj = new ObjectB();
+
+	var key1 = {"a": 1};
+	var key2 = fom.create("ObjectA",{"a":1});
+
+	describe(".set()", function(){
+		it(".set(Object, 100)", function(){
+			obj.set(key1,100);
+			obj.set(key2,200);
+			obj.set(key2,200);
+			assert.ok(obj._keys.indexOf(key1) > -1);
+			assert.ok(obj._keys.indexOf(key2) > -1);
+		});
+	});
+
+	describe(".get()", function(){
+		it(".get(Object) == 100", function(){
+			assert.equal(obj.get(key1), 100);
+			assert.equal(obj.get(key2), 200);
+		});
+	});
+
+	describe(".getLength()", function(){
+		it(".getLength() == 2", function(){
+			assert.equal(obj.getLength(), 2);
+		});
+	});
+
+	describe("remove(), .getLength()", function(){
+		it("remove(Object), .getLength() == 1", function(){
+			obj.remove(key2);
+			obj.remove(key2);
+			assert.ok(obj._keys.indexOf(key2) == -1, 1, "remove");
+			assert.equal(obj.getLength(), 1, "remove");
+		});
+	});
+
+	describe(".has()", function(){
+		it(".has(Object) == true", function(){
+			assert.ok(
+				obj.has(key1),
+				"has.true"
+			);
+		});
+		it(".has(DeletedObject) == false", function(){
+			assert.ok(
+				!obj.has(key2),
+				"has.false"
+			);
+		});
+	});
+
+});
+
+
+// -----------------------------------------------------------------------------
+
+
 describe("InterfaceEvents", function(){
 		var st = false;
 
@@ -269,7 +331,7 @@ describe("InterfaceFProperty", function(){
 // -----------------------------------------------------------------------------
 
 
-describe("DBModel", ()=>{
+describe("DBModel", function(){
 
 	var db = require(modPath.join(__root, "./nodejs/DBModel"))
 		.prototype
@@ -279,7 +341,7 @@ describe("DBModel", ()=>{
 			"dbsrc": "main"
 		});
 
-	it("DBModel.dbquery / SELECT NOW();", (done)=>{
+	it("DBModel.dbquery / SELECT NOW();", function(done){
 		db.dbquery({
 			"query": "SELECT NOW();",
 			"callback": (dbres)=>{
@@ -916,9 +978,9 @@ describe("utils", function(){
 // -----------------------------------------------------------------------------
 
 
-describe("Ajax-module", ()=>{
+describe("Ajax-module", function(){
 
-	it("Ajax._xFormParam", ()=>{
+	it("Ajax._xFormParam", function(){
 		var a = Ajax._xFormParam({
 			a: {
 				aa: 110,
@@ -931,7 +993,7 @@ describe("Ajax-module", ()=>{
 		assert.equal(decodeURIComponent(a), "a[aa]=110&a[ab]=120&a[ac]=130&b[]=210&b[]=220&b[]=230&c=300");
 	});
 
-	it("Ajax.req", (done)=>{
+	it("Ajax.req", function(done){
 		Ajax.request({
 			"url": "http://localhost:8100",
 			"method": "GET",
@@ -950,7 +1012,7 @@ describe("Ajax-module", ()=>{
 		});
 	});
 
-	it ("Ajax.req / vars / POST", (done)=>{
+	it ("Ajax.req / vars / POST", function(done){
 		Ajax.request({
 			"url": "http://localhost:8100/api",
 			"method": "POST",
@@ -969,7 +1031,7 @@ describe("Ajax-module", ()=>{
 		});
 	});
 
-	it ("Ajax.req / vars / GET", (done)=>{
+	it ("Ajax.req / vars / GET", function(done){
 		Ajax.request({
 			"url": "http://localhost:8100/api",
 			"method": "GET",
@@ -994,23 +1056,23 @@ describe("Ajax-module", ()=>{
 // -----------------------------------------------------------------------------
 
 
-describe("FOM", ()=>{
+describe("FOM", function(){
 
 	var db = fom.getDBInstance();
 
-	it("FOM.create", ()=>{
+	it("FOM.create", function(){
 		var mov = fom.create("MovDataModel");
 		assert.ok(  mov instanceof fom.mod.MovDataModel  );
 	});
 
-	it("MovDataModel", (done)=>{
+	it("MovDataModel", function(done){
 		db.dbquery({
 			"query": "SELECT TOP 5 MMID FROM Movement ORDER BY GSDate DESC",
 			"callback": (dbres)=>{
 				var mov = fom.create("MovDataModel");
 				mov.set("MMID", dbres.recs[0].MMID);
 				mov.load({
-					callback: ()=>{
+					callback: function(){
 						if (!mov.get("GS")){
 							throw new Error('!mov.get("GS")');
 						}

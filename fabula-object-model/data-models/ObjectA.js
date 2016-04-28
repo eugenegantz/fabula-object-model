@@ -12,14 +12,15 @@ var ObjectA = function(obj){
 
 	if (!arguments.length) return;
 
-	if (typeof obj != "object" || !obj) {
+	if (typeof obj != "object") {
 		throw new Error("Argument suppose to be type \"Object\"");
 	}
 
-	var keys = Object.getOwnPropertyNames(obj);
-
-	for(var c=0; c<keys.length; c++){
-		this.set(keys[c], obj[keys[c]]);
+	if (obj) {
+		var keys = Object.getOwnPropertyNames(obj);
+		for (var c = 0; c < keys.length; c++) {
+			this.set(keys[c], obj[keys[c]]);
+		}
 	}
 
 };

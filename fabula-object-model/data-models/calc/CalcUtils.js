@@ -1,7 +1,7 @@
 var cConst = require("./CalcConsts");
 var pUtils = require("./../PrintUtils");
 var gands = require("./../GandsDataModel").prototype.getInstance();
-
+var _utils = require("./../../utils");
 
 module.exports = {
 
@@ -69,7 +69,7 @@ module.exports = {
 
 
 	"parseColorCode": function(value) {
-		if (toString.call(value) == "[object Array]") {
+		if (_utils.getType(value) == "array") {
 			if (
 				value.length == 2
 				&& !isNaN(value[0])
@@ -126,7 +126,7 @@ module.exports = {
 		if (typeof pp == "string"){
 			ret = [{"m": this.createCalc(pp), "arg": {}}];
 
-		} else if (  toString.call(pp) == "[object Array]"  ) {
+		} else if (  _utils.getType(pp) == "array"  ) {
 			for(c=0; c<pp.length; c++){
 				ret = ret.concat(this.parsePostproc(pp[c]));
 			}

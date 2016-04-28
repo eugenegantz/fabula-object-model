@@ -108,11 +108,12 @@ GandsDataModel.prototype = {
 						"useCache": useCache
 					}
 				},
-				"callback": function(http){
+				"callback": function(err, http){
+					if (err){
+						callback(err);
+						return;
+					}
 					self._afterLoad(JSON.parse(http.responseText), callback);
-				},
-				"onerror": function(http){
-					callback("http.status = " + http.status);
 				}
 			});
 		}
@@ -391,8 +392,8 @@ GandsDataModel.prototype = {
 			row = this.dataReferences.get(row);
 
 		} else {
-			// TODO throw error
-			return void 0;
+			throw new Error("1st argument suppose to be String or Object");
+			// return void 0;
 		}
 
 		if (!row) return ret;
@@ -458,10 +459,10 @@ GandsDataModel.prototype = {
 	 * */
 	"get" : function(arg){
 		if (typeof arg != "object") arg = Object.create(null);
-		var type = toString.call(arg.type) == "[object Array]" ? arg.type : [];
-		if (toString.call(arg.group) == "[object Array]") type = arg.group;
-		var cop = toString.call(arg.cop) == "[object Array]" ? arg.cop : [];
-		var flags = toString.call(arg.flags) == "[object Array]" ? arg.flags : [];
+		var type = _utils.getType(arg.type) == "array" ? arg.type : [];
+		if (_utils.getType(arg.group) == "array") type = arg.group;
+		var cop = _utils.getType(arg.cop) == "array" ? arg.cop : [];
+		var flags = _utils.getType(arg.flags) == "array" ? arg.flags : [];
 		var useDraft = typeof arg.useDraft == "undefined" ? true : Boolean(arg.useDraft);
 
 		if (!type.length && !cop.length) return this.data;
