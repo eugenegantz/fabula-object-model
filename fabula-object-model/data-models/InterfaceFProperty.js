@@ -70,13 +70,16 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"_interfaceFPropertyFields": {
 			"uid"			:{"type":"integer"},
 			"pid"			:{"type":"integer"},
-			"sort"		:{"type":"integer"},
+			"sort"			:{"type":"integer"},
 			"value"		:{"type":"string"},
 			"valuetype":{"type":"string"},
 			"extclass"	:{"type":"string"},
 			"extid"		:{"type":"string"},
 			"property"	:{"type":"string"},
-			"tick"			:{"type":"integer"}
+			"tick"			:{"type":"integer"},
+			"[table]"		:{"type":"string", "spec":1}
+			// spec - специальное поле. Отсутсвует в таблице. Участвует в логике.
+			// [table] указывает на название таблицы свойств
 		},
 
 
@@ -173,9 +176,7 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * */
 		"addProperty": function(property){
 
-			var existsFields = [], prop, type, value, lowName;
-
-			var tmp = {};
+			var prop, type, value, lowName;
 
 			this.trigger("addProperty");
 
@@ -188,14 +189,16 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				return true;
 			}
 
+			var tmp = {};
+
+			// ----------------------------------------------------
+			// Клонирование объекта. Понижение регистра ключей
+			// ------------------------------------------------------------------------
 			for(prop in property){
-				if (typeof property.hasOwnProperty == "function"){
-					if (  !property.hasOwnProperty(prop)  ) continue;
-				}
+				if (  !Object.prototype.hasOwnProperty.call(property, prop)  ) continue;
 				if (typeof property[prop] == "undefined") continue;
 
 				lowName = prop.toLowerCase();
-				existsFields.push(lowName);
 
 				if (  !this._interfaceFPropertyFields.hasOwnProperty(lowName)  ) continue;
 
@@ -210,14 +213,20 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				tmp[lowName] = value;
 			}
 
+			// ------------------------------------------------------------------------
+			// Запись пропущенных полей
+			// ------------------------------------------------------------------------
 			for(prop in this._interfaceFPropertyFields){
 				if (!this._interfaceFPropertyFields.hasOwnProperty(prop)) continue;
 				lowName = prop.toLowerCase();
-				if (  !tmp.hasOwnProperty(lowName)  ) tmp[lowName] = null;
+				if (  !tmp.hasOwnProperty(lowName)  ) tmp[lowName] = void 0;
 			}
 
 			property = tmp;
 
+			// ------------------------------------------------------------------------
+			// Если не указан, определить автоматически тип данных для свойства
+			// ------------------------------------------------------------------------
 			if (  !property.hasOwnProperty("valuetype") || !property.valuetype  ){
 				if (  isNaN(property.value)  ){
 					property.valuetype = "C";
@@ -237,7 +246,6 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * */
 		"appendProperty": function(){
 			this.addProperty.apply(this, arguments);
-			this.appendProperty()
 		},
 
 
@@ -249,18 +257,15 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"updateProperty": function(getKeyValue, setKeyValue){
 			if (typeof getKeyValue != "object" || !getKeyValue) return;
 			if (typeof setKeyValue != "object" || !setKeyValue) return;
-			var setKeyValue_ = {};
+			// var setKeyValue_ = {};
 			var c, v, keys, lowKey;
 
-			keys = Object.getOwnPropertyNames(setKeyValue);
-			for(c=0; c<keys.length; c++){
-				lowKey = keys[c].toLowerCase();
-				setKeyValue_[lowKey] = setKeyValue[keys[c]];
-			}
+			var setKeyValue_ =  propUtils.toLowerCaseKeys(setKeyValue);
 
 			var props = this.getProperty(getKeyValue);
 			var isUpdated = false;
 
+			// обход всех свойств и всех полей свойств
 			for(c=0; c<props.length; c++){
 				keys = Object.getOwnPropertyNames(props[c]);
 				for(v=0; v<keys.length; v++){
