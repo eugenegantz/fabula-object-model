@@ -1,6 +1,8 @@
 var _utils = Object.create(null);
 
 _utils.DBSecureStr = function(str){
+	"use strict";
+
 	if (!arguments.length) return;
 	if (typeof str != "string") return str;
 	var a = [
@@ -26,6 +28,8 @@ _utils.DBSecureStr = function(str){
  * @return String В формате YYYY.MM.DD HH:mm:ss
  * */
 _utils.DBSecureDate = function(date, strict){
+	"use strict";
+
 	strict = Boolean(strict);
 
 	if (typeof date == "string"){
@@ -57,6 +61,8 @@ _utils.DBSecureDate = function(date, strict){
  * @return Array
  * */
 _utils.msplit = function(d,s){
+	"use strict";
+
 	if (  typeof d == "string"  ){
 		d = [d];
 	} else if (  Array.isArray(d)  ) {} else {
@@ -86,6 +92,8 @@ _utils.split = function(d,s){
  * @param {Number} direction - 0 - left, 1 = right, -1 = both
  * */
 _utils.trim = function(str,_chars, direction){
+	"use strict";
+
 	if (typeof str != "string") {
 		throw new Error("1st argument suppose to be String");
 	}
@@ -142,6 +150,7 @@ _utils.trim = function(str,_chars, direction){
  * @param {String, Array} _chars - Characters
  * */
 _utils.ltrim = function(str,_chars){
+	"use strict";
 	var arg = Array.prototype.slice.call(arguments,0);
 	arg[2] = 0;
 	return this.trim.apply(this, arg);
@@ -153,6 +162,7 @@ _utils.ltrim = function(str,_chars){
  * @param {String, Array} _chars - Characters
  * */
 _utils.rtrim = function(str,_chars){
+	"use strict";
 	var arg = Array.prototype.slice.call(arguments,0);
 	arg[2] = 1;
 	return this.trim.apply(this, arg);
@@ -171,6 +181,7 @@ _utils.arrayRemove = function(arr, from, to) {
  * @param {Number} n
  * */
 _utils.arrayRest = function(arr, n){
+	"use strict";
 	if (typeof arr != "object"){
 		throw new Error("1st argument suppose to be Array");
 	}
@@ -186,6 +197,7 @@ _utils.objectHasOwnProperty = function(obj, key){
 };
 
 _utils.objectKeysToLowerCase = function(obj){
+	"use strict";
 	if (typeof obj != "object") return null;
 	var res = {};
 	for(var prop in obj){
@@ -198,6 +210,7 @@ _utils.objectKeysToLowerCase = function(obj){
 };
 
 _utils.objectKeysToUpperCase = function(obj){
+	"use strict";
 	if (typeof obj != "object") return null;
 	var res = {};
 	for(var prop in obj){
@@ -210,6 +223,7 @@ _utils.objectKeysToUpperCase = function(obj){
 };
 
 _utils.URLHashParse = function (){
+	"use strict";
 	var vars = {};
 	if ( !!location.hash ){
 		var hash = location.hash.replace('#','');
@@ -227,6 +241,7 @@ _utils.URLHashParse = function (){
 };
 
 _utils.URLHashSet = function (IN){
+	"use strict";
 	var this_ = this;
 	var newHash= (typeof IN.newHash == "undefined" ? false : IN.newHash );
 	var vars = ( newHash ? Object.create(null) : this_.URLHashParse() );
@@ -253,6 +268,7 @@ _utils.URLHashSet = function (IN){
 
 
 _utils.URLQueryParse = function (){
+	"use strict";
 	var vars = {};
 	if ( !!location.search ){
 		var query = location.search.replace(/^[?]/,"");
@@ -270,6 +286,7 @@ _utils.URLQueryParse = function (){
 };
 
 _utils.URLQuerySet = function (IN){
+	"use strict";
 	var newQuery= (typeof IN.newQuery == "undefined" ? false : IN.newQuery );
 	var vars = ( newQuery ? Object.create(null) : this.URLQueryParse() );
 
@@ -456,6 +473,7 @@ _utils.getType = function(value){
  * @param {Array, String} arg.trim - срезать символы в уже разделенной строке
  * */
 _utils.parseArg = function(arg){
+	"use strict";
 
 	var into = ( typeof arg.into == "string" ? arg.into.toLowerCase() : "array" );
 

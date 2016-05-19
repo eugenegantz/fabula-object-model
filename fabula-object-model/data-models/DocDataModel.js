@@ -1,3 +1,5 @@
+"use strict";
+
 var _utils = require("./../utils");
 var DefaultDataModel = require("./DefaultDataModel");
 var InterfaceFProperty = require("./InterfaceFProperty");
@@ -433,7 +435,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			dbq.push("DELETE FROM Property WHERE ExtClass = 'DOCS' AND ExtID = '"+this.get("DocID")+"' ");
 
-			var property, type;
+			var property, type, lowerName;
+			var _interfaceFPropertyFields = InterfaceFProperty.prototype._interfaceFPropertyFields;
 
 			for(c=0; c<ownProps.length; c++){
 				property = ownProps[c];
@@ -475,25 +478,25 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				for(prop in property){
 					if (  !property.hasOwnProperty(prop)  ) continue;
 
-					type = null;
 					value = property[prop];
+					lowerName = prop.toLowerCase();
+					type = null;
 
 					if (  value === null || typeof value == "undefined"  ) continue;
-
-					fields.push("["+prop+"]");
-
-					if (  InterfaceFProperty.prototype._interfaceFPropertyFields.hasOwnProperty(prop.toLowerCase())  ){
-						type = InterfaceFProperty
-							.prototype
-							._interfaceFPropertyFields[prop.toLowerCase()]
-							.type;
-						type = type.toLowerCase();
+					if (
+						!_interfaceFPropertyFields.hasOwnProperty(lowerName)
+						|| _interfaceFPropertyFields[lowerName].spec
+					) {
+						continue;
 					}
+
+					type = _interfaceFPropertyFields[lowerName].type.toLowerCase();
 
 					if (type == "string"){
 						value = "\""+_utils.DBSecureStr(value)+"\"";
 					}
 
+					fields.push("["+prop+"]");
 					values.push(value);
 
 				}
@@ -761,10 +764,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 								lowerName = prop.toLowerCase();
 								type = null;
 
+								if (value === null || typeof value == "undefined") continue;
+								if (
+									!_interfaceFPropertyFields.hasOwnProperty(lowerName)
+									|| _interfaceFPropertyFields[lowerName].spec
+								) {
+									continue
+								}
 
-								if (value === null) continue;
-
-								if (  !_interfaceFPropertyFields.hasOwnProperty(lowerName)  ) continue;
 								type = _interfaceFPropertyFields[lowerName].type;
 								type = type.toLowerCase();
 

@@ -1,3 +1,4 @@
+"use strict";
 
 var gands = require("./GandsDataModel").prototype.getInstance();
 

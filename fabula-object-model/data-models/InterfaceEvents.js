@@ -1,3 +1,5 @@
+"use strict";
+
 var IEvent = require("./IEvent");
 var _utils = require("./../utils");
 

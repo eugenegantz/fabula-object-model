@@ -1,3 +1,5 @@
+"use strict";
+
 // TODO IEvent
 
 var IEvent = function(type){

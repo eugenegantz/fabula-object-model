@@ -1,3 +1,5 @@
+"use strict";
+
 var DefaultDataModel = require("./DefaultDataModel");
 var InterfaceFProperty = require("./InterfaceFProperty");
 var TalksDataModel = require("./TalksDataModel");
@@ -630,16 +632,19 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					lowName = prop.toLowerCase();
 
 					if (  value === null || typeof value == "undefined"  ) continue;
+					if (
+						!_interfaceFPropertyFields.hasOwnProperty(prop)
+						|| _interfaceFPropertyFields[prop].spec
+					) {
+						continue;
+					}
 
-					fields.push("["+prop+"]");
-
-					if (  !_interfaceFPropertyFields.hasOwnProperty(prop)  ) continue;
 					type = _interfaceFPropertyFields[lowName].type;
 					type = type.toLowerCase();
 
-
 					if (type == "string") value = "\""+_utils.DBSecureStr(value)+"\"";
 
+					fields.push("["+prop+"]");
 					values.push(value);
 				}
 				dbq.push(
@@ -935,11 +940,14 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 									value = self._property[c][prop];
 									lowName = prop.toLowerCase();
 
-									if (value === null) continue;
+									if (  value === null || typeof value == "undefined"  ) continue;
+									if (
+										!_interfaceFPropertyFields.hasOwnProperty(lowName)
+										|| _interfaceFPropertyFields[prop].spec
+									){
+										continue;
+									}
 
-									fields.push("["+prop+"]");
-
-									if (  !_interfaceFPropertyFields.hasOwnProperty(lowName)  ) continue;
 									type = _interfaceFPropertyFields[lowName].type;
 									type = type.toLowerCase();
 
@@ -947,6 +955,7 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 										value = (  value === null || value === "" ? "NULL" : "\""+_utils.DBSecureStr(value)+"\""  );
 									}
 
+									fields.push("["+prop+"]");
 									values.push(value);
 								}
 

@@ -1,3 +1,5 @@
+"use strict";
+
 /**
  * @Constructor
  * @param {Object} obj

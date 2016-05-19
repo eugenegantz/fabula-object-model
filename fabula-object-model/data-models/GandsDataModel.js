@@ -1,3 +1,5 @@
+"use strict";
+
 // ------------------------------------------------------
 // Номенклатура
 
@@ -38,7 +40,7 @@ GandsDataModel.prototype = {
 
 		this._init_timestamp = null;
 
-		this._indexData = {};
+		this._indexData = {}; // after init => Object
 
 	},
 
@@ -188,6 +190,8 @@ GandsDataModel.prototype = {
 	"_buildIndexData": function(){
 
 		var match;
+
+		this._indexData = {};
 
 		for (var c = 0; c < this.data.length; c++) {
 

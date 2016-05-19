@@ -247,7 +247,7 @@ describe("InterfaceFProperty", function(){
 		});
 		it("._property[4].value === null", function(){
 			assert.ok(
-				fp._property[4].value === null,
+				fp._property[4].value === void 0,
 				"Значение поля по умолчанию === null (для неуказанных полей) // fp._property[3].value === null"
 			);
 		});
@@ -658,7 +658,7 @@ describe("DocDataModel", function(){
 			var doc = fom.create("DocDataModel");
 			doc.getNewDocID({
 				"companyID": "РА",
-				"docType":"РеУС",
+				"docType":"ПоУс",
 				"callback": function(err, DocID){
 					if (err){
 						done(new Error(err));
@@ -710,7 +710,7 @@ describe("DocDataModel", function(){
 			stand.doc.set("Sum1", 0);
 			stand.doc.set("Person","test_person");
 			stand.doc.set("Company", "РА");
-			stand.doc.set("DocType", "РеУС");
+			stand.doc.set("DocType", "ПоУС");
 
 			var lorem_ipsum = "" +
 				"Lorem Ipsum is simply dummy text of the printing and typesetting industry. " +
@@ -822,10 +822,10 @@ describe("DocDataModel", function(){
 			var doc = fom.create("DocDataModel");
 
 			doc.set("DocID","РА5по12345");
-			assert.equal(doc.get("DocType"), "ПоЗа");
+			assert.equal(doc.get("DocType"), "ОтПо");
 			assert.equal(doc.get("Company"), "РА");
 
-			doc.set("DocType","ЗРГа");
+			doc.set("DocType","ПоГа");
 			assert.ok(Boolean(doc.get("DocID").match(/зг/g)));
 
 			doc.set("Company","Ел");
@@ -838,7 +838,7 @@ describe("DocDataModel", function(){
 		this.timeout(6000);
 
 		it(".save() / .update()", function(done){
-			stand.doc.set("DocType", "ЗРГа");
+			stand.doc.set("DocType", "ПоГа");
 			stand.doc.set("Company","Ел");
 			stand.doc.set("Manage",888);
 
@@ -1190,7 +1190,7 @@ describe("PrintUtils", function(){
 // -----------------------------------------------------------------------------
 
 
-describe("Calc", function(){
+describe.skip("Calc", function(){
 
 	var gands = fom.create("GandsDataModel");
 

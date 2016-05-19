@@ -1,3 +1,5 @@
+"use strict";
+
 var F = require("./../_FabulaObjectModel");
 
 require("eg-promise-cascade");

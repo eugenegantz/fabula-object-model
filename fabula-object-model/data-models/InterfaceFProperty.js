@@ -1,3 +1,5 @@
+"use strict";
+
 var InterfaceEvents = require("./InterfaceEvents");
 var DefaultDataModel = require("./DefaultDataModel");
 var ObjectA = require("./ObjectA");

@@ -1,3 +1,5 @@
+"use strict";
+
 var WsObserver = function(arg, dbContext){
 	// this.uid = Math.random() * Math.pow(10,18);
 	this.callback = typeof arg.callback == "function" ? arg.callback : new Function();

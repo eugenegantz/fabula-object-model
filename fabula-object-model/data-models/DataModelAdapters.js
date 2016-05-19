@@ -1,3 +1,5 @@
+"use strict";
+
 var _utils = require("./../utils");
 var MovDataModel = require("./MovDataModel");
 var DocDataModel = require ("./DocDataModel");
@@ -393,7 +395,7 @@ Adapters.MovTaskAdapter.prototype = {
 	"setPostproc": function(postproc){
 
 		var mov = this._getSelfObj();
-		var child, c, v, tmp;
+		var child, c;
 		var postproc_ = [];
 
 		for(c=0; c<postproc.length; c++){
