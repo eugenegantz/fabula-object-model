@@ -26,6 +26,8 @@ CPFolding.prototype.calc = function(arg){
 
 	if (!value || !amount || !paperDensity) return 0;
 
+	// TODO брать коды из ссылки
+
 	var list = {
 		">150": {
 			"1": "ПЗРАФ2Ф2",

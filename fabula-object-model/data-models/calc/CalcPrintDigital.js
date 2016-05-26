@@ -77,7 +77,7 @@ CPDigital.prototype.calc = function(arg){
 	for(c=0; c<gandsMater.length; c++){
 
 		// Получение цены листопрохода
-		if (  gandsMater[c].GSID.match(/ПЗРАЛП/gi)  ){
+		if (  gandsMater[c].GSID.match(/ПЗРАЛП/gi)  ){ // TODO код брать из ссылки
 
 			for(v=0; v<gandsMater[c].gandsPropertiesRef.length; v++){
 

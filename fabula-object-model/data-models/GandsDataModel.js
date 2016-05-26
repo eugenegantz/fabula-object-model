@@ -67,39 +67,80 @@ GandsDataModel.prototype = {
 		var callback = typeof arg.callback == "function" ? arg.callback : function(){};
 		var self = this;
 
+		var db = getContextDB.call(this);
+		var configRow = {"GSID": "ТСFM", "GSName": "Настройки FOM", gandsPropertiesRef: []};
+
+		// TODO брать коды инициализации из настроек
+
 		/*#if browser,node*/
 		// Номеклатура
-		var dbq = [
-			"SELECT * FROM Gands " 		+
-			"WHERE "							+
-			"GSCOP LIKE '87%' "			+
-			"OR GSCOP LIKE '17%' "		+
-			"OR GSCOP LIKE '27%' "		+
-			"OR GSCOP LIKE '07%' "		+
-			"OR GSID LIKE 'ТСПо%' "
-		];
+		db.query({
+			"query": "SELECT pid, extID, property, value FROM Property WHERE ExtID = 'ТСFM' ",
+			"callback": function(dbres){
 
-		// Расширение номенклатуры
-		dbq.push(
-			"SELECT * FROM GandsExt "				+
-			"WHERE "										+
-			"GSExID IN ("									+
-			dbq[0].replace(/[*]/gi, "GSID")			+
-			")"
-		);
+				// Конфиг по-умолчанию
+				var dbq = [
+					"SELECT * FROM Gands " 		+
+					"WHERE "							+
+					"GSCOP LIKE '87%' "			+
+					"OR GSCOP LIKE '17%' "		+
+					"OR GSCOP LIKE '27%' "		+
+					"OR GSCOP LIKE '07%' "		+
+					"OR GSID LIKE 'ТСПо%' "
+				];
 
-		// Свойства номенклатуры
-		dbq.push(
-			"SELECT pid, extID, property, value FROM Property "	+
-			"WHERE "																+
-			"ExtID IN ("															+
-			dbq[0].replace(/[*]/gi, "GSID")									+
-			")"
-		);
+				if (dbres.recs.length){
+					for(var c=0; c<dbres.recs.length; c++){
+						// Запрос из конфига
+						if (dbres.recs[c].property == "запрос-номенклатура"){
+							dbq[0] = "SELECT * FROM Gands WHERE " + dbres.recs[c].value;
+						}
+						configRow.gandsPropertiesRef.push(dbres.recs[c]);
+					}
+				}
+
+				// Расширение номенклатуры
+				dbq.push(
+					"SELECT * FROM GandsExt "				+
+					"WHERE "										+
+					"GSExID IN ("									+
+					dbq[0].replace(/[*]/gi, "GSID")			+
+					")"
+				);
+
+				// Свойства номенклатуры
+				dbq.push(
+					"SELECT pid, extID, property, value FROM Property "	+
+					"WHERE "																+
+					"ExtID IN ("															+
+					dbq[0].replace(/[*]/gi, "GSID")									+
+					")"
+				);
+
+				if (db){
+					db.dbquery({
+						"query" : dbq.join("; "),
+						"callback" : function(res){
+							self._afterLoad(
+								{
+									"data": res[0].recs,
+									"ext": res[1].recs,
+									"props": res[2].recs
+								},
+								callback
+							);
+							self._init_timestamp = Date.now();
+						}
+					});
+				}
+
+
+			}
+		});
 		/*#end*/
 
 		/*  #if browser-s */
-		if (typeof window == "object" && typeof document == "object"){
+		if (  _utils.isBrowser()  ){
 			var Ajax = require("./../browser/Ajax");
 			Ajax.req({
 				"url": self._fabulaInstance.url,
@@ -119,27 +160,7 @@ GandsDataModel.prototype = {
 				}
 			});
 		}
-		/*  #end */
-
-		/* #if browser,node */
-		var db = getContextDB.call(this);
-		if (db){
-			db.dbquery({
-				"query" : dbq.join("; "),
-				"callback" : function(res){
-					self._afterLoad(
-						{
-							"data": res[0].recs,
-							"ext": res[1].recs,
-							"props": res[2].recs
-						},
-						callback
-					);
-					self._init_timestamp = Date.now();
-				}
-			});
-		}
-		/*  #end */
+		/*#end*/
 	},
 
 
@@ -155,8 +176,8 @@ GandsDataModel.prototype = {
 
 		for(c=0; c<self.data.length; c++){
 			gandsRef[self.data[c].GSID] = self.data[c];
-			self.data[c].gandsExtRef = [];
-			self.data[c].gandsPropertiesRef = [];
+			if (!self.data[c].gandsExtRef) self.data[c].gandsExtRef = [];
+			if (!self.data[c].gandsPropertiesRef) self.data[c].gandsPropertiesRef = [];
 		}
 
 		var gandsExt = dbres.ext;
@@ -214,6 +235,8 @@ GandsDataModel.prototype = {
 	 * */
 	"_groupMatcher": function(row){
 
+		// TODO брать коды из ссылок
+
 		var tmp = [];
 
 		// Печатные форматы форматы
@@ -223,6 +246,7 @@ GandsDataModel.prototype = {
 
 		// Соответсвует ТМЦ / Бумага
 		// Сюда могут быть включены: картон, самокопирка и пр.
+		// TODO a.match(/^тцбу+[a-z-0-9]{1,}/ig)
 		if (
 			row.GSID.toLowerCase().match(/тцбу/gi)
 			&& row.GSID.length > 4

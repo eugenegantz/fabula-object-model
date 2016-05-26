@@ -1,3 +1,5 @@
+// TODO коды брать из Настройки FOM из Fabula
+
 module.exports = {
 
 	DIGITAL_PRINT_MAX_AMOUNT: 250,
@@ -48,4 +50,4 @@ module.exports = {
 
 };
 
-Object.freeze(module.exports);
+// Object.freeze(module.exports);
