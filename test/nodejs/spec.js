@@ -416,7 +416,7 @@ describe("DefaultDataModel", function(){
 // -----------------------------------------------------------------------------
 
 
-describe("MovDataModel", function(){
+describe.skip("MovDataModel", function(){
 
 	var db = fom.create("DBModel");
 
@@ -643,7 +643,7 @@ describe("MovDataModel", function(){
 // -----------------------------------------------------------------------------
 
 
-describe("DocDataModel", function(){
+describe.skip("DocDataModel", function(){
 
 	var db = fom.create("DBModel");
 
@@ -978,7 +978,7 @@ describe("utils", function(){
 // -----------------------------------------------------------------------------
 
 
-describe("Ajax-module", function(){
+describe.skip("Ajax-module", function(){
 
 	it("Ajax._xFormParam", function(){
 		var a = Ajax._xFormParam({
@@ -1109,6 +1109,25 @@ describe("GandsDataModel", function(){
 		});
 	});
 
+	describe(".get()", function(){
+		it(".get(materials:carton)", function(){
+			var d = gm.get({group:["materials:carton"]});
+			assert.ok(d.length > 0, ".length > 0");
+		});
+		it(".get(materials:carton:design)", function(){
+			var d = gm.get({group:["materials:carton:design"]});
+			assert.ok(d.length > 0, ".length > 0");
+		});
+		it(".get(products:print)", function(){
+			var d = gm.get({group:["products:print"]});
+			assert.ok(d.length > 0, ".length > 0");
+		});
+		it(".get(fom-config)", function(){
+			var d = gm.get({group:["fom-config"]});
+			assert.ok(d.length > 0, ".length > 0");
+		});
+	});
+
 	describe(".getParent()", function(){
 
 		beforeEach(function(done) {
@@ -1190,7 +1209,7 @@ describe("PrintUtils", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("Calc", function(){
+describe("Calc", function(){
 
 	var gands = fom.create("GandsDataModel");
 
@@ -1364,7 +1383,7 @@ describe.skip("Calc", function(){
 				"value": 4,
 				"salePrice": 1
 			});
-			assert.equal(sum, 340);
+			assert.equal(sum, 1000);
 		});
 		it("Folding / amount = 1000 / value = 4", function(){
 			var sum = cFold.calc({

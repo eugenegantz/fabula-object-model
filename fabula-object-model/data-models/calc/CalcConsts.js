@@ -16,6 +16,7 @@ module.exports = {
 
 		POSTPROC_LAMINATING: "LAMINATING",
 
+		// Задействовано в классе ламинация
 		POSTPROC_LAMINATING_1_SIDE_GSID: "ПЗРАЛАЛ1",
 
 		POSTPROC_LAMINATING_2_SIDE_GSID: "ПЗРАЛАЛ2",
@@ -24,6 +25,7 @@ module.exports = {
 
 		// .......................................
 
+		// Задействовано в классе бигование
 		POSTPROC_CREASING: "CREASING",
 
 		POSTPROC_CREASING_V1_GSID: "ПЗРАБИБ1",
@@ -34,15 +36,15 @@ module.exports = {
 
 		POSTPROC_FOLDING: "FOLDING",
 
-		POSTPROC_FOLDING_M_GSID: "ПЗРАФаФ1",
+		POSTPROC_FOLDING_M_GSID: "ПЗРАФаФ1", // Не используется
 
-		POSTPROC_FOLDING_H_GSID: "ПЗРАФаФ2",
+		POSTPROC_FOLDING_H_GSID: "ПЗРАФаФ2", // Не используется
 
 		// .......................................
 
 		POSTPROC_ROUNDING: "ROUNDING",
 
-		POSTPROC_ROUNDING_H_GSID: "ПЗРАПоПР",
+		POSTPROC_ROUNDING_H_GSID: "ПЗРАПоПР", // Не используется
 
 	// ---------------------------------------------------------------
 

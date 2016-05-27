@@ -11,7 +11,10 @@ CPDigital.prototype.calc = function(arg){
 	var c, v;
 	var cUtils = require("./CalcUtils");
 	var pUtils = require("./../PrintUtils");
-	var Gm = require("./../GandsDataModel").prototype.getInstance();
+	var gm = require("./../GandsDataModel").prototype.getInstance();
+
+	// Настройки из Fabula
+	var configRow = gm.get({"group": ["fom-config"]})[0];
 
 	// ------- Количество
 	var amount = cUtils.parseAmount(arg.amount);
@@ -31,10 +34,16 @@ CPDigital.prototype.calc = function(arg){
 	if (!format) return new Error("!arg.format");
 
 	// ------- Формат запечатки
-	var collageFormat =
+	var collageFormat = gm.getProperty(configRow, "код-кальк-формат-запечатки-по-умолчанию-цифра");
+	if (!collageFormat.length){
+		collageFormat = "ТСПоФмА3";
+	} else {
+		collageFormat = collageFormat[0].value;
+	}
+	collageFormat =
 		typeof arg.collageFormat == "string"
 			? pUtils.getFormat(arg.collageFormat)
-			: pUtils.getFormat("ТСПоФмА3");
+			: pUtils.getFormat(collageFormat);
 
 	if (  !collageFormat  ){
 		return new Error("!collageFormat");
@@ -48,7 +57,7 @@ CPDigital.prototype.calc = function(arg){
 
 	// ------------------------------------------------------------
 
-	var gandsMater = Gm.get({
+	var gandsMater = gm.get({
 		"type":["material-paper","materials:print"],
 		"cop":[
 			new RegExp("^07","gi")
@@ -59,10 +68,10 @@ CPDigital.prototype.calc = function(arg){
 	// ------------------------------------------------------------
 	// Количество и стоимость листов;
 
-	if (  !Gm.dataReferences.has(material)  ){
+	if (  !gm.dataReferences.has(material)  ){
 		return new Error("!material.found");
 	}
-	var materPrice = Gm.dataReferences.get(material).GSCostSale || Gm.dataReferences.get(material).GSCost;
+	var materPrice = gm.dataReferences.get(material).GSCostSale || gm.dataReferences.get(material).GSCost;
 
 	var paperAmount = (amount / format_k) + 250; // + допечатная подготовка
 	var paperSum = paperAmount * materPrice;
@@ -74,10 +83,19 @@ CPDigital.prototype.calc = function(arg){
 	var selected = {"color": false, "method": false, _break: false};
 	var rollsPrice0 = null;
 
+	var rollGSID = [];
+
+	if (configRow){
+		rollGSID = gm.getProperty(configRow, "код-листопроход");
+		if (rollGSID.length) rollGSID = eval("("+rollGSID[0].value+")");
+	}
+
+	if (!rollGSID.length) rollGSID = /ПЗРАЛП/gi; // листопроход по-умолчанию
+
 	for(c=0; c<gandsMater.length; c++){
 
 		// Получение цены листопрохода
-		if (  gandsMater[c].GSID.match(/ПЗРАЛП/gi)  ){ // TODO код брать из ссылки
+		if (  gandsMater[c].GSID.match(rollGSID)  ){ // TODO код брать из ссылки
 
 			for(v=0; v<gandsMater[c].gandsPropertiesRef.length; v++){
 

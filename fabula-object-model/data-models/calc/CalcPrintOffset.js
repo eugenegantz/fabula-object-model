@@ -12,7 +12,10 @@ CPOffset.prototype.calc = function(arg){
 	var c, v;
 	var cUtils = require("./CalcUtils");
 	var pUtils = require("./../PrintUtils");
-	var Gm = require("./../GandsDataModel").prototype.getInstance();
+	var gm = require("./../GandsDataModel").prototype.getInstance();
+
+	// Настройки из Fabula
+	var configRow = gm.get({"group": ["fom-config"]})[0];
 
 	// ------- Количество
 	var amount = cUtils.parseAmount(arg.amount);
@@ -28,7 +31,12 @@ CPOffset.prototype.calc = function(arg){
 	if (!colorCode) return new Error("!arg.colorCode");
 
 	// ------- Офсетные пластины
-	var printForm = "ТЦМППЛ01"; // TODO код брать из ссылки
+	var printForm = gm.getProperty(configRow, "код-кальк-пластина-по-умолчанию");
+	if (!printForm.length){
+		printForm = "ТЦМППЛ01"; // TODO код брать из ссылки
+	} else {
+		printForm = printForm[0].value;
+	}
 	if (typeof arg.printForm == "string" && arg.printForm){
 		printForm = arg.printForm;
 	}
@@ -38,10 +46,16 @@ CPOffset.prototype.calc = function(arg){
 	if (!format) return new Error("!arg.format");
 
 	// ------- Формат запечатки
-	var collageFormat =
+	var collageFormat = gm.getProperty(configRow, "код-кальк-формат-запечатки-по-умолчанию-офсет");
+	if (!collageFormat.length){
+		collageFormat = "ТСПоФмА3";
+	} else {
+		collageFormat = collageFormat[0].value;
+	}
+	collageFormat =
 		typeof arg.collageFormat == "string"
 			? pUtils.getFormat(arg.collageFormat)
-			: pUtils.getFormat("ТСПоФмА3"); // TODO код брать из ссылки
+			: pUtils.getFormat(collageFormat); // TODO код брать из ссылки
 
 	if (  !collageFormat  ){
 		return new Error("!collageFormat");
@@ -57,7 +71,7 @@ CPOffset.prototype.calc = function(arg){
 
 	// ------------------------------------------------------------
 
-	var gandsMater = Gm.get({
+	var gandsMater = gm.get({
 		"type":["material-paper","materials:print"],
 		"cop":[
 			new RegExp("^07","gi")
@@ -65,14 +79,14 @@ CPOffset.prototype.calc = function(arg){
 	});
 
 	// Получение цены материала
-	if (  !Gm.dataReferences.has(material)  ){
+	if (  !gm.dataReferences.has(material)  ){
 		return new Error("!material.found");
 	}
-	var materPrice = Gm.dataReferences.get(material).GSCostSale || Gm.dataReferences.get(material).GSCost || 0;
+	var materPrice = gm.dataReferences.get(material).GSCostSale || gm.dataReferences.get(material).GSCost || 0;
 
 	// Получение цены печатных пластин
-	if (  Gm.dataReferences.has(printForm)  ){
-		printFormPrice = Gm.dataReferences.get(printForm).GSCostSale || Gm.dataReferences.get(printForm).GSCost || 0;
+	if (  gm.dataReferences.has(printForm)  ){
+		printFormPrice = gm.dataReferences.get(printForm).GSCostSale || gm.dataReferences.get(printForm).GSCost || 0;
 	}
 
 	// ------------------------------------------------------------
@@ -82,10 +96,19 @@ CPOffset.prototype.calc = function(arg){
 
 	// ------------------------------------------------------------
 
+	var rollGSID = [];
+
+	if (configRow){
+		rollGSID = gm.getProperty(configRow, "код-листопроход");
+		if (rollGSID.length) rollGSID = eval("("+rollGSID[0].value+")");
+	}
+
+	if (!rollGSID.length) rollGSID = /ПЗРАЛП/gi; // листопроход по-умолчанию
+
 	for(c=0; c<gandsMater.length; c++){
 
 		// Получение цены листопрохода
-		if (  gandsMater[c].GSID.match(/ПЗРАЛП/gi)  ){ // TODO код брать из ссылки
+		if (  gandsMater[c].GSID.match(rollGSID)  ){ // TODO код брать из ссылки
 			for(v=0; v<gandsMater[c].gandsPropertiesRef.length; v++){
 				if (  gandsMater[c].gandsPropertiesRef[v].property.match(/Способ печати/gi)  ){
 					if (  gandsMater[c].gandsPropertiesRef[v].value.match(/офсет/gi)  ){

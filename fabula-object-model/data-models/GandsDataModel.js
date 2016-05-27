@@ -68,13 +68,12 @@ GandsDataModel.prototype = {
 		var self = this;
 
 		var db = getContextDB.call(this);
-		var configRow = {"GSID": "ТСFM", "GSName": "Настройки FOM", gandsPropertiesRef: []};
-
-		// TODO брать коды инициализации из настроек
+		var configRow = {"GSID": "ТСFM", "GSName": "Настройки FOM", "GSKindName":"", "GSCOP":""};
+		var configRowProps = [];
 
 		/*#if browser,node*/
 		// Номеклатура
-		db.query({
+		db.dbquery({
 			"query": "SELECT pid, extID, property, value FROM Property WHERE ExtID = 'ТСFM' ",
 			"callback": function(dbres){
 
@@ -95,7 +94,7 @@ GandsDataModel.prototype = {
 						if (dbres.recs[c].property == "запрос-номенклатура"){
 							dbq[0] = "SELECT * FROM Gands WHERE " + dbres.recs[c].value;
 						}
-						configRow.gandsPropertiesRef.push(dbres.recs[c]);
+						configRowProps.push(dbres.recs[c]);
 					}
 				}
 
@@ -123,9 +122,9 @@ GandsDataModel.prototype = {
 						"callback" : function(res){
 							self._afterLoad(
 								{
-									"data": res[0].recs,
+									"data": res[0].recs.concat(configRow),
 									"ext": res[1].recs,
-									"props": res[2].recs
+									"props": res[2].recs.concat(configRowProps)
 								},
 								callback
 							);
@@ -202,6 +201,23 @@ GandsDataModel.prototype = {
 
 		self.dataReferences = new ObjectA(gandsRef);
 
+		// -------------------------------------------------------------------------------------
+
+		var proto = Object.getPrototypeOf(self);
+		proto._matcherPatterns = [];
+
+		var configRow = self.dataReferences.get("ТСFM");
+
+		if (configRow){
+			for(c=0; c<configRow.gandsPropertiesRef.length; c++){
+				if (configRow.gandsPropertiesRef[c].property == "номенклатура-группы"){
+					proto._matcherPatterns = proto._matcherPatterns.concat(eval("("+ configRow.gandsPropertiesRef[c].value +")"));
+				}
+			}
+		}
+
+		// -------------------------------------------------------------------------------------
+
 		self._buildIndexData();
 
 		callback(null, self);
@@ -233,128 +249,31 @@ GandsDataModel.prototype = {
 	/**
 	 * @ignore
 	 * */
-	"_groupMatcher": function(row){
+	"_matcherPatterns": [],
 
-		// TODO брать коды из ссылок
+
+	/**
+	 * @ignore
+	 * */
+	"_groupMatcher": function(row){
 
 		var tmp = [];
 
-		// Печатные форматы форматы
-		if (  row.GSID.match(/ТСПоФм/gi)  ) {
-			tmp.push("print-formats");
-		}
-
-		// Соответсвует ТМЦ / Бумага
-		// Сюда могут быть включены: картон, самокопирка и пр.
-		// TODO a.match(/^тцбу+[a-z-0-9]{1,}/ig)
-		if (
-			row.GSID.toLowerCase().match(/тцбу/gi)
-			&& row.GSID.length > 4
-		) {
-			tmp.push("material-paper");
-		}
-
-		// Выбирает из ТМЦ / Бумага только конкретно бумагу
-		if (  row.GSID.toLowerCase().match(/тцбуме|тцбуоф|тцбуса|тцбуск|тцбуцп|тцбуфб/gi)  ) {
-			tmp.push("paper");
-		}
-
-		// materials:paper:offset
-		if (  row.GSID.match(/тцбуоф/gi)  ){
-			tmp.push("materials:paper:offset");
-		}
-
-		// materials:paper:coated
-		if (  row.GSID.match(/тцбуме/gi)  ){
-			tmp.push("materials:paper:coated");
-		}
-
-		// materials:carton
-		if (  row.GSID.match(/тцбукм|тцдк/gi)  ){
-			tmp.push("materials:carton")
-		}
-
-		// materials:carton:regular
-		if (  row.GSID.match(/тцбукм/gi)  ){
-			tmp.push("materials:carton:regular")
-		}
-
-		// paper:carton:design
-		if (  row.GSID.match(/тцдк/gi)  ){
-			tmp.push("materials:carton:design")
-		}
-
-		// production:lamination
-		if (  row.GSID.match(/пзрала/gi)  ){
-			tmp.push("production:laminating");
-		}
-
-		// production:cutting
-		if (  row.GSID.match(/пзрапз/gi)  ){
-			tmp.push("production:cutting");
-		}
-
-		// production:creasing
-		if (  row.GSID.match(/пзраби/gi)  ){
-			tmp.push("production:creasing");
-		}
-
-		// production:rounding
-		if (  row.GSID.match(/пзрапо/gi)  ){
-			tmp.push("production:rounding");
-		}
-
-		// production:folding
-		if (  row.GSID.match(/пзраф/gi)  ){
-			tmp.push("production:folding");
-		}
-
-		if (  row.GSID.match(/тцмп/gi)  ){
+		for(var c=0; c<this._matcherPatterns.length; c++){
 			if (
-				row.GSID.match(/тцмпбг|тцмпкк|тцмпкл|тцмпкр|тцмпкт|тцмпрс|тцмпс1|тцмпск|тцмпто/gi)
-				|| row.GSID.length <= 6
+				this._matcherPatterns[c].GS
+				&& row.GSID.match(this._matcherPatterns[c].GS)
 			){
-				// return false;
-			} else {
+				tmp.push(this._matcherPatterns[c].gr);
 
-			}
-			tmp.push("materials:print");
-		}
-
-		if (  row.GSID.toLowerCase().match(/тцбуд1|тцбуд3|тцбукр|тцбупр/gi)  ) {
-			tmp.push("carton");
-		}
-
-		if (  row.GSID.toLowerCase().match(/тцбуко/)  ) {
-			tmp.push("envelope");
-		}
-
-		if (
-			row.GSCOP.match(/17/)
-			|| row.GSCOP.match(/27/)
-		) {
-			if (!row.GSCOP.match(/276|176/)) {
-				tmp.push("products");
+			} else if (
+				this._matcherPatterns[c].COP
+				&& row.GSCOP.match(this._matcherPatterns[c].COP)
+			){
+				tmp.push(this._matcherPatterns[c].gr);
 			}
 		}
 
-		if (
-			row.GSCOP.match(/17/)
-			|| row.GSCOP.match(/27/)
-			|| row.GSCOP.match(/07/)
-		) {
-			tmp.push("print");
-		}
-
-		if (
-			row.GSCOP.match(/17/)
-			|| row.GSCOP.match(/27/)
-		) {
-			if (!row.GSCOP.match(/276|176/)) {
-				tmp.push("products:print");
-			}
-		}
-		
 		return tmp;
 	},
 

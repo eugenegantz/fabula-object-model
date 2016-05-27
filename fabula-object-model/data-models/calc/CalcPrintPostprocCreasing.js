@@ -26,7 +26,7 @@ CPCreasing.prototype.calc = function(arg){
 
 	if (!value || !amount) return 0;
 
-	var GSID = value == 1 ? cConst.POSTPROC_CREASING_V1_GSID : cConst.POSTPROC_CREASING_V2_GSID;
+	var GSID = value == 1 ? cConst.POSTPROC_CREASING_V1_GSID : cConst.POSTPROC_CREASING_V2_GSID; // TODO порешить ссылки
 
 	var discount = 0;
 
