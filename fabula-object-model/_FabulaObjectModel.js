@@ -192,4 +192,32 @@ FabulaObjModel.prototype.getInstance = function(arg){
 
 // ------------------------------------------------------------------------
 
+// Инициализация всех важных компонентов
+FabulaObjModel.prototype.load = function(arg){
+	var _utils = this.create("utils");
+	if (_utils.getType(arg) != "object") arg = Object.create(null);
+	var callback = typeof arg.callback == "function" ? arg.callback : new Function();
+	var self = this;
+
+	var gdm = this.create("GandsDataModel");
+
+	gdm.load({
+		callback: function(err){
+			self._initCalcConst();
+			callback(err, self);
+		}
+	});
+};
+
+
+/**
+ * Получение из БД констант для калькулятора
+ * */
+FabulaObjModel.prototype._initCalcConst = function(){
+	var cConst = require("./calc/CalcConsts");
+	cConst._init();
+};
+
+// ------------------------------------------------------------------------
+
 module.exports = FabulaObjModel;

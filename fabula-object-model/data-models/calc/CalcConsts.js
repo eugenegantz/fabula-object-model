@@ -2,11 +2,42 @@
 
 module.exports = {
 
-	DIGITAL_PRINT_MAX_AMOUNT: 250,
+	_init: function(){
+		var gdm = require("./../GandsDataModel").prototype.getInstance();
+		var fomConfig = gdm.get({"group":["fom-config"]});
+		var cConst = module.exports;
+		for(var c=0; c<fomConfig.gandsPropertiesRef.length; c++){
+			var prop = fomConfig.gandsPropertiesRef[c];
+			if (  prop.property.match(/код-бигование-1/ig)  ){
+				cConst.POSTPROC_CREASING_V1_GSID = prop.value;
+
+			} else if (  prop.property.match(/код-бигование-2/ig)  ){
+				cConst.POSTPROC_CREASING_V2_GSID = prop.value;
+
+			} else if (  prop.property.match(/код-закругление-углов-ручное/ig)  ) {
+				cConst.POSTPROC_ROUNDING_H_GSID = prop.value;
+
+			} else if (  prop.property.match(/код-ламинация-1-стор/ig)  ) {
+				cConst.POSTPROC_LAMINATING_1_SIDE_GSID = prop.value;
+
+			} else if (  prop.property.match(/код-ламинация-2-стор/ig)  ) {
+				cConst.POSTPROC_LAMINATING_2_SIDE_GSID = prop.value;
+
+			} else if (  prop.property.match(/тираж-предпечатной-подготовки-офсет/ig)  ) {
+				cConst.OFFSET_PREPRINT_PAPER_AMOUNT = prop.value;
+
+			} else if (  prop.property.match(/макс-тираж-циф-печати/ig)  ) {
+				cConst.DIGITAL_PRINT_MAX_AMOUNT = prop.value;
+			}
+		}
+		Object.freeze(cConst);
+	},
+
+	DIGITAL_PRINT_MAX_AMOUNT: 250, // TODO Занести в ТехСправ
 
 	DIGITAL_PRINT: "DIGITAL",
 
-	OFFSET_PREPRINT_PAPER_AMOUNT: 250,
+	OFFSET_PREPRINT_PAPER_AMOUNT: 250, // TODO Занести в ТехСправ
 
 	OFFSET_PRINT: "OFFSET",
 

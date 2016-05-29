@@ -3,6 +3,8 @@
 // ------------------------------------------------------
 // Номенклатура
 
+var DefaultDataModel = require("./DefaultDataModel");
+var IEvents = require("./InterfaceEvents");
 var ObjectA = require("./ObjectA");
 var _utils = require("./../utils");
 
@@ -25,7 +27,7 @@ var GandsDataModel = function(){
 	this.init();
 };
 
-GandsDataModel.prototype = {
+GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvents,{
 	"init" : function(){
 
 		this.dbModel = null;
@@ -486,6 +488,6 @@ GandsDataModel.prototype = {
 		return ret
 	}
 
-};
+});
 
 module.exports = GandsDataModel;
