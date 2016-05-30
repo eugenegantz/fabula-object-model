@@ -62,8 +62,6 @@ CPFolding.prototype.calc = function(arg){
 
 	if (!value || !amount || !paperDensity) return 0;
 
-	// TODO брать коды из ссылки
-
 	dkey = paperDensity > 150 ? ">150" : "<=150";
 
 	if (  [1,2,3,4,"1","2","3","4"].indexOf(value) == -1  ){

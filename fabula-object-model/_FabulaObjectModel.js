@@ -214,7 +214,7 @@ FabulaObjModel.prototype.load = function(arg){
  * Получение из БД констант для калькулятора
  * */
 FabulaObjModel.prototype._initCalcConst = function(){
-	var cConst = require("./calc/CalcConsts");
+	var cConst = require("./data-models/calc/CalcConsts");
 	cConst._init();
 };
 

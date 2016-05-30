@@ -17,6 +17,7 @@ var cUtils = require(modPath.join(__root, "./data-models/calc/CalcUtils.js"));
 // ------------------------------------------------------------------------------------
 
 var FabulaObjectModel = require(__root);
+
 var fom = FabulaObjectModel
 	.prototype
 	.getInstance({
@@ -31,7 +32,16 @@ describe("fabula-object-model", function(){
 
 	it(".prototype.getInstance()", function(){
 		assert.ok(Boolean(fom));
-	})
+	});
+
+	it(".load()", function(done){
+		fom.load({"callback": function(err){
+			if (err){
+				throw new Error("fom.load(err)");
+			}
+			done();
+		}});
+	});
 
 });
 

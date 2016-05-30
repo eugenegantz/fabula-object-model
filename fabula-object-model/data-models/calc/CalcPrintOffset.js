@@ -33,7 +33,7 @@ CPOffset.prototype.calc = function(arg){
 	// ------- Офсетные пластины
 	var printForm = gm.getProperty(configRow, "код-кальк-пластина-по-умолчанию");
 	if (!printForm.length){
-		printForm = "ТЦМППЛ01"; // TODO код брать из ссылки
+		printForm = "ТЦМППЛ01";
 	} else {
 		printForm = printForm[0].value;
 	}
@@ -55,7 +55,7 @@ CPOffset.prototype.calc = function(arg){
 	collageFormat =
 		typeof arg.collageFormat == "string"
 			? pUtils.getFormat(arg.collageFormat)
-			: pUtils.getFormat(collageFormat); // TODO код брать из ссылки
+			: pUtils.getFormat(collageFormat);
 
 	if (  !collageFormat  ){
 		return new Error("!collageFormat");
@@ -108,7 +108,7 @@ CPOffset.prototype.calc = function(arg){
 	for(c=0; c<gandsMater.length; c++){
 
 		// Получение цены листопрохода
-		if (  gandsMater[c].GSID.match(rollGSID)  ){ // TODO код брать из ссылки
+		if (  gandsMater[c].GSID.match(rollGSID)  ){
 			for(v=0; v<gandsMater[c].gandsPropertiesRef.length; v++){
 				if (  gandsMater[c].gandsPropertiesRef[v].property.match(/Способ печати/gi)  ){
 					if (  gandsMater[c].gandsPropertiesRef[v].value.match(/офсет/gi)  ){
