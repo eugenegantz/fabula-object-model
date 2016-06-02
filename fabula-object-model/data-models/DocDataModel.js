@@ -1175,7 +1175,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			dbawws.dbquery({
 				"query":"SELECT ID4, DocName, Prefix, GSFilter, Sort FROM RB_DOC ORDER BY Sort ASC",
 				"callback": function(dbres){
-					Object.getPrototypeOf(self)._RB_DOC_CACHE = dbres.recs;
+					if (self instanceof DocDataModel){
+						Object.getPrototypeOf(self)._RB_DOC_CACHE = dbres.recs;
+					} else {
+						self._RB_DOC_CACHE = dbres.recs;
+					}
 					if (typeof callback == "function"){
 						callback(self._RB_DOC_CACHE);
 					}

@@ -1138,6 +1138,14 @@ describe("GandsDataModel", function(){
 		});
 	});
 
+	describe("configRow Properties", function(){
+		it(".length == 20", function(){
+			var d = gm.get({group:["fom-config"]});
+			assert.ok(d.length > 0, ".length > 0");
+			assert.equal(Object.keys(d[0]).length, 22, "config.row.keys.length == 20");
+		});
+	});
+
 	describe(".getParent()", function(){
 
 		beforeEach(function(done) {

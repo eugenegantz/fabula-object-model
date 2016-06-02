@@ -76,7 +76,7 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 		/*#if browser,node*/
 		// Номеклатура
 		db.dbquery({
-			"query": "SELECT pid, extID, property, value FROM Property WHERE ExtID = 'ТСFM' ",
+			"query": "SELECT pid, extID, property, value FROM Property WHERE ExtID IN(SELECT [value] FROM Property WHERE extClass = 'config' AND property = 'fom-config-entry-gsid')",
 			"callback": function(dbres){
 
 				// Конфиг по-умолчанию
@@ -211,6 +211,15 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 		var configRow = self.dataReferences.get("ТСFM");
 
 		if (configRow){
+			// Заполнение недостающих полей в configRow
+			if (self.data.length){
+				var tmp = self.data[0];
+				for(var prop in tmp){
+					if (!Object.prototype.hasOwnProperty.call(tmp, prop)) continue;
+					if (  configRow[prop] === void 0  ) configRow[prop] = "";
+				}
+			}
+
 			for(c=0; c<configRow.gandsPropertiesRef.length; c++){
 				if (configRow.gandsPropertiesRef[c].property == "номенклатура-группы"){
 					proto._matcherPatterns = proto._matcherPatterns.concat(eval("("+ configRow.gandsPropertiesRef[c].value +")"));
