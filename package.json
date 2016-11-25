@@ -2,6 +2,18 @@
 	"name": "fabula-object-model",
 	"main": "./fabula-object-model/nodejs/FabulaObjectModel.js",
 	"version": "0.8.0",
+	"description": [
+		"Библиотека реализующая объектную модель для работы с базой данных \"Фабулы\"",
+		"Работает: frontend, backend",
+		"Включает классы реализующие модели, интерфейсы событий, типовые утилиты;",
+			"классы для работы с таблицами: Movements, Docs, GandS, Talk, Property, Firms;",
+			"утилиты для работы с печатью;",
+			"калькуляторы"
+	],
+	"author": {
+		"name": "EugeneGantz",
+		"email": "eugengantz@gmail.com"
+	},
 	"dependencies": {
 		"eg-db-awws": "https://github.com/eugenegantz/eg-db-awws.git",
 		"eg-promise-cascade": "https://github.com/eugenegantz/promise.cascade.git"

@@ -426,7 +426,7 @@ describe("DefaultDataModel", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("MovDataModel", function(){
+describe("MovDataModel", function(){
 
 	var db = fom.create("DBModel");
 
@@ -653,7 +653,7 @@ describe.skip("MovDataModel", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("DocDataModel", function(){
+describe("DocDataModel", function(){
 
 	var db = fom.create("DBModel");
 
@@ -988,7 +988,7 @@ describe("utils", function(){
 // -----------------------------------------------------------------------------
 
 
-describe.skip("Ajax-module", function(){
+describe("Ajax-module", function(){
 
 	it("Ajax._xFormParam", function(){
 		var a = Ajax._xFormParam({
@@ -1173,15 +1173,16 @@ describe("GandsDataModel", function(){
 
 	});
 
-	describe(".getProperty()", function(){
-		it(".getProperty(ГППО00ДИ, [материал]).length > 0", function(){
-			assert.ok(gm.getProperty("ГППО00ДИ", ["материал"]).length > 0);
+	describe(".getProperty()", function() {
+		// TODO неправильный проверяются приоритетные свойства
+		it(".getProperty(ГППО00ДИ, [материал]).length > 0", function() {
+			assert.ok(gm.getProperty("ГППО35В1", ["материал"]).length > 0);
 		});
-		it(".getProperty(ГППО00ДИ).length > 0", function(){
-			assert.ok(gm.getProperty("ГППО00ДИ").length > 0);
+		it(".getProperty(ГППО00ДИ).length > 0", function() {
+			assert.ok(gm.getProperty("ГППО35В1").length > 0);
 		});
-		it(".getProperty(ГППО00ДИ, null, {onlyPriority: true}).length > 0", function(){
-			assert.ok(gm.getProperty("ГППО00ДИ", null, {onlyPriority: true}).length > 0);
+		it(".getProperty(ГППО00ДИ, null, {onlyPriority: true}).length > 0", function() {
+			assert.ok(gm.getProperty("ГППО35В1", null, { onlyPriority: true }).length > 0);
 		});
 	});
 
@@ -1227,7 +1228,7 @@ describe("PrintUtils", function(){
 // -----------------------------------------------------------------------------
 
 
-describe("Calc", function(){
+describe.skip("Calc", function(){
 
 	var gands = fom.create("GandsDataModel");
 
