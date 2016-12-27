@@ -187,7 +187,11 @@ FabulaObjModel.prototype.instances = [];
 // ------------------------------------------------------------------------
 
 FabulaObjModel.prototype.getInstance = function(arg){
-	return this.instances.length ? this.instances[0] : new FabulaObjModel(arg);
+	return this.instances[0] || new FabulaObjModel(arg);
+};
+
+FabulaObjModel.getInstance = function(arg){
+	return this.prototype.instances[0] || new FabulaObjModel(arg);
 };
 
 // ------------------------------------------------------------------------

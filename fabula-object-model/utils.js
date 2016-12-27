@@ -88,60 +88,21 @@ _utils.split = function(d,s){
 
 /**
  * @param {String} str - String
- * @param {String, Array} _chars - Characters
- * @param {Number} direction - 0 - left, 1 = right, -1 = both
+ * @param {String, Array} ch - Characters
+ * @param {Number} di - 0 - left, 1 = right, -1 = both
  * */
-_utils.trim = function(str,_chars, direction){
+_utils.trim = function(str, ch, di){
 	"use strict";
 
-	if (typeof str != "string") {
-		throw new Error("1st argument suppose to be String");
-	}
+	var regEx = [];
 
-	if ( typeof _chars == "string" ){
-		_chars = _chars.split('');
+	if (!di || di == -1)
+		regEx.push("^[" + ch + "]+");
 
-	} else if (  Array.isArray(_chars)  ){
+	if (di == 1 || di == -1)
+		regEx.push("[" + ch + "]+$");
 
-	} else {
-		throw new Error("1st argument suppose to be String or Array");
-
-	}
-
-	if (typeof direction != "number") direction = -1;
-
-	str = str.split('');
-
-	for(;;){
-		if (!str.length) {
-			break;
-
-		} else if (
-			(
-				direction === -1
-				|| direction === 0
-			)
-			&& _chars.indexOf(str[0]) > -1
-		){
-			str.shift();
-
-		} else if (
-			(
-				direction === -1
-				|| direction === 1
-			)
-			&& _chars.indexOf(str[str.length-1]) > -1
-		){
-			str.pop();
-
-		} else {
-			break;
-
-		}
-
-	}
-
-	return str.join('');
+	return str.replace(new RegExp(regEx.join("|"), "g"), '');
 };
 
 
