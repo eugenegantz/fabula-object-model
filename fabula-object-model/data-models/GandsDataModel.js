@@ -169,11 +169,14 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 	 * @ignore
 	 * */
 	"_afterLoad": function(dbres, callback){
-		var self = this;
+		var c, L, v, gsid, gslv,
+			lvs = [2, 4, 6],
+			self = this,
+			gandsRef = Object.create(null),
+			dataRefByGSIDGroup = Object.create(null);
+
 		self.data = dbres.data;
 		self.state = 1;
-
-		var c, L, gandsRef = Object.create(null);
 
 		for(c=0; c<self.data.length; c++){
 			gandsRef[self.data[c].GSID] = self.data[c];
@@ -195,13 +198,26 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 			gandsRef[gandsProps[c].extID].gandsPropertiesRef.push(gandsProps[c]);
 		}
 
-		for(c= 0, L=self.data.length; c<L; c++){
-			if (typeof self.GSUnits[self.data[c].GSID] == "undefined") {
-				self.GSUnits[self.data[c].GSID] = self.data[c].GSUnit
+		for (c = 0, L = self.data.length; c < L; c++) {
+			if (typeof self.GSUnits[self.data[c].GSID] == "undefined")
+				self.GSUnits[self.data[c].GSID] = self.data[c].GSUnit;
+
+			gsid = self.data[c].GSID;
+
+			for (v = 0; v < lvs.length; v++) {
+				gslv = gsid.substr(0, lvs[v]);
+
+				if (gslv.length == lvs[v]) {
+					if (!dataRefByGSIDGroup[gslv]) dataRefByGSIDGroup[gslv] = [];
+
+					dataRefByGSIDGroup[gslv].push(self.data[c]);
+				}
 			}
 		}
 
 		self.dataReferences = new ObjectA(gandsRef);
+		self.dataRefByGSID = self.dataReferences;
+		self.dataRefByGSIDGroup = new ObjectA(dataRefByGSIDGroup);
 
 		// -------------------------------------------------------------------------------------
 
@@ -472,7 +488,6 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 					if (  cop[v] == this.data[c]  ){
 						tmp.push(this.data[c]);
 					}
-
 				}
 			}
 		}

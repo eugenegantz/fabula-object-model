@@ -4,3 +4,4 @@ docs
 *.bat
 *.zip
 *.rar
+node_modules/
