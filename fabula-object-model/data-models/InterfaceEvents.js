@@ -37,9 +37,9 @@ EventsInterface.prototype = {
 		){
 
 			if (
-				e instanceof IEvent
-				&& e instanceof CustomEvent === false
-				&& e instanceof Event === false
+				!(e instanceof IEvent)
+				&& !(e instanceof CustomEvent)
+				&& !(e instanceof Event)
 			){
 				e = this._createEvent(eventName);
 			}

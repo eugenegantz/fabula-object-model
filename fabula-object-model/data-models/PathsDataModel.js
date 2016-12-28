@@ -1,6 +1,7 @@
 "use strict";
 
-var stdUtils = require("./../utils.js");
+var modPath = require("path"),
+	stdUtils = require("./../utils.js");
 
 // Для совместимости
 var getContextDB = function() {
@@ -46,11 +47,11 @@ PathsDataModel.prototype = {
 
 		if (db) {
 			db.dbquery({
-				"query": "SELECT Value, Property FROM Property WHERE ExtClass = 'path' ",
+				"query": "SELECT value, property FROM Property WHERE extClass = 'path' ",
 				"callback": function(res) {
 					self.data = res.recs;
 					self.state = 1;
-					callback(self.data);
+					callback(([res.info.errors] + '') || null, self.data);
 				}
 			});
 		}
