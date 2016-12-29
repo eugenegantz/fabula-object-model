@@ -88,13 +88,13 @@ PathsDataModel.prototype = {
 
 	/**
 	 * Приветсти путь к длинному виду
-	 * @param {String} path - путь
+	 * @param {String} argPath - путь
 	 * @return {String}
 	 * */
-	"toLong": function(path) {
-		if (typeof path != "string") return "";
+	"toLong": function(argPath) {
+		if (typeof argPath != "string") return "";
 
-		var c,
+		var c, path,
 			pattern,
 			paths = this.data;
 
@@ -107,18 +107,18 @@ PathsDataModel.prototype = {
 				"g"
 			);
 
-			if (!path.match(pattern)) continue;
+			if (!argPath.match(pattern)) continue;
 
 			path = paths[c].value.split(/[;,]/ig)[0].trim();
 
-			path = path.replace(pattern, "");
-			path = modPath.join(
+			argPath = argPath.replace(pattern, "");
+			argPath = modPath.join(
 				stdUtils.rtrim(path, ["\\", "/"]),
-				stdUtils.trim(path, ["\\", "/"])
+				stdUtils.trim(argPath, ["\\", "/"])
 			).replace(/[\\]/g, "/");
 		}
 
-		return path;
+		return argPath;
 	},
 
 
