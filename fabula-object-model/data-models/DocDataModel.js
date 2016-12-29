@@ -206,6 +206,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				mov.set("Doc", this.get("DocID"));
 			}
 			this.movs.push(mov);
+
+			this.trigger("add-mov");
 		},
 	
 	
@@ -241,6 +243,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				);
 
 			}
+
+			this.trigger("delete-mov");
 
 			return true;
 		},
@@ -303,7 +307,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					} else {
 						for (c = 0; c < self.movs.length; c++) {
-							GSID = self.movs[c].get("GSID");
+							GSID = self.movs[c].get("GS");
 							if (!GSID) {
 								GSID = null;
 							} else {
@@ -1331,6 +1335,42 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				}
 			});
 
+		},
+
+
+		/**
+		 * Посчитать суммы полей sum, sum2 подчиненных задач
+		 * @return {Object}
+		 * */
+		getSumOfMovs: function() {
+			var c,
+				sum1 = 0,
+				sum2 = 0,
+				movs = this.getMov();
+
+			for (c = 0; c < movs.length; c++) {
+				sum1 += +movs[c].get("sum", null, !1) || 0;
+				sum2 += +movs[c].get("sum2", null, !1) || 0;
+			}
+
+			return {
+				sum1: sum1,
+				sum2: sum2
+			};
+		},
+
+
+		/**
+		 * Присвоить sum1, sum2 как суммы полей sum, sum2 подчиненных задач
+		 * @return {DocDataModel}
+		 * */
+		calcAndApplySumOfMovs: function() {
+			var sums = this.getSumOfMovs();
+
+			this.set("sum1", sums.sum1, null, !1);
+			this.set("sum2", sums.sum2, null, !1);
+
+			return this;
 		},
 
 
