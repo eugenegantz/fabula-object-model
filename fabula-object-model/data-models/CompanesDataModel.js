@@ -1,33 +1,30 @@
 "use strict";
 
-// ------------------------------------------------------
-// Данные из базы о собственных филиалах
-
 /**
  * Для совместимости
  * @ignore
  * */
-var getContextDB = function(){
-	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
-	var DBModel = FabulaObjectModel.prototype._getModule("DBModel");
+var getContextDB = function() {
+	var FabulaObjectModel = require("./../_FabulaObjectModel.js"),
+		DBModel = FabulaObjectModel.prototype._getModule("DBModel");
 
-	if (  this._fabulaInstance ){
+	if (this._fabulaInstance)
 		return this._fabulaInstance.getDBInstance();
-	}
+
 	return DBModel.prototype.getInstance();
 };
 
 
 /**
+ * Модель данных из базы о собственных филиалах
  * @constructor
  * */
-var CompanesDataModel = function(){
+var CompanesDataModel = function() {
 	this.init();
 };
 
 CompanesDataModel.prototype = {
-	"init" : function(){
-
+	"init": function() {
 		this.dbModel = null;
 
 		this.data = [];
@@ -35,49 +32,50 @@ CompanesDataModel.prototype = {
 		this.instances.push(this);
 
 		this.state = 0;
-
 	},
 
 
 	/**
 	 * Массив экземпляров класса
 	 * */
-	"instances" : [],
+	"instances": [],
 
 
 	/**
 	 * Получить экземпляр класса
 	 * */
-	"getInstance" : function(){
-		return this.instances.length ? this.instances[0] : new CompanesDataModel();
+	"getInstance": function() {
+		return this.instances[0] || new CompanesDataModel();
 	},
 
 
 	/**
 	 * Инициализация данных из БД
 	 * */
-	"load" : function(A){
-		if (typeof A == "undefined") A = Object.create(null);
-		var callback = (typeof A.callback == "function" ? A.callback : function(){} );
-		var db = getContextDB.call(this);
-		var self = this;
-		if (db){
-			db.dbquery({
-				"query" : "SELECT CompanyID, CompanyName FROM Companes",
-				"callback" : function(res){
-					self.data = res.recs;
-					self.state = 1;
-					callback(self.data);
-				}
-			});
-		}
+	"load": function(arg) {
+		if (typeof arg == "undefined") arg = Object.create(null);
+
+		var callback = typeof arg.callback == "function" ? arg.callback : new Function(),
+			db = getContextDB.call(this),
+			self = this;
+
+		if (!db) return;
+
+		db.dbquery({
+			"query": "SELECT CompanyID, CompanyName FROM Companes",
+			"callback": function(res) {
+				self.data = res.recs;
+				self.state = 1;
+				callback(self.data);
+			}
+		});
 	},
 
 
 	/**
 	 * Получить инициализированные данные
 	 * */
-	"get" : function(){
+	"get": function() {
 		return this.data;
 	}
 };

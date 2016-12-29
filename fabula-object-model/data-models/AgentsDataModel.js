@@ -1,17 +1,14 @@
 "use strict";
 
-// ------------------------------------------------------
-// Данные из базы об агентах
-
 /**
  * Для совместимости
  * @ignore
  * */
-var getContextDB = function(){
+var getContextDB = function() {
 	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
 	var DBModel = FabulaObjectModel.prototype._getModule("DBModel");
 
-	if (  this._fabulaInstance ){
+	if (this._fabulaInstance) {
 		return this._fabulaInstance.getDBInstance();
 	}
 	return DBModel.prototype.getInstance();
@@ -19,15 +16,15 @@ var getContextDB = function(){
 
 
 /**
+ * Данные из базы об агентах
  * @constructor
  * */
-var AgentsDataModel = function(){
+var AgentsDataModel = function() {
 	this.init();
 };
 
 AgentsDataModel.prototype = {
-	"init" : function(){
-
+	"init": function() {
 		this.dbModel = null;
 
 		this.data = [];
@@ -35,52 +32,50 @@ AgentsDataModel.prototype = {
 		this.instances.push(this);
 
 		this.state = 0;
-
 	},
 
 
 	/**
 	 * Массив экземпляров класса
 	 * */
-	"instances" : [],
+	"instances": [],
 
 
 	/**
 	 * Получить экземпляр класса
 	 * */
-	"getInstance" : function(){
-		if (this.instances.length){
-			return this.instances[0];
-		}
-		return new AgentsDataModel();
+	"getInstance": function() {
+		return this.instances[0] || new AgentsDataModel();
 	},
 
 
 	/**
 	 * Инициализация данных из БД
 	 * */
-	"load" : function(A){
-		if (typeof A == "undefined") A = Object.create(null);
-		var callback = (typeof A.callback == "function" ? A.callback : function(){} );
-		var db = getContextDB.call(this);
-		var self = this;
-		if (db){
-			db.dbquery({
-				"query" : "SELECT AgentID, FIO, NameShort, NameFull, User FROM Agents",
-				"callback" : function(res){
-					self.data = res.recs;
-					self.state = 1;
-					callback(self.data);
-				}
-			});
-		}
+	"load": function(arg) {
+		if (typeof arg == "undefined") arg = Object.create(null);
+
+		var callback = typeof arg.callback == "function" ? arg.callback : function() {},
+			db = getContextDB.call(this),
+			self = this;
+
+		if (!db) return;
+
+		db.dbquery({
+			"query": "SELECT AgentID, FIO, NameShort, NameFull, User FROM Agents",
+			"callback": function(res) {
+				self.data = res.recs;
+				self.state = 1;
+				callback(self.data);
+			}
+		});
 	},
 
 
 	/**
 	 * Получить инициализированные данные
 	 * */
-	"get" : function(){
+	"get": function() {
 		return this.data;
 	}
 };
