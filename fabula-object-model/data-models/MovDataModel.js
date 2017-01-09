@@ -189,6 +189,11 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		"addMov": function() {
+			return this.addChildMov.apply(this, arguments);
+		},
+
+
 		"addChildMov": function(child){
 			var mov, c, prop;
 
@@ -349,15 +354,23 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		"getJSON": function(){
-			var keys = Object.getOwnPropertyNames(this.props);
-			var defaultFields = _utils.objectKeysToLowerCase(this.__movDataModelDefaultFields);
-			var lowKey, json = {};
-			for(var c=0; c<keys.length; c++){
+			var c, lowKey,
+				keys            = Object.getOwnPropertyNames(this.props),
+				defaultFields   = _utils.objectKeysToLowerCase(this.__movDataModelDefaultFields),
+				ret             = { "className":"MovDataModel", "fields": {}, "movs": [] };
+
+			for(c = 0; c < keys.length; c++){
 				lowKey = keys[c].toLowerCase();
+
 				if (  !defaultFields.hasOwnProperty(lowKey)  ) continue;
-				json[lowKey] = this.props[keys[c]];
+
+				ret.fields[lowKey] = this.props[keys[c]];
 			}
-			return json;
+
+			for (c = 0; c < this.childrenMovs.length; c++)
+				ret.movs.push(this.childrenMovs[c].getJSON());
+
+			return ret;
 		},
 
 
