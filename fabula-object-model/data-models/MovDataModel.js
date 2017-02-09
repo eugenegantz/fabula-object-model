@@ -1192,6 +1192,13 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		"getNestedMovs": function() {
+			return this.getCMov().reduce(function(prev, curr) {
+				return prev.concat(curr, curr.getNestedMovs());
+			}, []);
+		},
+
+
 		"save": function(A){
 			var self = this;
 
