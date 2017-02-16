@@ -673,15 +673,19 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						"query": dbq.join("; "),
 						"callback": function(dbres){
 							var err = [];
-							for(var c=0; c<dbres.length; c++){
-								if (  dbres[c].info.errors  ){
-									err.push(dbres[c].info.errors);
-								}
+
+							if (Array.isArray(dbres)) {
+								for(var c = 0; c < dbres.length; c++)
+									if (dbres[c].info.errors)
+										err.push(dbres[c].info.errors);
+
+							} else {
+								dbres.info.errors && err.push(dbres.info.errors);
 							}
-							if (err.length){
-								reject(err);
-								return;
-							}
+
+							if (err.length)
+								return reject(err);
+
 							resolve();
 						}
 					});
