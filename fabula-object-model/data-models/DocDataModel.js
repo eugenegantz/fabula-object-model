@@ -294,6 +294,88 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		/**
+		 * Удалить заявку и все подчиненные ей записи из БД
+		 * @param {Function=} arg.callback
+		 * */
+		"rm": function(arg) {
+			var c,
+				db          = getContextDB.call(this),
+				callback    = arg.callback || new Function(),
+				movs        = this.getMov(),
+				docId       = this.get("docId", null, !1),
+				promises    = [];
+
+			if (!docId)
+				return callback("DocDataMode.rm(): !this.docId");
+
+			promises.push(
+				new Promise(function(resolve, reject) {
+					db.dbquery({
+						"query": "" +
+						"DELETE " +
+						"FROM Property " +
+						"WHERE " +
+						"   extClass = 'DOCS'" +
+						"   AND pid = 0" +
+						"   AND extId = '" + docId + "';" +
+
+						"DELETE " +
+						"FROM Ps_property " +
+						"WHERE " +
+						"   extClass = 'DOCS'" +
+						"   AND pid = 0" +
+						"   AND extId = '" + docId + "';" +
+
+						"DELETE " +
+						"FROM Docs " +
+						"WHERE " +
+						"   docId = '" + docId + "'",
+
+						"callback": function(dbres) {
+							var c, err = [];
+
+							for (c = 0; c<dbres.length; c++)
+								err = err.concat(dbres[c].errors || []);
+
+							if (err.length)
+								return reject(err.join('; '));
+
+							resolve();
+						}
+					});
+				})
+			);
+
+			for (c = 0; c < movs.length; c++) {
+				(function() {
+					var mov = movs[c];
+
+					if (!mov.get("mmid", null, !1)) return;
+
+					promises.push(
+						new Promise(function(resolve, reject) {
+							mov.rm({
+								"callback": function(err) {
+									if (err)
+										return reject(err);
+
+									resolve();
+								}
+							});
+						})
+					);
+				})();
+			}
+
+			Promise.all(promises)
+				.then(function() {
+					callback(null);
+				})
+				.catch(callback)
+		},
+
+
+		/**
 		 * Сохранить (Добавить/обновить)
 		 * @param {Object} arg
 		 * @param {Function} arg.callback
@@ -990,7 +1072,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				err         = [],
 				callback    = typeof arg.callback == "function" ? arg.callback : new Function(),
 				DocID       = typeof arg.DocID == "string" && arg.DocID.length == 10 ? arg.DocID : self.get("DocID"),
-				taskModel   = typeof arg.taskModel == "function" ? arg.taskModel : null,
+				taskModel   = typeof arg.taskModel == "function" ? arg.taskModel : MovDataModel,
 				excludeGSID = typeof arg.excludeGSID == "object" ? arg.excludeGSID : [],
 				includeGSID = typeof arg.includeGSID == "object" ? arg.includeGSID : [],
 				useSubMovs  = typeof arg.useSubMovs == "undefined" ? false : Boolean(arg.useSubMovs);

@@ -292,6 +292,79 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		/**
+		 * Удалить запись и подчинен. ей записи
+		 * @param {Function} arg.callback
+		 * */
+		"rm": function(arg) {
+			var c,
+				db = getContextDB.call(this),
+				callback = arg.callback || new Function(),
+				movs = this.getCMov(),
+				mmid = this.get('mmid', null, !1),
+				promises = [
+					new Promise(function(resolve, reject) {
+						db.dbquery({
+							"query": "" +
+							"DELETE FROM Movement WHERE MMID = " + mmid + ";" +
+
+							"DELETE " +
+							"FROM Property " +
+							"WHERE " +
+							"   extClass = 'DOCS'" +
+							"   AND pid = " + mmid + ";" +
+
+							"DELETE " +
+							"FROM Ps_property " +
+							"WHERE " +
+							"   extClass = 'DOCS'" +
+							"   AND pid = " + mmid,
+
+							"callback": function(dbres) {
+								var c,
+									err = [];
+
+								for (c = 0; c < dbres.length; c++)
+									err = err.concat(dbres[c].errors || []);
+
+								if (err.length)
+									return reject(err.join('; '));
+
+								resolve();
+							}
+						});
+					})
+				];
+
+			for (c = 0; c < movs.length; c++) {
+				(function() {
+					var mov = movs[c];
+
+					if (!mov.get('mmid', null, !1)) return;
+
+					promises.push(
+						new Promise(function(resolve, reject) {
+							mov.rm({
+								"callback": function(err) {
+									if (err)
+										return reject(err);
+
+									resolve();
+								}
+							})
+						})
+					)
+				})();
+			}
+
+			Promise.all(promises)
+				.then(function() {
+					callback(null);
+				})
+				.catch(callback);
+		},
+
+
+		/**
 		 * @param {Object, MovDataModel=} keyValue - условия поиска по полям или обьект поиска
 		 * @param {Object=} propKeyValue - условия поиска по свойствам
 		 * @returns Array
@@ -1230,7 +1303,7 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					if (!dbres[0].recs.length){
 						// Новая запись
-						console.log("INSERT");
+						console.log("MOV-INSERT");
 
 						self.set("MMID",dbres[1].recs[0].NEW_MMID);
 
