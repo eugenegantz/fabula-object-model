@@ -353,6 +353,56 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 
 
 	/**
+	 * Получить данные из таблицы расширения номенклатуры GandsExt
+	 * @param {Object | String} row
+	 * @param {Object=} fld
+	 * @param {Object=} opt
+	 * */
+	"getExt": function(row, fld, opt) {
+		if (_utils.getType(row) == "object" && row.GSID)
+			row = this.dataReferences.get(row.GSID);
+
+		else if (_utils.getType(row) == "string")
+			row = this.dataReferences.get(row);
+
+		else
+			throw new Error("1st argument suppose to be String or Object");
+
+		if (!row)
+			return [];
+
+		if (fld && typeof fld != "object")
+			throw new Error("2nd argument supposed to be type Object");
+
+		if (!fld)
+			return row.gandsExtRef.concat(this.getExt(this.getParent(row), opt));
+
+		if (!opt)
+			opt = Object.create(null);
+
+		var res = this._fetchRowExtFields(row, fld);
+
+		if ((opt.onlyPriority && !res.length) || !opt.onlyPriority)
+			return res.concat(this.getExt(this.getParent(row) || '', fld, opt) || []);
+
+		return res;
+	},
+
+
+	"_fetchRowExtFields": function(row, fld) {
+		fld = _utils.objectKeysToLowerCase(fld);
+
+		return row.gandsExtRef.filter(function(extRow) {
+			extRow = _utils.objectKeysToLowerCase(extRow);
+
+			return !Object.keys(fld).some(function(key) {
+				return extRow[key] != fld[key];
+			});
+		});
+	},
+
+
+	/**
 	 * Получить свойства записи. Собственные и наследуемые
 	 * @param {Object | String} row - код либо запись номенклатуры
 	 * @param {Array | String=} props - массив свойств
@@ -513,6 +563,15 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 		ret.data = this.data;
 		ret.GSUnits = this.GSUnits;
 		return ret
+	},
+
+
+	/**
+	 * Является ли данная строка ссылкой на номенклатуру
+	 * @param {String} str
+	 * */
+	"isGsLink": function(str) {
+		return /\[\/?gs\]/ig.test(str);
 	}
 
 });

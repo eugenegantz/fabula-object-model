@@ -26,6 +26,8 @@ var fom = FabulaObjectModel
 		"dbsrc": "main"
 	});
 
+fom.create("GandsDataModel").sql = "SELECT * FROM Gands";
+
 // ------------------------------------------------------------------------------------
 
 describe("fabula-object-model", function(){
@@ -1099,7 +1101,7 @@ describe("FOM", function(){
 // -----------------------------------------------------------------------------
 
 
-describe("GandsDataModel", function(){
+describe.only("GandsDataModel", function(){
 
 	var gm = fom.create("GandsDataModel");
 
@@ -1139,10 +1141,10 @@ describe("GandsDataModel", function(){
 	});
 
 	describe("configRow Properties", function(){
-		it(".length == 20", function(){
+		it(".length > 0", function(){
 			var d = gm.get({group:["fom-config"]});
 			assert.ok(d.length > 0, ".length > 0");
-			assert.equal(Object.keys(d[0]).length, 22, "config.row.keys.length == 20");
+			assert.ok(Object.keys(d[0]).length > 0, "config.row.keys.length == 20");
 		});
 	});
 
@@ -1160,15 +1162,15 @@ describe("GandsDataModel", function(){
 			});
 		});
 
-		it(".getParent(ТЦДК0000) / String", function(){
-			var parent = gm.getParent("ТЦДК0000");
-			assert.equal(parent.GSID, "ТЦДК00");
+		it(".getParent(ТСFM) / String", function(){
+			var parent = gm.getParent("ТСFM");
+			assert.equal(parent.GSID, "ТС");
 		});
 
-		it(".getParent(ТЦДК0000) / Object / gands-row", function(){
-			var row = gm.dataReferences.get("ТЦДК0000");
+		it(".getParent(ТСFM) / Object / gands-row", function(){
+			var row = gm.dataReferences.get("ТСFM");
 			var parent = gm.getParent(row);
-			assert.equal(parent.GSID, "ТЦДК00");
+			assert.equal(parent.GSID, "ТС");
 		});
 
 	});
@@ -1186,6 +1188,43 @@ describe("GandsDataModel", function(){
 		});
 	});
 
+	describe(".getExt", function() {
+		describe('onlyPriority==false', function() {
+			it(".getExt(ГППО35В1, {GSExType:Анкета, GSExName:Материал})", function() {
+				var res = gm.getExt("ГППО35В1", { "GSExType": "Анкета", "GSExName": "Комментарий" });
+				assert.equal(res.length, 1);
+			});
+		});
+
+		describe('onlyPriority==true', function() {
+			it(".getExt(ГППО35В1, {GSExType:Анкета, GSExName:Комментарий})", function() {
+				var res = gm.getExt("ГППО35В1", { "GSExType": "Анкета", "GSExName": "Комментарий" }, { onlyPriority: true });
+				assert.equal(res.length, 1);
+			});
+		});
+
+		describe('onlyPriority==true', function() {
+			it(".getExt(ГППО35В1, {GSExType:Прайс, GSExName:Агентство, GSExSort:1000})", function() {
+				var res = gm.getExt(
+					"ГППО35В1",
+					{ "GSExType": "Прайс", "GSExName": "Агентство", "GSExSort": "1000" },
+					{ onlyPriority: true }
+				);
+				assert.equal(res.length, 1);
+			});
+		});
+
+		describe('onlyPriority==true', function() {
+			it(".getExt(ГППО35В1, { GSExType: Прайс, GSExName: Агентство, GSExSort:10002})", function() {
+				var res = gm.getExt(
+						"ГППО35В1",
+						{ "GSExType": "Прайс", "GSExName": "Агентство", "GSExSort": "10002" },
+						{ onlyPriority: true }
+				);
+				assert.equal(res.length, 0);
+			});
+		});
+	});
 });
 
 
