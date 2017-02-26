@@ -557,4 +557,13 @@ _utils.parseArg = function(arg){
 }; // parseArg
 
 
+/**
+ * Удалить из строки теги-ссылки фабулы
+ * @param {String} str
+ * */
+_utils.rmGsTags = function(str) {
+	return str.replace(/\[\/?\w+\]/ig, "");
+};
+
+
 module.exports =_utils;

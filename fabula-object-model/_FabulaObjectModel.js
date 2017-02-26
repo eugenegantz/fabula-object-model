@@ -82,6 +82,8 @@ FabulaObjModel.prototype._setModule("CalcUtils",  require("./data-models/calc/Ca
 
 FabulaObjModel.prototype._setModule("PrintUtils",  require("./data-models/PrintUtils"));
 
+FabulaObjModel.prototype._setModule("EvalUtils",  require("./data-models/EvalUtils"));
+
 FabulaObjModel.prototype._setModule("utils", require("./utils"));
 
 FabulaObjModel.prototype._setModule("ObjectA", require("./data-models/ObjectA"));

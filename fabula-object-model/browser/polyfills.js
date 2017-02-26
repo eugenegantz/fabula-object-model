@@ -3,13 +3,14 @@
 // --------------------------------------------------------------------------------
 // Полфил CustomEvents для IE9+
 // https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent/CustomEvent
-(function () {
-	if ( typeof window.CustomEvent === "function" ) return false;
+// --------------------------------------------------------------------------------
+(function() {
+	if (typeof window.CustomEvent === "function") return false;
 
-	function CustomEvent ( event, params ) {
+	function CustomEvent(event, params) {
 		params = params || { bubbles: false, cancelable: false, detail: undefined };
-		var evt = document.createEvent( 'CustomEvent' );
-		evt.initCustomEvent( event, params.bubbles, params.cancelable, params.detail );
+		var evt = document.createEvent('CustomEvent');
+		evt.initCustomEvent(event, params.bubbles, params.cancelable, params.detail);
 		return evt;
 	}
 
@@ -21,10 +22,12 @@
 // --------------------------------------------------------------------------------
 // Полифил Promise
 // https://github.com/stefanpenner/es6-promise
-(function(){
-	if (typeof window.Promise != "function"){
-		var _promise = require("./es6-promise.min.js");
-		window.Promise = _promise.Promise;
-		// _promise.polyfill();
-	}
-})();
+// --------------------------------------------------------------------------------
+if (typeof window.Promise != "function")
+	window.Promise = require("./es6-promise.min.js").Promise;
+
+// --------------------------------------------------------------------------------
+// Полифил Object.assign()
+// https://developer.mozilla.org/ru/docs/Web/JavaScript/Reference/Global_Objects/Object/assign
+// --------------------------------------------------------------------------------
+require('./object-assign.js');

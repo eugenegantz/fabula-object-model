@@ -374,13 +374,10 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 		if (fld && typeof fld != "object")
 			throw new Error("2nd argument supposed to be type Object");
 
-		if (!fld)
-			return row.gandsExtRef.concat(this.getExt(this.getParent(row), opt));
-
 		if (!opt)
 			opt = Object.create(null);
 
-		var res = this._fetchRowExtFields(row, fld);
+		var res = !fld ? row.gandsExtRef : this._fetchRowExtFields(row, fld);
 
 		if ((opt.onlyPriority && !res.length) || !opt.onlyPriority)
 			return res.concat(this.getExt(this.getParent(row) || '', fld, opt) || []);
@@ -570,8 +567,34 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 	 * Является ли данная строка ссылкой на номенклатуру
 	 * @param {String} str
 	 * */
-	"isGsLink": function(str) {
-		return /\[\/?gs\]/ig.test(str);
+	"hasGsLinks": function(str) {
+		return !!this.matchGsLinks(str).length;
+	},
+
+
+	/**
+	 * Получить подстроки из строки, в которых содержатся ссылки на номенклатуру
+	 * @param {String} str
+	 * @return {Array | undefined}
+	 * */
+	"matchGsLinks": function(str) {
+		return (str.match(/\[gs\][a-zA-Z0-9а-яА-Я]+\[\/gs\]/ig) || []).map(a => _utils.rmGsTags(a));
+	},
+
+
+	/**
+	 * @param {String} str
+	 * @param {Boolean} withNested - получить запись вместе с вложенными в нее
+	 * @return {Array}
+	 * */
+	"parseGsLink": function(str, withNested) {
+		return (this.matchGsLinks(str) || []).reduce((prev, curr) => {
+			return prev.concat((
+				withNested
+					? this.dataRefByGSIDGroup.get(curr) || this.dataRefByGSID.get(curr)
+					: this.dataRefByGSID.get(curr)
+			) || [])
+		}, []);
 	}
 
 });
