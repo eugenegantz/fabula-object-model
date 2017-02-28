@@ -48,6 +48,27 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 
 	"instances" : [],
 
+
+	_knownGSUnits: {
+		"ед": {
+			"type": 'num',
+			"val": 1
+		},
+		"шт": {
+			"type": 'num',
+			"val": 1
+		},
+		"шт.": {
+			"type": 'num',
+			"val": 1
+		},
+		"1000 шт.": {
+			"type": 'num',
+			"val": 1000
+		}
+	},
+
+
 	/**
 	 * @return {GandsDataModel}
 	 * */
@@ -552,6 +573,20 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 		if (typeof this.GSUnits[GSID] == "undefined") return;
 
 		return this.GSUnits[GSID];
+	},
+
+
+	"GSUnitConvert": function(from, to, value) {
+		from = this._knownGSUnits[from];
+		to = this._knownGSUnits[to];
+
+		if (!to || !from)
+			throw new Error("GSUnitConvert: Unknown unit type");
+
+		if (from.type != to.type)
+			throw new Error("GSUnitConvert: must be same type");
+
+		return (+value * from.val) / to.val;
 	},
 
 
