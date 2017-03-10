@@ -37,3 +37,5 @@ module.exports = {
 	}
 
 };
+
+module.exports.evalFn = module.exports._evalFn;

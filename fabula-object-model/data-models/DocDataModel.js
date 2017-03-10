@@ -1043,10 +1043,17 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		"getJSON": function() {
-			var c, lowKey,
-				keys            = Object.getOwnPropertyNames(this.props),
-				defaultFields   = _utils.objectKeysToLowerCase(this.__docDataModelsDefaultFields),
-				ret             = { "className":"DocDataModel", "fields": {}, "movs": [] };
+			var c,
+				lowKey,
+				keys = Object.getOwnPropertyNames(this.props),
+				defaultFields = _utils.objectKeysToLowerCase(this.__docDataModelsDefaultFields),
+
+				ret = {
+					"className": "DocDataModel",
+					"fields": {},
+					"movs": [],
+					"props": JSON.parse(JSON.stringify(this.getProperty()))
+				};
 
 			for (c = 0; c < keys.length; c++) {
 				lowKey = keys[c].toLowerCase();

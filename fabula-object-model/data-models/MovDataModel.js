@@ -426,16 +426,23 @@ MovDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
-		"getJSON": function(){
-			var c, lowKey,
-				keys            = Object.getOwnPropertyNames(this.props),
-				defaultFields   = _utils.objectKeysToLowerCase(this.__movDataModelDefaultFields),
-				ret             = { "className":"MovDataModel", "fields": {}, "movs": [] };
+		"getJSON": function() {
+			var c,
+				lowKey,
+				keys = Object.getOwnPropertyNames(this.props),
+				defaultFields = _utils.objectKeysToLowerCase(this.__movDataModelDefaultFields),
 
-			for(c = 0; c < keys.length; c++){
+				ret = {
+					"className": "MovDataModel",
+					"fields": {},
+					"movs": [],
+					"props": JSON.parse(JSON.stringify(this.getProperty()))
+				};
+
+			for (c = 0; c < keys.length; c++) {
 				lowKey = keys[c].toLowerCase();
 
-				if (  !defaultFields.hasOwnProperty(lowKey)  ) continue;
+				if (!defaultFields.hasOwnProperty(lowKey)) continue;
 
 				ret.fields[lowKey] = this.props[keys[c]];
 			}
