@@ -1196,6 +1196,7 @@ describe("Calc", function(){
 				}
 			});
 		});
+
 		var cpd = fom.create("CalcPrintDefault");
 
 		it("amount: 1000, salePrice: 0, ПЗРАЛАЛ1 == 1440", function(){
