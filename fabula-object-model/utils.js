@@ -374,18 +374,13 @@ _utils.awwsBase64 = {
 
 
 _utils.detectEnvironment = function(){
-	var _env = (function(){
-		return toString.call(this);
-	})();
-	if (  _env == "[object global]"  ){
-		return "node";
+	var globClassName = Object.prototype.toString.call(new Function("return this")());
 
-	} else if (  _env == "[object Window]"){
+	if (globClassName == "[object Window]")
 		return "browser";
 
-	} else {
-		return void 0;
-	}
+	if (globClassName == "[object global]")
+		return "node";
 };
 
 
