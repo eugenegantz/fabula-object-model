@@ -63,26 +63,27 @@ PathsDataModel.prototype = {
 	},
 
 
-	"toShort": function(path) {
-		var v,
-			tmp,
-			pathCache = this.data;
+	"toShort": function(argPath) {
+		var c,
+			longSubStr,
+			longSubStrRegEx,
+			paths = this.data;
 
-		for (v = 0; v < pathCache.length; v++) {
-			if (!pathCache[v].value.trim()) continue;
+		argPath = argPath.replace(/[\\]/ig, "/");
 
-			tmp = pathCache[v].value.split(/[;,]/ig);
+		for (c = 0; c < paths.length; c++) {
+			if (!(longSubStr = (paths[c].value || "").trim().split(/[;,]/ig)[0]))
+				continue;
 
-			if (!tmp.length) continue;
+			longSubStrRegEx = new RegExp("^" + longSubStr.replace(/[\\]/ig, "/"), "g");
 
-			path = path.replace(new RegExp("^" + pathCache[v].property), "");
-			path = modPath.join(
-				stdUtils.trim(tmp[0], ["\\", "/"]),
-				stdUtils.trim(path, ["\\", "/"])
-			).replace(/[\\]/g, "/");
+			if (!argPath.match(longSubStrRegEx))
+				continue;
+
+			return argPath.replace(longSubStrRegEx, paths[c].property);
 		}
 
-		return path;
+		return argPath;
 	},
 
 
