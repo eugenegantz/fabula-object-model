@@ -11,7 +11,7 @@ CPOffset.prototype.calc = function(arg){
 	// var isStrict = typeof arg.strict == "undefined" ? true : Boolean(arg.strict);
 	var c, v;
 	var cUtils = require("./CalcUtils");
-	var pUtils = require("./../PrintUtils");
+	var pUtils = require("./../../utils/printUtils");
 	var gm = require("./../GandsDataModel").prototype.getInstance();
 
 	// Настройки из Fabula

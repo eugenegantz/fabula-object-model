@@ -1,6 +1,6 @@
 "use strict";
 
-var gands = require("./GandsDataModel").prototype.getInstance();
+var gands = require("./../data-models/GandsDataModel").prototype.getInstance();
 
 // ------------------------------------------------------------------------------------------
 

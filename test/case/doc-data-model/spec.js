@@ -1,67 +1,613 @@
 describe("DocDataModel", function() {
 	var fom,
 		stand,
-		db;
+		db,
+		gands,
+		dbUtils = require("./../../../fabula-object-model/utils/dbUtils.js"),
 
-	before(function() {
+		// 2015/01/01 - 1 янв. 2015
+		timestamp = 1420056000000,
+		date = new Date(timestamp),
+
+		docIdRegExp = /^\D{2}\d{1}\D{2}\d{5}$/i;
+
+		sid = (Math.random() + '').slice(-10);
+
+
+	function mkMov() {
+		var mov = fom.create("MovDataModel");
+
+		mov.set("mmFlag", "3");
+		mov.set("amount", 999);
+		mov.set("gsDate", date);
+		mov.set("gs", "ГППО35");
+		mov.set("gsSpec", sid);
+
+		mov.addProperty({ value: 100, property: "mov" + sid });
+		mov.addProperty({ value: 200, property: "mov" + sid });
+
+		return mov;
+	}
+
+
+	function mkDoc() {
+		var doc = fom.create("DocDataModel");
+
+		doc.set("notice", sid);
+		doc.set("agent", 999);
+		doc.set("firmContract", 1);
+		doc.set("regDate", date);
+		doc.set("docType", "ПоУс");
+		doc.set("company", "РА");
+
+		doc.addProperty({ value: 100, property: "doc" + sid });
+		doc.addProperty({ value: 200, property: "doc" + sid });
+
+		doc.addMov(mkMov());
+		doc.addMov(mkMov());
+
+		return doc;
+	}
+
+
+	function clearDB(cb) {
+		db.dbquery({
+			"query": ""
+			+ "DELETE FROM talk WHERE mm IN (SELECT mmid FROM Movement WHERE gsSpec = '" + sid +  "')"
+
+			+ ";"
+			+ "DELETE FROM Property WHERE property = 'mov" + sid + "'"
+
+			+ ";"
+			+ "DELETE FROM Property WHERE property = 'doc" + sid + "'"
+
+			+ ";"
+			+ "DELETE FROM Movement WHERE gsSpec = '" + sid + "'"
+
+			+ ";"
+			+ "DELETE FROM Docs WHERE notice = '" + sid + "' AND notice IS NOT NULL",
+			callback: function() {
+				cb();
+			}
+		});
+	}
+
+
+	before(function(done) {
+		this.timeout(5000);
+
 		fom = globTestUtils.getFabulaObjectModel();
+		gands = fom.create("GandsDataModel");
 		db = fom.create("DBModel");
-		stand = {
-			"doc": fom.create("DocDataModel")
-		};
-	});
 
-	describe(".getNewDocID()", function() {
-		this.timeout(6000);
+		if (!gands.state) {
+			gands.sql = 'SELECT * FROM gands';
 
-		it(".getNewDocID()", function(done) {
-			var doc = fom.create("DocDataModel");
-			doc.getNewDocID({
-				"companyID": "РА",
-				"docType": "ПоУс",
-				"callback": function(err, DocID) {
-					if (err) {
-						done(new Error(err));
-						return;
-					}
-					if (!DocID) {
-						done(new Error("!DocID"));
-						return;
-					}
+			gands.load({
+				callback: function() {
 					done();
 				}
 			});
+
+			return;
+		}
+
+		done();
+	});
+
+
+	afterEach(clearDB);
+
+
+	describe(".getNewDocID()", function() {
+		var doc,
+			docId,
+			checkDBRecs;
+
+		before(function(done) {
+			doc = mkDoc();
+
+			doc.getNewDocID({
+				"companyID": doc.get("company"),
+				"docType": doc.get("docType")
+			}).then(function(_docId) {
+				docId = _docId;
+
+			}).then(function() {
+				db.dbquery({
+					"query": "SELECT docId FROM DOCS WHERE docId = '" + docId + "'",
+					"callback": function(dbres) {
+						checkDBRecs = dbres.recs;
+
+						done();
+					}
+				});
+			}).catch(done);
+		});
+
+		it("Длина кода == 10, соответствие паттерну", function() {
+			assert.equal(checkDBRecs.length, 0);
+			assert.equal(docId.length, 10);
+			assert.ok(docIdRegExp.test(docId));
 		});
 	});
 
-	describe("childMovs", function() {
-		this.timeout(6000);
 
-		it("childMovs", function() {
-			var doc = fom.create("DocDataModel");
-			var mov;
-			var count = 0;
-			for (var c = 6; c < 19; c++) {
-				mov = fom.create("MovDataModel");
-				mov.set("MMFlag", c);
-				mov.set("Sum", c * 100);
-				mov.set("Sum2", Math.round(Math.random() * 1000));
-				doc.addMov(mov);
-				count++;
-			}
+	describe(".insert()", function() {
+		var doc,
+			dbRecsMovs,
+			dbRecsProps,
+			dbRecsDocs;
 
-			assert.equal(doc.movs.length, count);
+		before(function(done) {
+			doc = mkDoc();
 
-			doc.deleteMov({ "Sum": 9 * 100, "MMFlag": 9 });
-			doc.deleteMov({ "Sum": 8 * 100, "MMFlag": 8 });
-			doc.deleteMov({ "Sum": 7 * 100, "MMFlag": 10 });
+			doc.getNewDocID({
+				"companyID": doc.get("company"),
+				"docType": doc.get("docType")
+			}).then(function(docId) {
+				doc.set("docId", docId);
 
-			assert.equal(doc.movs.length, count - 2);
-			assert.equal(doc.getMov({ "Sum": 10 * 100, "MMFlag": 10 }).length, 1);
+				return doc.insert();
+
+			}).then(function() {
+				return new Promise(function(resolve, reject) {
+					var _query = ""
+						+ "SELECT docId"
+						+ " FROM Docs"
+						+ " WHERE"
+						+   " notice = '" + sid + "'"
+						+   " AND agent = '999'"
+						+   " AND firmContract = 1";
+
+					db.dbquery({
+						"query": ""
+							+ _query
+
+							+ ";"
+							+ "SELECT [value]"
+							+ " FROM Property"
+							+ " WHERE"
+							+   " pid = 0"
+							+   " AND property = 'doc" + sid + "'"
+							+   " AND extClass = 'DOCS'"
+							+   " AND extId IN (" + _query + ")"
+
+							+ ";"
+							+ "SELECT mmId"
+							+ " FROM Movement"
+							+ " WHERE"
+							+   " doc IN (" + _query + ")",
+
+						"callback": function(dbres, err) {
+							if (err = dbUtils.fetchErrStrFromRes(dbres))
+								return reject(err);
+
+							dbRecsDocs = dbres[0].recs;
+							dbRecsProps = dbres[1].recs;
+							dbRecsMovs = dbres[2].recs;
+
+							resolve();
+						}
+					});
+				});
+
+			}).then(function() {
+				done();
+
+			}).catch(done);
+		});
+
+		it("Заявка записана и две задачи записаны в БД", function() {
+			assert.equal(dbRecsDocs.length, 1);
+			assert.equal(dbRecsProps.length, 2);
+			assert.equal(dbRecsMovs.length, 2);
 		});
 	});
 
-	describe(".save() / .insert()", function() {
+
+	describe(".update()", function() {
+
+		afterEach(clearDB);
+
+		describe("Изменились только поля заявки", function() {
+			var doc,
+				dbRecsMovs,
+				dbRecsProps,
+				dbRecsDocs,
+				eventMovUpd = 0;
+
+			before(function(done) {
+				doc = mkDoc();
+
+				doc.getNewDocID({
+					"companyID": doc.get("company"),
+					"docType": doc.get("docType")
+				}).then(function(docId) {
+					doc.set("docId", docId);
+
+					return doc.insert();
+
+				}).then(function() {
+					doc.set({
+						"agent": 888
+					});
+
+					// Событие НЕ ДОЛЖНО выстрелить
+					// Так проверяется незаписывание заявкой неизм. задач
+					doc.getMov().forEach(function(mov) {
+						mov.on("before-update", function() {
+							eventMovUpd++;
+						});
+					});
+
+					return doc.update();
+
+				}).then(function() {
+					return new Promise(function(resolve, reject) {
+						var _query = ""
+							+ "SELECT docId"
+							+ " FROM Docs"
+							+ " WHERE"
+							+ " notice = '" + sid + "'"
+							+   " AND agent = '888'"
+							+   " AND docId = '" + doc.get("docId") + "'"
+							+   " AND company = '" + doc.get("company") + "'"
+							+   " AND firmContract = 1";
+
+						db.dbquery({
+							"query": ""
+							+ _query
+
+							+ ";"
+							+ "SELECT [value]"
+							+ " FROM Property"
+							+ " WHERE"
+							+   " pid = 0"
+							+   " AND property = 'doc" + sid + "'"
+							+   " AND extClass = 'DOCS'"
+							+   " AND extId IN (" + _query + ")"
+
+							+ ";"
+							+ "SELECT mmId"
+							+ " FROM Movement"
+							+ " WHERE"
+							+   " doc IN (" + _query + ")",
+
+							"callback": function(dbres, err) {
+								if (err = dbUtils.fetchErrStrFromRes(dbres))
+									return reject(err);
+
+								dbRecsDocs = dbres[0].recs;
+								dbRecsProps = dbres[1].recs;
+								dbRecsMovs = dbres[2].recs;
+
+								resolve();
+							}
+						});
+					});
+
+				}).then(function() {
+					done();
+
+				}).catch(done);
+			});
+
+			it("Записи обновились", function() {
+				assert.equal(eventMovUpd, 0);
+				assert.ok(!doc.getChanged().length);
+				assert.ok(!doc.hasChangedFProperty());
+				assert.equal(dbRecsDocs.length, 1);
+				assert.equal(dbRecsProps.length, 2);
+				assert.equal(dbRecsMovs.length, 2);
+			});
+		});
+
+		describe("Изменились поля заявки и подч. задачи (поле doc)", function() {
+			var doc,
+				dbRecsMovs,
+				dbRecsProps,
+				dbRecsDocs,
+				eventMovUpd = 0,
+				movChangedFields = [];
+
+			before(function(done) {
+				doc = mkDoc();
+
+				doc.getNewDocID({
+					"companyID": doc.get("company"),
+					"docType": doc.get("docType")
+				}).then(function(docId) {
+					doc.set("docId", docId);
+
+					return doc.insert();
+
+				}).then(function() {
+					doc.set({
+						"agent": 888,
+						"company": "Fi"
+					});
+
+					// Событие ОБЯЗАНО выстрелить
+					// - значит заявка записала изм. задачи (изменилось поле doc)
+					doc.getMov().forEach(function(mov) {
+						mov.on("before-update", function() {
+							movChangedFields = mov.getChanged();
+							eventMovUpd++;
+						});
+					});
+
+					return doc.update();
+
+				}).then(function() {
+					return new Promise(function(resolve, reject) {
+						var _query = ""
+							+ "SELECT docId"
+							+ " FROM Docs"
+							+ " WHERE"
+							+ " notice = '" + sid + "'"
+							+   " AND agent = '888'"
+							+   " AND docId = '" + doc.get("docId") + "'"
+							+   " AND company = '" + doc.get("company") + "'"
+							+   " AND firmContract = 1";
+
+						db.dbquery({
+							"query": ""
+							+ _query
+
+							+ ";"
+							+ "SELECT [value]"
+							+ " FROM Property"
+							+ " WHERE"
+							+   " pid = 0"
+							+   " AND property = 'doc" + sid + "'"
+							+   " AND extClass = 'DOCS'"
+							+   " AND extId IN (" + _query + ")"
+
+							+ ";"
+							+ "SELECT mmId"
+							+ " FROM Movement"
+							+ " WHERE"
+							+   " doc IN (" + _query + ")",
+
+							"callback": function(dbres, err) {
+								if (err = dbUtils.fetchErrStrFromRes(dbres))
+									return reject(err);
+
+								dbRecsDocs = dbres[0].recs;
+								dbRecsProps = dbres[1].recs;
+								dbRecsMovs = dbres[2].recs;
+
+								resolve();
+							}
+						});
+					});
+
+				}).then(function() {
+					done();
+
+				}).catch(done);
+			});
+
+			it("" +
+				"before-update для mov выстрелило 2 раза; " +
+				"в задачах изм. поля doc, doc1; " +
+				"в заявках после записи нет изм. полей; " +
+				"после сохр. изм. отразились в БД",
+				function() {
+					assert.equal(eventMovUpd, 2);
+					assert.deepEqual(movChangedFields.sort(), ["doc", "doc1"].sort());
+					assert.ok(!doc.getChanged().length);
+					assert.ok(!doc.hasChangedFProperty());
+					assert.equal(dbRecsDocs.length, 1);
+					assert.equal(dbRecsProps.length, 2);
+					assert.equal(dbRecsMovs.length, 2);
+				}
+			);
+		});
+
+		describe("Изменились только подч. задачи", function() {
+			var doc,
+				eventMovUpd = 0,
+				movChangedFields = [];
+
+			before(function(done) {
+				doc = mkDoc();
+
+				doc.getNewDocID({
+					"companyID": doc.get("company"),
+					"docType": doc.get("docType")
+				}).then(function(docId) {
+					doc.set("docId", docId);
+
+					return doc.insert();
+
+				}).then(function() {
+					// Событие ОБЯЗАНО выстрелить
+					// - значит заявка записала изм. задачи
+					doc.getMov().forEach(function(mov, idx) {
+						if (!idx)
+							mov.set("mmFlag");
+
+						mov.on("before-update", function() {
+							movChangedFields = mov.getChanged();
+							eventMovUpd++;
+						});
+					});
+
+					return doc.update();
+
+				}).then(function() {
+					done();
+
+				}).catch(done);
+			});
+
+			it("" +
+				"before-update для mov выстрелило 1 раз; " +
+				"в задачах изм. поля mmflag; " +
+				"в заявках после записи нет изм. полей",
+				function() {
+					assert.equal(eventMovUpd, 1);
+					assert.deepEqual(movChangedFields, ["mmflag"]);
+					assert.ok(!doc.getChanged().length);
+					assert.ok(!doc.hasChangedFProperty());
+				}
+			);
+		});
+
+		describe("Удаление задачи", function() {
+			var doc,
+				dbRecsMovs;
+
+			before(function(done) {
+				doc = mkDoc();
+
+				doc.save().then(function() {
+					doc.delMov(doc.getMov()[0]);
+
+					return doc.save();
+
+				}).then(function() {
+					db.dbquery({
+						"query": ""
+						+ "SELECT mmId FROM Movement"
+						+ " WHERE"
+						+   " doc1 = '" + doc.get("docId") + "'",
+						"callback": function(dbres) {
+							dbRecsMovs = dbres.recs;
+
+							done();
+						}
+					});
+
+				}).catch(done);
+			});
+
+			it("", function() {
+				assert.equal(dbRecsMovs.length, 1);
+			});
+		});
+
+	});
+
+
+	describe(".save()", function() {
+
+		afterEach(clearDB);
+
+		describe("запись - insert", function() {
+			var doc,
+				nextDocId,
+				eventDocBeforeInsert = false;
+
+			before(function(done) {
+				doc = mkDoc();
+
+				doc.on("before-insert", function() {
+					eventDocBeforeInsert = true;
+
+					nextDocId = doc.get("docId");
+				});
+
+				doc.save().then(function() {
+					done();
+				}).catch(done);
+			});
+
+			it(
+				"заявка обрела новый docId; " +
+				"docId появился до записи заявки; " +
+				"выполнено событие before-insert",
+				function() {
+					assert.ok(!doc.getChanged().length);
+					assert.ok(!doc.hasChangedFProperty());
+					assert.ok(docIdRegExp.test(nextDocId));
+					assert.ok(eventDocBeforeInsert);
+				}
+			)
+		});
+
+		describe("перезапись - update", function() {
+			var doc,
+				eventDocBeforeUpdate = false;
+
+			before(function(done) {
+				doc = mkDoc();
+
+				doc.on("before-update", function() {
+					eventDocBeforeUpdate = true;
+				});
+
+				doc
+					.save()
+					.then(doc.save.bind(doc))
+					.then(function() {
+						done();
+					});
+			});
+
+			it(
+				"заявка обрела новый docId; " +
+				"docId появился до записи заявки; " +
+				"выполнено событие before-insert",
+				function() {
+					assert.ok(!doc.getChanged().length);
+					assert.ok(!doc.hasChangedFProperty());
+					assert.ok(eventDocBeforeUpdate);
+				}
+			)
+		});
+
+	});
+
+
+	describe(".load()", function() {
+		var doc,
+			doc2,
+			fields;
+
+		before(function(done) {
+			doc = mkDoc();
+
+			doc.save().then(function() {
+				doc2 = fom.create("DocDataModel");
+
+				doc2.set("docId", doc.get("docId"));
+
+				fields = doc.getKeys().filter(function(key) {
+					if ("_" == key[0] || doc.get(key) instanceof Date)
+						return false;
+
+					return doc.get(key);
+				});
+
+				return doc2.load({
+					fields: fields
+				});
+			}).then(function() {
+				done();
+			}).catch(done);
+		});
+
+		it(
+			"заявка содержит две задачи; " +
+			"в заявке нет изм. полей или свойств; " +
+			"в заявке все поля совпадают с оригинальным экземпляром",
+			function() {
+				assert.equal(doc2.getMov().length, 2);
+
+				assert.ok(!doc2.getChanged().length);
+				assert.ok(!doc2.hasChangedFProperty());
+
+				fields.forEach(function(key) {
+					assert.equal(doc2.get(key), doc.get(key), key);
+				});
+			});
+	});
+
+
+	describe.skip(".save() / .insert()", function() {
 		this.timeout(6000);
 
 		it(".save(...) / .insert()", function(done) {
@@ -139,7 +685,7 @@ describe("DocDataModel", function() {
 	});
 
 
-	describe(".load()", function() {
+	describe.skip(".load()", function() {
 		this.timeout(6000);
 
 		it(".load() // prev doc", function(done) {
@@ -182,7 +728,7 @@ describe("DocDataModel", function() {
 	});
 
 
-	describe("doc / events", function() {
+	describe.skip("doc / events", function() {
 		this.timeout(6000);
 
 		it("doc / events", function() {
@@ -201,7 +747,7 @@ describe("DocDataModel", function() {
 	});
 
 
-	describe(".save() / .update()", function() {
+	describe.skip(".save() / .update()", function() {
 		this.timeout(6000);
 
 		it(".save() / .update()", function(done) {
@@ -279,27 +825,6 @@ describe("DocDataModel", function() {
 
 				}
 			});
-		});
-	});
-
-	after(function(done) {
-		var doc = stand.doc.get("DocID");
-		if (!doc) return;
-		db.dbquery({
-			"query": [
-				"DELETE FROM DOCS WHERE DocID = '" + doc + "' ",
-				"DELETE FROM Movement WHERE Doc = '" + doc + "' ",
-				"DELETE FROM Property " +
-				" WHERE " +
-				" ExtClass = 'DOCS' " +
-				" AND ExtID = '" + doc + "' " +
-				" OR pid IN (" +
-				"SELECT MMID FROM Movement WHERE Doc = '" + doc + "' " +
-				")"
-			].join("; "),
-			"callback": function() {
-				done();
-			}
 		});
 	});
 

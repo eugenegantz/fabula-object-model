@@ -9,6 +9,8 @@ describe("GandsDataModel", function() {
 	});
 
 	describe(".load()", function() {
+		this.timeout(5000);
+
 		it("gands.data.length > 0", function(done) {
 			gm.load({
 				callback: function() {

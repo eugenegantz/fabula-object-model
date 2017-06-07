@@ -1,7 +1,7 @@
 "use strict";
 
 var IEvent = require("./IEvent");
-var _utils = require("./../utils");
+var _utils = require("./../utils/utils");
 
 // Хак для nodejs
 if (typeof CustomEvent == "undefined") var CustomEvent = IEvent;

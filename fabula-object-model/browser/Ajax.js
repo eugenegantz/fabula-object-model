@@ -1,6 +1,6 @@
 "use strict";
 
-var _utils = require("./../utils");
+var _utils = require("./../utils/utils");
 
 var Ajax = Object.create(null);
 

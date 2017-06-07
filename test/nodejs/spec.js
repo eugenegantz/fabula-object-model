@@ -1,3 +1,10 @@
+process.on('uncaughtException', function(err) {
+	console.log(err);
+
+}).on('unhandledRejection', function(err) {
+	console.log(err);
+});
+
 require('./../test-utils.js');
 global.assert = require("assert");
 global.modPath = require("path");
@@ -16,7 +23,6 @@ global.globFabulaObjectModelConfig = {
 require('./../case/fabula-object-model/spec.js');
 require('./../case/object-a/spec.js');
 require('./../case/object-b/spec.js');
-require('././spec.js');
 require('./../case/utils/spec.js');
 require('./../case/ajax-module/spec.js');
 require('./../case/default-data-model/spec.js');

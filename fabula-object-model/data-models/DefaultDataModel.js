@@ -1,131 +1,29 @@
 "use strict";
 
-// ------------------------------------------------------
-// Прототип модели данных
-
-var InterfaceEvents = require("./InterfaceEvents");
-
-var _objectsPrototyping = function() {
-	var tmp, c, prop;
-
-	if (arguments.length < 2) return;
-
-	var main = arguments[0];
-
-	for (c = 1; c < arguments.length; c++) {
-
-		if (typeof arguments[c] != "object") continue;
-
-		tmp = {};
-
-		// var ownProps = Object.getOwnPropertyNames(arguments[c]);
-		// var enumOwnProps = Object.keys(arguments[c]);
-
-		for (prop in arguments[c]) {
-
-			if (!arguments[c].hasOwnProperty(prop)) continue;
-
-			tmp[prop] = {
-				"writable": true,
-				"configurable": true,
-				"enumerable": true,
-				"value": arguments[c][prop]
-			};
-
-		}
-
-		main = Object.create(main, tmp);
-
-	}
-
-	return main;
-};
-
+var InterfaceEvents = require("./InterfaceEvents"),
+	MField = require("./field-models/MField.js"),
+	utils = require("./../utils/utils.js");
 
 /**
  * Предлагает методы для удобной работы с данными. Задуман как основа для расширения других классов.
  * @constructor
- * @implements InterfaceEvents
  * */
 var DefaultDataModel = function() {
-	this.props                  = Object.create(null);
-	this.aliases                = Object.create(null);
-	this.aliases.get            = Object.create(null);
-	this.aliases.getMethods     = Object.create(null);
-	this.aliases.set            = Object.create(null);
-	this.aliases.setMethods     = Object.create(null);
-	this.propsChanged           = Object.create(null);
+	InterfaceEvents.call(this);
+
+	this._mDefaultFields = Object.create(null);
 
 	this._DataModelSettings = {
 		"caseSensitiveProps": false
 	};
-
-	InterfaceEvents.call(this);
-
-	this.on("set", this._defaultEventSet);
-
-	this.on("get", this._defaultEventGet);
-
-	this.clearChanged();
 };
 
 // TODO Пересмотреть алиасы. добавить return
-DefaultDataModel.prototype = _objectsPrototyping(
+DefaultDataModel.prototype = utils.createProtoChain(
 	InterfaceEvents.prototype,
 	{
-		"_objectsPrototyping": _objectsPrototyping,
+		"_objectsPrototyping": utils.createProtoChain.bind(utils),
 
-
-		"_defaultEventSet": function(obj, e) {
-			this.trigger(e.type, e);
-		},
-
-
-		"_defaultEventGet": function(obj, e) {
-			this.trigger(e.type, e);
-		},
-
-		/**
-		 * @param {String} purpose
-		 * @param {String} key - старый ключ
-		 * @param {String,Function} alias - новый ключ
-		 *    @memberof DefaultDataModel
-		 * */
-		"setAlias": function(purpose, key, alias) {
-			// key - старый ключ
-			// alias - новый ключ
-
-			if (typeof purpose != "string") return;
-			// if (typeof alias != "string") return;
-			if (typeof key != "string") return;
-
-			if (!this._DataModelSettings.caseSensitiveProps) {
-				key = key.toLowerCase();
-				if (typeof alias == "string") {
-					alias = alias.toLowerCase();
-				}
-			}
-
-			if (purpose == "get") {
-				this.aliases.get[alias] = key;
-
-			} else if (
-				purpose == "getMethod"
-				&& typeof alias == "function"
-			) {
-				this.aliases.getMethods[key] = alias;
-
-			} else if (purpose == "set") {
-				this.aliases.set[alias] = key;
-
-			} else if (
-				purpose == "setMethod"
-				&& typeof alias == "function"
-			) {
-				this.aliases.setMethods[key] = alias;
-			}
-
-		},
 
 		/**
 		 * @param {String} key
@@ -134,43 +32,17 @@ DefaultDataModel.prototype = _objectsPrototyping(
 		 * @memberof DefaultDataModel
 		 * */
 		"get": function(key, arg, useEvent) {
-			if (typeof key != "string") return;
+			key = (key + "").toLowerCase();
 
-			if (!this._DataModelSettings.caseSensitiveProps) {
-				key = key.toLowerCase();
-			}
-
-			if (typeof this.aliases.get[key] == "string") {
-				key = this.aliases.get[key];
-			}
-
-			if (typeof useEvent == "undefined") useEvent = true;
-
-			if (useEvent) {
+			if (typeof useEvent == "undefined" || useEvent) {
+				this.trigger("get");
 				this.trigger("get:" + key);
 			}
 
-			if (typeof this.aliases.getMethods[key] != "undefined") {
-				if (typeof arg == "undefined") arg = Object.create(null);
+			if (!this.hasField(key))
+				return;
 
-				if (typeof this.aliases.getMethods[key] == "string") {
-					key = this.aliases.getMethods[key];
-
-					if (typeof this[key] != "function") return;
-
-					return this[key].apply(this, [arg]);
-
-				} else if (typeof this.aliases.getMethods[key] == "function") {
-					return this.aliases.getMethods[key].apply(this, [arg]);
-
-				} else {
-					return;
-				}
-			}
-
-			if (typeof this.props[key] != "undefined") {
-				return this.props[key];
-			}
+			return this._mDefaultFields[key].get();
 		},
 
 
@@ -182,83 +54,46 @@ DefaultDataModel.prototype = _objectsPrototyping(
 		 * @memberof DefaultDataModel
 		 * */
 		"set": function(key, value, arg, useEvent) {
-			if (typeof key == "undefined") return false;
-
 			// Множественное присваивание
-			if (typeof key == "object") {
-				var return_ = Object.create(null);
-
-				for (var prop in key) {
-					if (!key.hasOwnProperty(prop)) continue;
-
-					return_[prop] = this.set(prop, key[prop]);
-				}
-
-				return return_;
+			if (utils.getType(key) == "object") {
+				return Object.keys(key).map(function(k) {
+					return this.set(k, key[k]);
+				}, this);
 			}
 
-			if (typeof key != "string") return false;
+			key = (key + "").toLowerCase();
 
-			if (!this._DataModelSettings.caseSensitiveProps) {
-				key = key.toLowerCase();
-			}
+			if (typeof useEvent == "undefined" || useEvent) {
+				useEvent = true;
 
-			if (typeof this.aliases.set[key] == "string") {
-				key = this.aliases.set[key];
-			}
+				var eventBeforeFld = this._createEvent("set:" + key, { "value": value, "argument": arg }),
+					eventAfterFld = this._createEvent("afterset:" + key, { "value": value, "argument": arg }),
+					eventAfter = this._createEvent("afterset", { "value": value, "argument": arg }),
+					eventBefore = this._createEvent("beforeset", { "value": value, "argument": arg });
 
-			// ........................................
-
-			if (typeof useEvent == "undefined") useEvent = true;
-
-			if (useEvent) {
-				var eventBefore = this._createEvent("set:" + key, { "value": value, "argument": arg }); // createEvent("set:" + key);
-				var eventAfter = this._createEvent("afterset:" + key, { "value": value, "argument": arg }); // createEvent("afterset:" + key);
 				this.trigger(eventBefore.type, eventBefore);
+				this.trigger(eventBeforeFld.type, eventBeforeFld);
 			}
 
-			// ........................................
+			if (!this.hasField(key))
+				this.declField(key, new MField());
 
-			/*
-			 * Логичный вопрос: почему не присваивать
-			 * результат работы метод-алиса по передаваемому в аргументе ключу?
-			 * Ответ: результат работы метода может быть не одно значение
-			 * и присваиваться оно может не по собственному ключу а сразу по нескольким
-			 * */
-			var ret = true;
-
-			if (typeof this.aliases.setMethods[key] != "undefined") {
-
-				if (typeof arg == "undefined") arg = Object.create(null);
-
-				if (typeof this.aliases.setMethods[key] == "string") {
-					var methodKey = this.aliases.setMethods[key];
-
-					if (typeof this[methodKey] != "function") {
-						return false;
-					}
-
-					this.propsChanged[key] = true;
-					ret = this[methodKey].apply(this, [value, arg]);
-
-				} else if (typeof this.aliases.setMethods[key] == "function") {
-					this.propsChanged[key] = true;
-					ret = this.aliases.setMethods[key].apply(this, [value, arg]);
-
-				} else {
-					return false
-				}
-
-			} else {
-				this.propsChanged[key] = true;
-				this.props[key] = value;
-			}
+			this._mDefaultFields[key].set(value);
 
 			if (useEvent) {
+				this.trigger(eventAfterFld.type, eventAfterFld);
 				this.trigger(eventAfter.type, eventAfter);
 			}
+		},
 
-			return ret || true;
+
+		"hasField": function(key) {
+			return (key + "").toLowerCase() in this._mDefaultFields;
+		},
+
+
+		"declField": function(key, mdl) {
+			this._mDefaultFields[(key + "").toLowerCase()] = mdl;
 		},
 
 
@@ -268,23 +103,29 @@ DefaultDataModel.prototype = _objectsPrototyping(
 		 * @memberof DefaultDataModel
 		 * */
 		"getChanged": function() {
-			var prop, tmp = [];
+			var self = this;
 
-			for (prop in this.propsChanged) {
-				if (!Object.prototype.hasOwnProperty.call(this.propsChanged, prop)) continue;
-				tmp.push(prop);
-			}
+			return this.getKeys().reduce(function(arr, key) {
+				self._mDefaultFields[key].isChanged() && arr.push(key);
 
-			return tmp;
+				return arr;
+			}, []);
+		},
+
+
+		"getKeys": function() {
+			return Object.keys(this._mDefaultFields);
 		},
 
 
 		/**
 		 * Очищает историю изменений
-		 *    @memberof DefaultDataModel
+		 * @memberof DefaultDataModel
 		 * */
 		"clearChanged": function() {
-			this.propsChanged = Object.create(null);
+			this.getKeys().forEach(function(key) {
+				this._mDefaultFields[key].clearHistory();
+			}, this);
 		}
 	}
 );

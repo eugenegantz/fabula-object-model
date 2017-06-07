@@ -561,4 +561,44 @@ _utils.rmGsTags = function(str) {
 };
 
 
+_utils.isEmpty = function(val) {
+	return ![].concat(val).join("");
+};
+
+
+_utils.createProtoChain = function() {
+	var args = Array.prototype.slice.call(arguments, 0),
+		proto,
+		base = args.shift();
+
+	if (!args.length)
+		return;
+
+	function protoReduce(obj, key) {
+		obj[key] = {
+			"writable": true,
+			"configurable": true,
+			"enumerable": true,
+			"value": proto[key]
+		};
+
+		return obj;
+	}
+
+	function argsReduce(base, _proto) {
+		proto = _proto;
+
+		if (typeof proto != "object")
+			return base;
+
+		return Object.create(
+			base,
+			Object.keys(proto).reduce(protoReduce, {})
+		);
+	}
+
+	return args.reduce(argsReduce, base);
+};
+
+
 module.exports =_utils;

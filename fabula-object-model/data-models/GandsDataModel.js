@@ -6,7 +6,7 @@
 var DefaultDataModel = require("./DefaultDataModel");
 var IEvents = require("./InterfaceEvents");
 var ObjectA = require("./ObjectA");
-var _utils = require("./../utils");
+var _utils = require("./../utils/utils");
 
 // Для совместимости
 var getContextDB = function(){
@@ -613,7 +613,9 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 	 * @return {Array | undefined}
 	 * */
 	"matchGsLinks": function(str) {
-		return (str.match(/\[gs\][a-zA-Z0-9а-яА-Я]+\[\/gs\]/ig) || []).map(a => _utils.rmGsTags(a));
+		return (str.match(/\[gs\][a-zA-Z0-9а-яА-Я]+\[\/gs\]/ig) || []).map(function(a) {
+			return _utils.rmGsTags(a);
+		});
 	},
 
 
@@ -623,11 +625,13 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 	 * @return {Array}
 	 * */
 	"parseGsLink": function(str, withNested) {
-		return (this.matchGsLinks(str) || []).reduce((prev, curr) => {
+		var self = this;
+
+		return (self.matchGsLinks(str) || []).reduce(function(prev, curr) {
 			return prev.concat((
 				withNested
-					? this.dataRefByGSIDGroup.get(curr) || this.dataRefByGSID.get(curr)
-					: this.dataRefByGSID.get(curr)
+					? self.dataRefByGSIDGroup.get(curr) || self.dataRefByGSID.get(curr)
+					: self.dataRefByGSID.get(curr)
 			) || [])
 		}, []);
 	}

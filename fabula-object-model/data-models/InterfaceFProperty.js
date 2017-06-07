@@ -1,66 +1,118 @@
 "use strict";
 
-var InterfaceEvents = require("./InterfaceEvents");
-var DefaultDataModel = require("./DefaultDataModel");
-var ObjectA = require("./ObjectA");
+var InterfaceEvents = require("./InterfaceEvents"),
+	DefaultDataModel = require("./DefaultDataModel"),
+	ObjectA = require("./ObjectA"),
+	dbUtils = require("./../utils/dbUtils.js"),
+	utils = require("./../utils/utils.js");
 
 var propUtils = {
-	"duplicateProperty": function(property){
-		var keys = Object.getOwnPropertyNames(property);
-		var duplicate = {};
-		for(var c=0; c<keys.length; c++){
-			duplicate[keys[c]] = property[keys[c]];
-		}
+
+	toObjA: function(obj) {
+		if (obj instanceof ObjectA)
+			return obj;
+
+		return new ObjectA(obj);
 	},
 
-	"toLowerCaseKeys": function(property){
-		var keys = Object.getOwnPropertyNames(property);
-		var lowerProperty = {};
-		for(var c=0; c<keys.length; c++){
-			lowerProperty[keys[c].toLowerCase()] = property[keys[c]];
-		}
-		return lowerProperty;
-	},
 
-	// Запускается через изм. контекст call, apply
-	"setChanged": function(property){
-		var propName;
+	normalizePropRow: function(row) {
+		var fieldsDecl = InterfaceFProperty.prototype._interfaceFPropertyFields;
 
-		if (  typeof property == "string"  ) {
-			propName = property;
+		row = this.toObjA(row);
 
-		} else if (  typeof property == "object"  ){
-			property = propUtils.toLowerCaseKeys(property);
+		row.getKeys().forEach(function(key) {
+			if (!fieldsDecl.has(key))
+				row.remove(key);
 
-			if (  typeof property.property == "string"  ){
-				propName = property.property;
+			var type = fieldsDecl.get(key).type;
 
-			} else {
-				return;
+			if ("string" == type)
+				row.set(key, row.get(key) + "");
+
+			if ("integer" == type)
+				row.set(key, +row.get(key));
+
+			if (!row.get("valueType")) {
+				if (isFinite(row.get("value"))) {
+					row.set("valueType", "N");
+
+				} else {
+					row.set("valueType", "C");
+				}
 			}
+		});
 
-		} else {
-			return;
-		}
-
-		propName = propName.toLowerCase();
-
-		if (  this._changedFProperty.indexOf(propName) == -1  ){
-			this._changedFProperty.push(propName);
-		}
+		return row;
 	}
+
 };
 
 
 /**
  * @interface
  * */
-var InterfaceFProperty = function(){
-	this._property = [];
-	this._changedFProperty = [];
+var InterfaceFProperty = function() {
+	this._iFPropsData = [];
+	this._iFPropsHasChanged = false;
+
+	// changedFProperty
 
 	InterfaceEvents.call(this);
 };
+
+
+InterfaceFProperty.mkDBInsertStr = function(argProp) {
+	argProp = [].concat(argProp || []);
+
+	var propDecl = InterfaceFProperty.prototype._interfaceFPropertyFields;
+
+	var inserts = argProp.reduce(function(prev, row) {
+		var fields = [],
+			values = [];
+
+		if (utils.isEmpty(row) || typeof row != "object")
+			return prev;
+
+		if (utils.isEmpty(row.get("property")))
+			return prev;
+
+		if (utils.isEmpty(row.get("value")))
+			return prev;
+
+		row.getKeys().forEach(function(colKey) {
+			var type,
+				colVal = row.get(colKey);
+
+			// Если значение свойства пустое - не записывать
+			if (utils.isEmpty(colVal))
+				return prev;
+
+			// Если такого поля не существует или поле специальное - пропустить
+			if (
+				!propDecl.get(colKey)
+				|| propDecl.get(colKey).spec
+			) {
+				return prev;
+			}
+
+			type = propDecl.get(colKey).type.toLowerCase();
+
+			fields.push(dbUtils.mkFld(colKey));
+			values.push(dbUtils.mkVal(colVal, type));
+		});
+
+		if (!fields.length || !values.length)
+			return prev;
+
+		prev.push("INSERT INTO Property (" + fields.join(",") + ") VALUES (" + values.join(",") + ")");
+
+		return prev;
+	}, []);
+
+	return inserts.join("; ");
+};
+
 
 /**
  * @abstract
@@ -69,106 +121,64 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 	InterfaceEvents.prototype,
 	{
 
-		"_interfaceFPropertyFields": {
-			"uid"			:{"type":"integer"},
-			"pid"			:{"type":"integer"},
-			"sort"			:{"type":"integer"},
-			"value"		:{"type":"string"},
-			"valuetype":{"type":"string"},
-			"extclass"	:{"type":"string"},
-			"extid"		:{"type":"string"},
-			"property"	:{"type":"string"},
-			"tick"			:{"type":"integer"},
-			"[table]"		:{"type":"string", "spec":1}
+		"_interfaceFPropertyFields": new ObjectA({
+			"uid":          { "type": "integer" },
+			"pid":          { "type": "integer" },
+			"sort":         { "type": "integer" },
+			"value":        { "type": "string" },
+			"valuetype":    { "type": "string" },
+			"extclass":     { "type": "string" },
+			"extid":        { "type": "string" },
+			"property":     { "type": "string" },
+			"tick":         { "type": "integer" },
+			"[table]":      { "type": "string", "spec": 1 }
 			// spec - специальное поле. Отсутсвует в таблице. Участвует в логике.
 			// [table] указывает на название таблицы свойств
+		}),
+
+
+		"hasChangedFProperty": function() {
+			return this._iFPropsHasChanged;
 		},
 
 
-		"splitProperty": function(property){
-			if (  typeof property != "object"  ) return null;
+		"clearFPropertyHistory": function() {
+			this._iFPropsHasChanged = false;
+		},
 
-			/*
-			var dFn = function(str, d){
-				str = str+"";
-				var
-					tmp = [],
-					str_ = "",
-					b = Math.floor(str.length / d);
-				for(var c=0; c<str.length; c++){
-					str_ += str[c];
-					if (str_.length >= b || c == str.length - 1){
-						tmp.push(str_);
-						str_ = "";
-					}
-				}
-				return tmp;
-			};
-			*/
 
-			var dFn = function(str, L){
-				str = str+"";
-				var
-					tmp = [],
-					str_ = "";
-				for(var c=0; c<str.length; c++){
-					str_ += str[c];
-					if (str_.length >= L || c == str.length - 1){
-						tmp.push(str_);
-						str_ = "";
-					}
-				}
-				return tmp;
-			};
+		"splitFProperty": function(property) {
+			if (!property || typeof property != "object")
+				throw new Error("1st argument expected to be Object or ObjectA");
 
-			var c, value, tmp;
-			var limit = 120;
+			var value,
+				props = [],
+				limit = 120;
 
-			var lowProperty = propUtils.toLowerCaseKeys(property);
+			property = propUtils.normalizePropRow(property);
 
-			if (  !lowProperty.hasOwnProperty("value")  ) {
-				lowProperty.value = "";
-				value = "";
-			} else {
-				value = lowProperty.value;
-			}
+			value = (property
+				.get("value") || "")
+				.match(new RegExp(".{1," + (limit - 1) + "}(\\s|$)|.{1," + limit + "}", "g")) || [];
 
-			var words = [];
-			var props = [];
-			var count = 0;
-			var dProperty;
+			value.forEach(function(val) {
+				var row = property.getClone();
 
-			value = value.split(" ");
+				row.set("sort", props.length);
+				row.set("value", val);
 
-			tmp = [];
-
-			for(c=0; c<value.length; c++){
-				if (  value[c].length > limit  ){
-					tmp = tmp.concat(dFn(value[c], limit));
-					continue;
-				}
-				tmp.push(value[c]);
-			}
-
-			value = tmp;
-
-			for(c=0; c<value.length; c++){
-				words.push(value[c]);
-				count+=value[c].length;
-				if (
-					count + (value.hasOwnProperty(c+1) ? value[c+1].length : 0) > limit
-					|| c == value.length - 1
-				){
-					dProperty = propUtils.toLowerCaseKeys(lowProperty);
-					dProperty.value = words.join(" ");
-					props.push(dProperty);
-					words = [];
-					count = 0;
-				}
-				count+=value[c].length;
-			}
+				props.push(row);
+			});
 
 			return props;
+		},
+
+
+		/**
+		 * @deprecated
+		 * */
+		"splitProperty": function() {
+			return this.splitFProperty.apply(this, arguments);
 		},
 
 
@@ -176,78 +186,51 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * Добавить свойство
 		 * @param {Object} property - объект-свойства. Ключи в объекте соответсвуют полям в таблице Property
 		 * */
-		"addProperty": function(property){
+		"addFProperty": function(property) {
+			this.trigger("add-fab-property");
 
-			var prop, type, value, lowName;
+			if (!property || typeof property != "object")
+				return;
 
-			this.trigger("addProperty");
+			if (Array.isArray(property)) {
+				property.forEach(function(row) {
+					this.addFProperty(row);
+				}, this);
 
-			if (!property || typeof property != "object") return false;
-
-			if (  Array.isArray(property)  ){
-				for(var c=0; c<property.length; c++){
-					this.addProperty(property[c]);
-				}
-				return true;
+				return;
 			}
 
-			var tmp = {};
+			property = propUtils.normalizePropRow(property);
 
-			// ----------------------------------------------------
-			// Клонирование объекта. Понижение регистра ключей
-			// ------------------------------------------------------------------------
-			for(prop in property){
-				if (  !Object.prototype.hasOwnProperty.call(property, prop)  ) continue;
-				if (typeof property[prop] == "undefined") continue;
+			this._iFPropsHasChanged = true;
 
-				lowName = prop.toLowerCase();
-
-				if (  !this._interfaceFPropertyFields.hasOwnProperty(lowName)  ) continue;
-
-				type = this._interfaceFPropertyFields[lowName].type;
-				value = property[prop];
-
-				if (type == "integer" && typeof value == "string"){
-					if (  value.match(/\D/g)  ) continue;
-					if ((value+"").trim() === "") continue;
-				}
-
-				tmp[lowName] = value;
-			}
-
-			// ------------------------------------------------------------------------
-			// Запись пропущенных полей
-			// ------------------------------------------------------------------------
-			for(prop in this._interfaceFPropertyFields){
-				if (!this._interfaceFPropertyFields.hasOwnProperty(prop)) continue;
-				lowName = prop.toLowerCase();
-				if (  !tmp.hasOwnProperty(lowName)  ) tmp[lowName] = void 0;
-			}
-
-			property = tmp;
-
-			// ------------------------------------------------------------------------
-			// Если не указан, определить автоматически тип данных для свойства
-			// ------------------------------------------------------------------------
-			if (  !property.hasOwnProperty("valuetype") || !property.valuetype  ){
-				if (  isNaN(property.value)  ){
-					property.valuetype = "C";
-				} else {
-					property.valuetype = "N";
-				}
-			}
-
-			// Изменен
-			propUtils.setChanged.call(this, property);
-
-			this._property.push(property);
+			this._iFPropsData.push(property);
 		},
+
+
+		/**
+		 * @deprecated
+		 * */
+		"addProperty": function() {
+			return this.addFProperty.apply(this, arguments);
+		},
+
 
 		/**
 		 * @alias addProperty
 		 * */
-		"appendProperty": function(){
-			this.addProperty.apply(this, arguments);
+		"appendProperty": function() {
+			return this.addProperty.apply(this, arguments);
+		},
+
+
+		"setFProperty": function(arg) {
+			if (Array.isArray(arg)) {
+				return this._iFPropsData = arg;
+
+			} else if (utils.getType(arg) == "object") {
+				this._iFPropsData = [propUtils.normalizePropRow(arg)];
+			}
 		},
 
 
@@ -256,31 +239,28 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @param {object} getKeyValue - искомое свойство
 		 * @param {Object} setKeyValue - свойство на замену
 		 * */
-		"updateProperty": function(getKeyValue, setKeyValue){
-			if (typeof getKeyValue != "object" || !getKeyValue) return;
-			if (typeof setKeyValue != "object" || !setKeyValue) return;
-			// var setKeyValue_ = {};
-			var c, v, keys, lowKey;
+		"updateFProperty": function(getKeyValue, setKeyValue) {
+			if (typeof setKeyValue != "object" || !setKeyValue)
+				return;
 
-			var setKeyValue_ =  propUtils.toLowerCaseKeys(setKeyValue);
+			setKeyValue = propUtils.normalizePropRow(setKeyValue);
 
-			var props = this.getProperty(getKeyValue);
-			var isUpdated = false;
+			var props = this.getFPropertyA(getKeyValue);
 
-			// обход всех свойств и всех полей свойств
-			for(c=0; c<props.length; c++){
-				keys = Object.getOwnPropertyNames(props[c]);
-				for(v=0; v<keys.length; v++){
-					lowKey = keys[v].toLowerCase();
-					if (  !setKeyValue_.hasOwnProperty(lowKey)  ) continue;
-					isUpdated = true;
-					props[c][keys[v]] = setKeyValue_[lowKey];
-				}
-				// Изменен
-				propUtils.setChanged.call(this, props[c]);
-			}
+			props.forEach(function(row) {
+				ObjectA.assign(row, setKeyValue);
+			});
 
-			return isUpdated;
+			if (props.length)
+				this._iFPropsHasChanged = true;
+		},
+
+
+		/**
+		 * @deprecated
+		 * */
+		"updateProperty": function() {
+			return this.updateFProperty.apply(this, arguments);
 		},
 
 
@@ -289,239 +269,109 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @param {object} getKeyValue - искомое свойство
 		 * @param {Object} insProperty - свойство на замену
 		 * */
-		"upsertProperty": function(getKeyValue, insProperty){
-			var filterProps = function(pr){
-				var tmp = [];
-				for(var c=0; c<pr.length; c++){
-					if (typeof pr[c] != "object" || !pr[c]) continue;
-					tmp.push(pr[c]);
-				}
-				return tmp;
-			};
+		"upsertFProperty": function(getKeyValue, insProperty) {
+			var ownProperty = this.getFPropertyA(getKeyValue);
 
-			var ownProperty, keys, c, v, lowKey, insProperty_;
+			[].concat(insProperty || []).forEach(function(insRow, c) {
+				if (!insRow)
+					return;
 
-			if (  arguments.length < 2  ) return false;
+				insRow = propUtils.normalizePropRow(insRow);
 
-			// ------------------------------------------------------------------------------------
+				!ownProperty[c]
+					? this.addFProperty(insRow)
+					: ObjectA.assign(ownProperty[c], insRow);
 
-			if (  !Array.isArray(insProperty) && typeof insProperty == "object"  ){
-				insProperty = [insProperty];
+				this._iFPropsHasChanged = true;
+			}, this);
+		},
 
-			} else if (  Array.isArray(insProperty)  ) {
 
-			} else {
-				return false;
-
-			}
-
-			// ------------------------------------------------------------------------------------
-
-			ownProperty = this.getProperty(getKeyValue);
-
-			insProperty = filterProps(insProperty);
-
-			for(  c=0; ; c++  ){
-
-				// Условие выхода из цикла
-				if (
-					typeof insProperty[c] == "undefined"
-					&& typeof ownProperty[c] == "undefined"
-				){
-					break;
-				}
-
-				if (
-					typeof insProperty[c] == "object"
-					&& typeof ownProperty[c] == "object"
-				){
-
-					insProperty_ = propUtils.toLowerCaseKeys(insProperty[c]);
-
-					keys = Object.getOwnPropertyNames(ownProperty[c]);
-
-					for(v=0; v<keys.length; v++){
-						lowKey= keys[v].toLocaleLowerCase();
-						if (  !insProperty_.hasOwnProperty(lowKey)  ) continue;
-						ownProperty[c][keys[v]] = insProperty_[lowKey];
-					}
-
-					// Изменен
-					propUtils.setChanged.call(this, ownProperty[c]);
-
-				} else if (  typeof insProperty[c] == "object"  ) {
-
-					this.addProperty(insProperty[c]);
-
-				}
-
-			}
-
-			return true;
-
+		/**
+		 * @deprecated
+		 * */
+		"upsertProperty": function() {
+			return this.upsertFProperty.apply(this, arguments);
 		},
 
 
 		/**
 		 * Получить свойство
+		 * @param {Object=} argObj - искомое свойство
 		 * @return {Array}
-		 * @param {Object} keyValue - искомое свойство
 		 * */
-		"getProperty": function(keyValue){
-			var props = [];
+		"getFProperty": function(argObj) {
+			return this.getFPropertyA(argObj).map(function(row) {
+				return row.getPlainObject();
+			})
+		},
 
-			var caseSens = false;
 
-			var skip, value1, value2, c, v, key, keys;
-
-			this.trigger("getProperty");
+		"getFPropertyA": function(argObj) {
+			this.trigger("get-fab-property");
 
 			if (
 				!arguments.length
-				|| !keyValue
-				|| !Object.getOwnPropertyNames(keyValue).length
-			){
-				return this._property;
+				|| !argObj
+				|| !Object.keys(argObj).length
+			) {
+				return this._iFPropsData;
 			}
 
-			if (typeof keyValue != "object") {
+			if (typeof argObj != "object")
 				throw new Error("1st argument suppose to be type \"Object\"");
+
+			if (argObj instanceof ObjectA) {
+				return this.getFPropertyA().filter(function(row) {
+					return row === argObj;
+				});
 			}
 
-			for(c=0; c<this._property.length; c++){
-				skip = 0;
+			return this.getFPropertyA().filter(function(row) {
+				if (typeof row != "object" || !row)
+					return false;
 
-				if (
-					typeof this._property[c] != "object"
-					|| !this._property[c]
-				){
-					continue;
-				}
-
-				var propObjA = new ObjectA(this._property[c]);
-
-				keys = Object.getOwnPropertyNames(keyValue);
-
-				for(v=0; v<keys.length; v++){
-					key = keys[v].toLowerCase();
-
-					if (  !propObjA.has(key)  ) skip = 1;
-
-					value1 = propObjA.get(key);
-					value2 = keyValue[keys[v]];
-
-					if (!caseSens){
-						value1 = typeof value1 == "string" ? value1.toLowerCase() : value1;
-						value2 = typeof value2 == "string" ? value2.toLowerCase() : value2;
-					}
-
-					if (  value1 != value2  ) skip = 1;
-				}
-
-				if (skip) continue;
-
-				props.push(this._property[c]);
-
-			}
-
-			return props;
+				return Object.keys(argObj).every(function(key) {
+					return row.get(key) == argObj[key];
+				});
+			}, this);
 		},
 
 
 		/**
-		 * Получить измененные свойства
-		 * @return {Object}
+		 * @deprecated
 		 * */
-		"getChangedProperty": function(){
-			return this._changedFProperty;
-		},
-
-
-		/**
-		 * Очистить историю изменений свойств
-		 * */
-		"clearChangedProperty": function(){
-			this._changedFProperty = [];
+		"getProperty": function() {
+			return this.getFProperty.apply(this, arguments);
 		},
 
 
 		/**
 		 * Удалить свойство
-		 * @param {Object} keyValue - искомое свойство на удаление
+		 * @param {Object} argObj - искомое свойство на удаление
 		 * */
-		"removeProperty": function(keyValue){
-			var props = [];
-
-			if (typeof keyValue != "object") return false;
-
-			var skip, existsFields, prop, value1, value2;
-
-			var caseSens = false;
-
-			this.trigger("removeProperty");
+		"deleteFProperty": function(argObj) {
+			this.trigger("remove-fab-property");
 
 			if (
 				!arguments.length
-				|| !keyValue
-				|| !Object.getOwnPropertyNames(keyValue).length
-			){
-				this._property = [];
-				return true;
+				|| !argObj
+				|| !Object.keys(argObj).length
+			) {
+				this._iFPropsData = [];
+
+				return;
 			}
 
-			for(var c=0; c<this._property.length; c++){
-				skip = 1;
+			if (argObj instanceof ObjectA) {
+				this._iFPropsData = this._iFPropsData.filter(function(row) {
+					return row === argObj && (this._iFPropsHasChanged = true)
+				}, this);
 
-				existsFields = {};
-
-				for(prop in this._property[c]){
-					if (  typeof this._property[c].hasOwnProperty == "function"  ){
-						if (  !this._property[c].hasOwnProperty(prop)  ) continue;
-					}
-					if (typeof this._property[c][prop] == "undefined") continue;
-					existsFields[prop.toLowerCase()] = this._property[c][prop];
-				}
-
-				for(prop in keyValue){
-					if (  typeof keyValue.hasOwnProperty == "function"  ){
-						if (  !keyValue.hasOwnProperty(prop)  ) continue;
-					}
-					if (typeof keyValue[prop] == "undefined") continue;
-
-					if (  !existsFields.hasOwnProperty(prop.toLowerCase())  ) continue;
-
-					value1 = existsFields[prop.toLowerCase()];
-					value2 = keyValue[prop];
-
-					if (!caseSens){
-						value1 = typeof value1 == "string" ? value1.toLowerCase() : value1;
-						value2 = typeof value2 == "string" ? value2.toLowerCase() : value2;
-					}
-
-					if (  value1 != value2  ) skip = 0;
-				}
-
-				// Изменен
-				propUtils.setChanged.call(this, this._property[c]);
-
-				if (skip) continue;
-
-				props.push(this._property[c]);
-
+				return;
 			}
 
-			var isDeleted = this._property.length != props.length;
-
-			this._property = props;
-
-			return isDeleted;
-		},
-
-		/**
-		 * @alias removeProperty
-		 * */
-		"deleteProperty": function(){
-			return this.removeProperty.apply(this, arguments);
+			this.getFPropertyA(argObj).forEach(this.deleteFProperty.bind(this));
 		}
 
 	}

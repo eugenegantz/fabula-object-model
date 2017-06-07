@@ -19,6 +19,8 @@ var FabulaObjModel = function(arg){
 	}
 	/*#end*/
 
+	this.config = {};
+
 	this.instances.push(this);
 };
 
@@ -80,11 +82,9 @@ FabulaObjModel.prototype._setModule("CalcPrintPostprocLaminating",  require("./d
 
 FabulaObjModel.prototype._setModule("CalcUtils",  require("./data-models/calc/CalcUtils"));
 
-FabulaObjModel.prototype._setModule("PrintUtils",  require("./data-models/PrintUtils"));
+FabulaObjModel.prototype._setModule("printUtils",  require("./utils/printUtils"));
 
-FabulaObjModel.prototype._setModule("EvalUtils",  require("./data-models/EvalUtils"));
-
-FabulaObjModel.prototype._setModule("utils", require("./utils"));
+FabulaObjModel.prototype._setModule("utils", require("./utils/utils"));
 
 FabulaObjModel.prototype._setModule("ObjectA", require("./data-models/ObjectA"));
 

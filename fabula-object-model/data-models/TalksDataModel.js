@@ -1,6 +1,6 @@
 "use strict";
 
-var _utils = require("./../utils");
+var _utils = require("./../utils/utils");
 
 // Для совместимости
 var getContextDB = function(){

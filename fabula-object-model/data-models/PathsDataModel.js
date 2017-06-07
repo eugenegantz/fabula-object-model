@@ -1,7 +1,7 @@
 "use strict";
 
 var modPath = require("path"),
-	stdUtils = require("./../utils.js");
+	stdUtils = require("./../utils/utils.js");
 
 // Для совместимости
 var getContextDB = function() {
