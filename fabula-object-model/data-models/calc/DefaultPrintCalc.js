@@ -96,7 +96,7 @@ DefaultPrintCalc.prototype.calcByApprox = function(arg) {
 
 	return {
 		"sum": cost,
-		"price": cost / (( argAmount > kol ) ? kol : argAmount) || 1
+		"price": cost / (( argAmount > kol ) ? kol : argAmount) || 0
 	};
 };
 
