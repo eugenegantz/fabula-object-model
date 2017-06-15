@@ -100,11 +100,13 @@ FirmsDataModel.prototype = {
 			});
 
 			dbres[1].recs.forEach(function(row) {
-				var obj = self.dataRefByFirmId[row.extId];
+				var obj = self.dataRefByFirmId[row.extID];
 
 				if (obj)
 					obj.firmsPropertiesRef.push(row);
 			});
+
+			self.dataRefByFirmId = new ObjectA(self.dataRefByFirmId);
 
 			self.state = 1;
 

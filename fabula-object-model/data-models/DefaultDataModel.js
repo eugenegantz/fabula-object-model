@@ -189,7 +189,7 @@ DefaultDataModel.prototype = _objectsPrototyping(
 				var return_ = Object.create(null);
 
 				for (var prop in key) {
-					if (!key.hasOwnProperty(prop)) continue;
+					if (!Object.prototype.hasOwnProperty.call(key, prop)) continue;
 
 					return_[prop] = this.set(prop, key[prop]);
 				}
