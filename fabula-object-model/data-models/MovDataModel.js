@@ -791,16 +791,17 @@ MovDataModel.prototype = _utils.createProtoChain(
 			"PrimeCost":    {"type": "N"},
 			"Sum":          {"type": "N"},
 			"Sum2":         {"type": "N"},
-			"FirmProduct":  {"type": "N"},
-			"Remark":       {"type": "S"},
-			"NameAVR":      {"type": "S"},
-			"Agent2":       {"type": "N"},
-			"Manager2":     {"type": "N"},
-			"Performer":    {"type": "N"},
 			"MAttr1":       {"type": "S"},
 			"MAttr2":       {"type": "S"},
 			"MAttr3":       {"type": "S"},
-			"MAttr4":       {"type": "S"}
+			"MAttr4":       {"type": "S"},
+			"FirmProduct":  {"type": "N"},
+			"Remark":       {"type": "S"},
+			"NameAVR":      {"type": "S"},
+			"Agent2":       {"type": "S"},
+			"Manager2":     {"type": "S"},
+			"Performer":    {"type": "S"},
+			"Stock":        {"type": "B"}
 		}),
 
 
