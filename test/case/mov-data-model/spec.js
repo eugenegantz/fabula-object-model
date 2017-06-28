@@ -677,6 +677,52 @@ describe("MovDataModel", function() {
 
 		});
 
+		describe('Проверка уникальности', () => {
+			var movsDBRecs;
+
+			before(function(done) {
+
+				Promise.all([
+					// +5
+					mkMov().save(),
+					mkMov().save(),
+					mkMov().save(),
+					mkMov().save(),
+					mkMov().save(),
+
+					// +5
+					mkMov().save(),
+					mkMov().save(),
+					mkMov().save(),
+					mkMov().save(),
+					mkMov().save()
+
+					// =10
+				]).then(function() {
+					db.dbquery({
+						"query": "SELECT mmid FROM Movement WHERE mmPid IS NULL AND gsSpec = '" + sid + "'",
+						"callback": function(dbres, err) {
+							if (err = dbUtils.fetchErrStrFromRes(dbres))
+								throw new Error(err);
+
+							movsDBRecs = dbres.recs;
+
+							done();
+						}
+					});
+
+				}).catch(function(err) {
+					done(err);
+				});
+
+			});
+
+			it('', function() {
+				assert.equal(movsDBRecs.length, 10);
+			});
+
+		});
+
 	});
 
 });

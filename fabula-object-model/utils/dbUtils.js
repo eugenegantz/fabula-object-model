@@ -4,15 +4,45 @@ var utils = require("./utils.js");
 
 module.exports = {
 
+	"stringTypes": {
+		"S": 1,
+		"string": 1
+	},
+
+
+	"dateTypes": {
+		"D": 1,
+		"DT": 1,
+		"date": 1
+	},
+
+
+	"numberTypes": {
+		"float": 1,
+		"double": 1,
+		"integer": 1,
+		"number": 1
+	},
+
+
+	"booleanTypes": {
+		"boolean": 1,
+		"B": 1
+	},
+
+
 	"mkVal": function(val, type) {
 		if (utils.isEmpty(val))
 			return "NULL";
 
-		if ("S" === type || "string" === type)
+		if (this.stringTypes[type])
 			return "\"" + this.secureStr(val) + "\"";
 
-		if ("D" === type)
+		if (this.dateTypes[type])
 			return "CDate(\"" + this.secureDate(val) + "\")";
+
+		if (this.booleanTypes[type])
+			return val ? "-1" : "0";
 
 		return val + "";
 	},

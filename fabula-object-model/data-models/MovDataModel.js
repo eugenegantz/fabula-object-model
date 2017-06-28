@@ -355,6 +355,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 					if (!val)
 						return;
 
+					// БД отрезает дробную часть - прямое сравнение не работает
+					// сравнить результаты округления
+					if (dbUtils.numberTypes[fldDecl.type]) {
+						return cond.push(
+							"ROUND(" + dbUtils.mkFld(key) + ")"
+							+ " = "
+							+ dbUtils.mkVal(Math.round(val), fldDecl.type)
+						);
+					}
+
 					cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl.type));
 				});
 
@@ -411,6 +421,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 			arg = arg || {};
 
 			var self = this,
+				mAttrRnd = (Math.random() * Math.pow(10, 16) + '').slice(0, 16),
 				callback = arg.callback || emptyFn;
 
 			// -----------------------------------------------------------------
@@ -420,11 +431,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 			console.log("MOV-INSERT(" + (self.get("mmid", null, !1) || "AWAIT") + ")");
 
 			// -----------------------------------------------------------------
-
-			// Если MAttr1 не занято, записать в него случайное число
+			// Если MAttr[n] не занято, записать в него случайное число
 			// для повышения уникальности записи
-			if (!self.get("mAttr1", null, false))
-				self.set("mattr1", (Math.random() * Math.pow(10, 16) + '').slice(0, 16));
+			// -----------------------------------------------------------------
+			["mAttr1", "mAttr2", "mAttr3", "mAttr4"].some(function(key) {
+				if (!self.get(key, null, !1)) {
+					self.set(key, mAttrRnd);
+
+					return true;
+				}
+			});
 
 			// -----------------------------------------------------------------
 
@@ -764,44 +780,44 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		"__movDataModelDefaultFields": new ObjectA({
-			"MMID":         {"type": "N"},
-			"MMPID":        {"type": "N"},
-			"IsDraft":      {"type": "N"},
-			"Tick":         {"type": "N"},
-			"Doc":          {"type": "S"},
-			"Doc1":         {"type": "S"},
-			"ParentDoc":    {"type": "S"},
-			"MMFlag":       {"type": "S"},
-			"InOut":        {"type": "N"},
-			"GSDate":       {"type": "D"},
-			"GSDate2":      {"type": "D"},
-			"Mark":         {"type": "B"},
-			"CodeOp":       {"type": "S"},
-			"CodeDc":       {"type": "S"},
-			"ExtCode":      {"type": "S"},
-			"Storage":      {"type": "S"},
-			"GS":           {"type": "S"},
-			"GSSpec":       {"type": "S"},
-			"GSExt":        {"type": "N"},
-			"Consigment":   {"type": "N"},
-			"Amount":       {"type": "N"},
-			"Rest":         {"type": "N"},
-			"RestSum":      {"type": "N"},
-			"Price":        {"type": "N"},
-			"PrimeCost":    {"type": "N"},
-			"Sum":          {"type": "N"},
-			"Sum2":         {"type": "N"},
-			"MAttr1":       {"type": "S"},
-			"MAttr2":       {"type": "S"},
-			"MAttr3":       {"type": "S"},
-			"MAttr4":       {"type": "S"},
-			"FirmProduct":  {"type": "N"},
-			"Remark":       {"type": "S"},
-			"NameAVR":      {"type": "S"},
-			"Agent2":       {"type": "S"},
-			"Manager2":     {"type": "S"},
-			"Performer":    {"type": "S"},
-			"Stock":        {"type": "B"}
+			"MMID":         {"type": "integer"},
+			"MMPID":        {"type": "integer"},
+			"IsDraft":      {"type": "integer"},
+			"Tick":         {"type": "integer"},
+			"Doc":          {"type": "string"},
+			"Doc1":         {"type": "string"},
+			"ParentDoc":    {"type": "string"},
+			"MMFlag":       {"type": "string"},
+			"InOut":        {"type": "integer"},
+			"GSDate":       {"type": "date"},
+			"GSDate2":      {"type": "date"},
+			"Mark":         {"type": "boolean"},
+			"CodeOp":       {"type": "string"},
+			"CodeDc":       {"type": "string"},
+			"ExtCode":      {"type": "string"},
+			"Storage":      {"type": "string"},
+			"GS":           {"type": "string"},
+			"GSSpec":       {"type": "string"},
+			"GSExt":        {"type": "integer"},
+			"Consigment":   {"type": "integer"},
+			"Amount":       {"type": "float"},
+			"Rest":         {"type": "float"},
+			"RestSum":      {"type": "float"},
+			"Price":        {"type": "float"},
+			"PrimeCost":    {"type": "float"},
+			"Sum":          {"type": "float"},
+			"Sum2":         {"type": "float"},
+			"MAttr1":       {"type": "string"},
+			"MAttr2":       {"type": "string"},
+			"MAttr3":       {"type": "string"},
+			"MAttr4":       {"type": "string"},
+			"FirmProduct":  {"type": "integer"},
+			"Remark":       {"type": "string"},
+			"NameAVR":      {"type": "string"},
+			"Agent2":       {"type": "string"},
+			"Manager2":     {"type": "string"},
+			"Performer":    {"type": "string"},
+			"Stock":        {"type": "boolean"}
 		}),
 
 
