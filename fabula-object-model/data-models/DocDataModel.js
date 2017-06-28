@@ -641,7 +641,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
-		"getJSON": function() {
+		"serializeObject": function() {
 			var fieldsDecl = this.__docDataModelsDefaultFields,
 
 				ret = {
@@ -658,11 +658,19 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				ret.fields[key] = this.get(key);
 			}, this);
 
-			ret.movs = this.getMov(function(mov) {
+			ret.movs = this.getMov().map(function(mov) {
 				return mov.getJSON();
 			});
 
 			return ret;
+		},
+
+
+		/**
+		 * @deprecated
+		 * */
+		"getJSON": function() {
+			return this.serializeObject();
 		},
 
 

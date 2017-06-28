@@ -167,7 +167,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"getJSON": function() {
+		"serializeObject": function() {
 			var movFieldsDecl = this.__movDataModelDefaultFields,
 
 				ret = {
@@ -189,6 +189,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 			});
 
 			return ret;
+		},
+
+
+		/**
+		 * @deprecated
+		 * */
+		"getJSON": function() {
+			return this.serializeObject();
 		},
 
 
