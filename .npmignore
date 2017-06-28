@@ -9,3 +9,4 @@ webpack.config.js
 *.7z
 *.zip
 *.rar
+package.json

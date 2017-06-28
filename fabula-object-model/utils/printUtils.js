@@ -29,7 +29,8 @@ PrintUtils._initFormatCache = function(){
 
 			if (  !gandsFormat[c].gandsPropertiesRef[v].property.match(/размер/gi)  ) continue;
 
-			tmp = gandsFormat[c].gandsPropertiesRef[v].value.split("x");
+			// ха - кириллическая, икс - латинский
+			tmp = gandsFormat[c].gandsPropertiesRef[v].value.split(/[xх]/);
 
 			if (tmp.length != 2) continue;
 
