@@ -395,26 +395,47 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 		if (fld && typeof fld != "object")
 			throw new Error("2nd argument supposed to be type Object");
 
-		if (!opt)
-			opt = Object.create(null);
+		opt = opt || {};
 
 		var res = !fld ? row.gandsExtRef : this._fetchRowExtFields(row, fld);
 
-		if ((opt.onlyPriority && !res.length) || !opt.onlyPriority)
-			return res.concat(this.getExt(this.getParent(row) || '', fld, opt) || []);
+		res = res.concat(
+			this.getExt(
+				this.getParent(row) || '',
+				fld,
+				Object.assign({}, opt, { onlyPriority: false })
+			) || []
+		);
+
+		if (opt.onlyPriority) {
+			var ex = {};
+
+			res = res.sort(function(a, b) {
+				return a.GSExID.length > b.GSExID.length ? -1 : 1;
+			}).filter(function(extRow) {
+				var key = extRow.GSExType + extRow.GSExName;
+
+				// Если такой ключ уже был и этот ключ лежит в таблице с меньшим весом - исключить его из выборки
+				// (чтобы избежать выбрасывания родственников из одной таблицы)
+				if (ex[key] && extRow.GSExID.length < ex[key])
+					return false;
+
+				return ex[key] = extRow.GSExID.length;
+			});
+		}
 
 		return res;
 	},
 
 
 	"_fetchRowExtFields": function(row, fld) {
-		fld = _utils.objectKeysToLowerCase(fld);
+		fld = ObjectA.create(fld);
 
 		return row.gandsExtRef.filter(function(extRow) {
-			extRow = _utils.objectKeysToLowerCase(extRow);
+			extRow = ObjectA.create(extRow);
 
-			return !Object.keys(fld).some(function(key) {
-				return extRow[key] != fld[key];
+			return fld.getKeys().every(function(key) {
+				return extRow.get(key) == fld.get(key);
 			});
 		});
 	},
