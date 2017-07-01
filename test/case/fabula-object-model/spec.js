@@ -1,4 +1,6 @@
 describe("fabula-object-model", function() {
+	this.timeout(5000);
+
 	var fom, db;
 
 	before(function() {

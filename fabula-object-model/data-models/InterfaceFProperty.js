@@ -348,7 +348,7 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		/**
 		 * Удалить свойство
-		 * @param {Object} argObj - искомое свойство на удаление
+		 * @param {Object=} argObj - искомое свойство на удаление
 		 * */
 		"deleteFProperty": function(argObj) {
 			this.trigger("remove-fab-property");
@@ -372,6 +372,96 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			}
 
 			this.getFPropertyA(argObj).forEach(this.deleteFProperty.bind(this));
+		},
+
+
+		"getUpsertOrDelFPropsQueryStrByDBRes": function(dbPropsRecs, insProperty) {
+			var self                    = this,
+				dbq                     = [],
+				selfFPropsRefByUId      = {},
+				deletedPropsUId         = [],
+				dbPropsRecsRefByUId     = {};
+
+			insProperty = new ObjectA(insProperty);
+
+			// ---------------------------------
+			// Ссылки на свойства задачи
+			// ---------------------------------
+			self.setFProperty(
+				self.getFPropertyA().filter(function(row) {
+					if (!(row instanceof ObjectA))
+						return false;
+
+					var uid = row.get("uid");
+
+					// Удалить все записи без названия и без значения
+					if (!row.get("property") || !row.get("value"))
+						return false;
+
+					ObjectA.assign(row, insProperty);
+
+					if (!uid)
+						return true;
+
+					selfFPropsRefByUId[uid] = row;
+
+					return true;
+				})
+			);
+
+			// ---------------------------------
+			// Создание ссылок на свойства в базе.
+			// Создание списка удаленных, добавленных и обновленных свойств
+			// ---------------------------------
+			dbPropsRecs.forEach(function(row) {
+				row = new ObjectA(row);
+
+				var sets = [],
+					uid = row.get("uid"),
+					selfRow = selfFPropsRefByUId[uid];
+
+				dbPropsRecsRefByUId[uid] = row;
+
+				if (!selfRow)
+					return deletedPropsUId.push(uid);
+
+				row.getKeys().forEach(function(k) {
+					var fldDecl = self._interfaceFPropertyFields.get(k);
+
+					if (!fldDecl || fldDecl.spec)
+						return;
+
+					if (selfRow.get(k) != row.get(k))
+						sets.push(dbUtils.mkFld(k) + " = " + dbUtils.mkVal(selfRow.get(k), fldDecl.type));
+				});
+
+				if (!sets.length)
+					return;
+
+				dbq.push(""
+					+ "UPDATE Property"
+					+ " SET " + sets.join(", ")
+					+ " WHERE"
+					+   " [uid] = " + uid
+				);
+			});
+
+			// ---------------------------------
+			// Запись новых свойств
+			// ---------------------------------
+			self.getFPropertyA().forEach(function(row) {
+				if (dbPropsRecsRefByUId[row.get("uid")])
+					return;
+
+				dbq.push.apply(dbq, [].concat(InterfaceFProperty.mkDBInsertStr(row) || []));
+			});
+
+			// ---------------------------------
+
+			if (deletedPropsUId.length)
+				dbq.push("DELETE FROM Property WHERE uid IN (" + deletedPropsUId.join(",") + ")");
+
+			return dbq.join("; ");
 		}
 
 	}

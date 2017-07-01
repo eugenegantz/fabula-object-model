@@ -97,6 +97,11 @@ DefaultDataModel.prototype = utils.createProtoChain(
 		},
 
 
+		"unDeclField": function(key) {
+			delete this._mDefaultFields[(key + "").toLowerCase()];
+		},
+
+
 		/**
 		 * Возвращает массив с измененными ключами
 		 * @return {Array}

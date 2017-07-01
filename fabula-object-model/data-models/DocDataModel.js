@@ -273,7 +273,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				docId           = this.get("docId", null, !1),
 				callback        = arg.callback || emptyFn,
 				dbawws          = self.getDBInstance(),
-				ownProps        = this.getFPropertyA(),
 				dbq             = [],
 				docFieldsDecl   = this.__docDataModelsDefaultFields,
 				disabledFields  = new ObjectA({ "id": 1 }),
@@ -298,22 +297,22 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				}
 
 				values.push(dbUtils.mkVal(val, fldDecl.type));
-				fields.push("[" + key + "]");
+				fields.push(dbUtils.mkFld(key));
 			});
 
 			dbq.push("INSERT INTO DOCS (" + fields.join(",") + ") VALUES (" + values.join(",") + ")");
-			dbq.push("DELETE FROM Property WHERE ExtClass = 'DOCS' AND ExtID = '" + docId + "' ");
+			dbq.push("DELETE FROM Property WHERE extClass = 'DOCS' AND extId = '" + docId + "' ");
 
-			ownProps.forEach(function(row) {
-				if (!row || typeof row != "object")
-					return;
-
-				row.set("extClass", "DOCS");
-				row.set("extId", docId);
-				row.set("pid", 0);
-			});
-
-			dbq.push.apply(dbq, [].concat(InterfaceFProperty.mkDBInsertStr(ownProps) || []));
+			dbq.push.apply(
+				dbq,
+				[].concat(
+					self.getUpsertOrDelFPropsQueryStrByDBRes([], {
+						"extClass": "DOCS",
+						"extId": docId,
+						"pid": 0
+					}) || []
+				)
+			);
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
@@ -441,14 +440,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					dbPropsRecs         = dbres[0].recs,
 					dbMovsRecs          = dbres[1].recs,
-					dbPropsRecsRefByUId = {},
-
-					selfFPropRefByUId   = {},
 					selfMovsRefByMMId   = {},
-
-					deletedPropsUId     = [],
-					deletedMovsMMId     = [],
-
 					values              = [],
 					dbq                 = [];
 
@@ -468,85 +460,21 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					);
 				});
 
-
 				if (values.length)
 					dbq.push("UPDATE DOCS SET " + values.join(", ") + " WHERE ID = " + self.get("ID"));
 
 				// --------------------------------------
-				// Обработка свойств
-				// Ссылки на собственные свойства
-				// --------------------------------------
-				self.setFProperty(
-					self.getFPropertyA().filter(function(row) {
-						if (!row || typeof row != "object")
-							return false;
 
-						if (
-							_utils.isEmpty(row.get("property"))
-							|| _utils.isEmpty(row.get("value"))
-						) {
-							return false;
-						}
-
-						row.set("pid", 0);
-						row.set("extId", self.get("docId", null, !1));
-						row.set("extClass", "DOCS");
-
-						if (!row.get("uid"))
-							return true;
-
-						selfFPropRefByUId[row.get("uid")] = row;
-
-						return true;
-					})
+				dbq.push.apply(
+					dbq,
+					[].concat(
+						self.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
+							"pid": 0,
+							"extId": self.get("docId", null, !1),
+							"extClass": "DOCS"
+						}) || []
+					)
 				);
-
-				// --------------------------------------
-				// Ссылки на свойства в БД
-				// --------------------------------------
-				dbPropsRecs.forEach(function(row) {
-					if (!row.uid)
-						return;
-
-					dbPropsRecsRefByUId[row.uid] = row;
-				});
-
-				// --------------------------------------
-				// INSERT
-				// --------------------------------------
-				self.getFPropertyA().forEach(function(row) {
-					if (row.get("uid"))
-						return;
-
-					dbq.push.apply(dbq, [].concat(InterfaceFProperty.mkDBInsertStr(row) || []));
-				});
-
-
-				// --------------------------------------
-				// UPDATE & DELETE
-				// --------------------------------------
-				dbPropsRecs.forEach(function(row) {
-					if (!selfFPropRefByUId[row.uid])
-						return deletedPropsUId.push(row.uid);
-
-					if (!(
-						selfFPropRefByUId[row.uid].get("value") != row.value
-						|| row.ExtID != self.get("docId", null, !1)
-					)) {
-						return;
-					}
-
-					dbq.push(
-						"UPDATE Property" +
-						" SET" +
-						"   [value] = " + dbUtils.mkVal(selfFPropRefByUId[row.uid].get("value"), "S") + "," +
-						"   [ExtID] = " + dbUtils.mkVal(self.get("docId"), "S") + "," +
-						"   [ExtClass] = 'DOCS'" +
-						" WHERE" +
-						"   [property] = '" + row.property + "'" +
-						"   AND [uid] = " + row.uid
-					);
-				});
 
 				// --------------------------------------
 
@@ -556,16 +484,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					selfMovsRefByMMId[mov.get("mmid", null, !1)] = mov;
 				});
-
-				// --------------------------------------
-
-				if (deletedPropsUId.length)
-					dbq.push("DELETE FROM Property WHERE uid IN (" + deletedPropsUId.join(",") + ")");
-
-				if (deletedMovsMMId.length) {
-					dbq.push("DELETE FROM Movement WHERE MMID IN (" + deletedMovsMMId.join(",") + ")");
-					dbq.push("DELETE FROM Property WHERE pid IN (" + deletedMovsMMId.join(",") + ")")
-				}
 
 				// --------------------------------------
 
@@ -766,6 +684,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var dbRecDoc = dbres[0].recs[0],
 					dbRecsMovs = dbres[1].recs,
 					dbRecsProps = dbres[2].recs;
+
+				self.getKeys().forEach(function(k) {
+					self.unDeclField(k);
+				});
+
+				self.delMov({});
+
+				self.deleteFProperty();
 
 				self.set(dbRecDoc);
 
