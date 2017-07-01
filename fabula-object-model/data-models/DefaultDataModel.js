@@ -97,6 +97,11 @@ DefaultDataModel.prototype = utils.createProtoChain(
 		},
 
 
+		"unDeclField": function(key) {
+			delete this._mDefaultFields[(key + "").toLowerCase()];
+		},
+
+
 		/**
 		 * Возвращает массив с измененными ключами
 		 * @return {Array}
@@ -126,7 +131,19 @@ DefaultDataModel.prototype = utils.createProtoChain(
 			this.getKeys().forEach(function(key) {
 				this._mDefaultFields[key].clearHistory();
 			}, this);
+		},
+
+
+		"getPlainObject": function() {
+			var self = this;
+
+			return this.getKeys().reduce(function(obj, k) {
+				obj[k] = self.get(k, null, !1);
+
+				return obj;
+			}, {});
 		}
+
 	}
 );
 

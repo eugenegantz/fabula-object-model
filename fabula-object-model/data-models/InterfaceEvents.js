@@ -14,7 +14,7 @@ if (typeof Event == "undefined") var Event = IEvent;
  * @requires ./../utils
  * */
 var EventsInterface = function(){
-	this._events = {};
+	this._iEventsListeners = {};
 };
 
 EventsInterface.prototype = {
@@ -32,8 +32,8 @@ EventsInterface.prototype = {
 		eventName = eventName.toLowerCase();
 
 		if (
-			typeof this._events[eventName] == "object"
-			&& Array.isArray(this._events[eventName])
+			typeof this._iEventsListeners[eventName] == "object"
+			&& Array.isArray(this._iEventsListeners[eventName])
 		){
 
 			if (
@@ -44,7 +44,7 @@ EventsInterface.prototype = {
 				e = this._createEvent(eventName);
 			}
 
-			var events = this._events[eventName];
+			var events = this._iEventsListeners[eventName];
 
 			for(var c=0; c<events.length; c++){
 
@@ -85,11 +85,11 @@ EventsInterface.prototype = {
 		eventName = eventName.toLowerCase();
 
 		if (
-			typeof this._events[eventName] != "object"
-			|| !Array.isArray(this._events[eventName])
+			typeof this._iEventsListeners[eventName] != "object"
+			|| !Array.isArray(this._iEventsListeners[eventName])
 		){
 
-			this._events[eventName] = [];
+			this._iEventsListeners[eventName] = [];
 
 		}
 
@@ -97,7 +97,7 @@ EventsInterface.prototype = {
 
 		if (  typeof fx.isOnce == "undefined"  ) fx.isOnce = false;
 
-		this._events[eventName].push(fx);
+		this._iEventsListeners[eventName].push(fx);
 
 		return true;
 
@@ -111,22 +111,22 @@ EventsInterface.prototype = {
 	 * */
 	"_removeListener": function(eventName, _unique_id){
 		if (typeof _unique_id == "undefined"){
-			this._events[eventName] = [];
+			this._iEventsListeners[eventName] = [];
 			return;
 		}
 		if (
-			typeof this._events[eventName] == "object"
-			&& Array.isArray(this._events[eventName])
+			typeof this._iEventsListeners[eventName] == "object"
+			&& Array.isArray(this._iEventsListeners[eventName])
 		){
 			var tmp = [];
-			var events = this._events[eventName];
+			var events = this._iEventsListeners[eventName];
 			for(var c=0; c<events.length; c++){
 				if (events[c]._unique_id == _unique_id){
 					continue;
 				}
 				tmp.push(events[c])
 			}
-			this._events[eventName] = tmp;
+			this._iEventsListeners[eventName] = tmp;
 		}
 	},
 
@@ -169,10 +169,10 @@ EventsInterface.prototype = {
 		if (typeof eventName != "string"){
 			return [];
 		}
-		if (  typeof this._events[eventName] != "object"  ){
+		if (  typeof this._iEventsListeners[eventName] != "object"  ){
 			return [];
 		}
-		return this._events[eventName];
+		return this._iEventsListeners[eventName];
 	},
 
 

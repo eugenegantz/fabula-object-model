@@ -51,6 +51,8 @@ describe("DocDataModel", function() {
 
 
 	function clearDB(cb) {
+		this.timeout(5000);
+
 		db.dbquery({
 			"query": ""
 			+ "DELETE FROM talk WHERE mm IN (SELECT mmid FROM Movement WHERE gsSpec = '" + sid +  "')"
@@ -304,6 +306,8 @@ describe("DocDataModel", function() {
 		});
 
 		describe("Изменились поля заявки и подч. задачи (поле doc)", function() {
+			this.timeout(6000);
+
 			var doc,
 				dbRecsMovs,
 				dbRecsProps,
@@ -321,6 +325,9 @@ describe("DocDataModel", function() {
 					doc.set("docId", docId);
 
 					return doc.insert();
+
+				}).then(function() {
+					return doc.load();
 
 				}).then(function() {
 					doc.set({

@@ -677,7 +677,7 @@ describe("MovDataModel", function() {
 
 		});
 
-		describe('Проверка уникальности', () => {
+		describe('Проверка уникальности', function() {
 			var movsDBRecs;
 
 			before(function(done) {

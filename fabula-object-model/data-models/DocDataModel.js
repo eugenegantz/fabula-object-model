@@ -21,10 +21,15 @@ var DocDataModel = function() {
 	IMovCollection.call(this);
 	IFabModule.call(this);
 
-	this.on("set:docid", this._eventSetDocID);
-	this.on("set:company", this._eventSetCompany);
-	this.on("set:doctype", this._eventSetDocType);
-	this.on("add-fab-mov", this._eventAddFabMov);
+	// -------------------------------------
+
+	this.mDocEvents.getKeys().forEach(function(key) {
+		this.mDocEvents.get(key).forEach(function(fn) {
+			this.on(key, fn);
+		}, this);
+	}, this);
+
+	// -------------------------------------
 
 	this._mDocClsHistory();
 };
@@ -36,71 +41,80 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 	IFabModule.prototype,
 	{
 
-		"_eventAddFabMov": function(self, e) {
-			e.mov.set("doc", this.get("docId"))
-		},
+		"mDocEvents": new ObjectA({
 
+			"set:docid": [
+				function(self, e) {
+					self = this;
 
-		"_eventSetDocID": function(self, e) {
-			self = this;
+					if (
+						!e.value
+						|| typeof e.value != "string"
+						|| e.value.length != 10
+					) {
+						return;
+					}
 
-			if (
-				!e.value
-				|| typeof e.value != "string"
-				|| e.value.length != 10
-			) {
-				return;
-			}
+					var parsed = this.parseDocID(e.value);
 
-			var parsed = this.parseDocID(e.value);
+					self.set("docType", parsed.docType, null, !1);
+					self.set("company", parsed.company, null, !1);
+					self.movSet("doc", e.value);
+				}
+			],
 
-			self.set("docType", parsed.docType, null, !1);
-			self.set("company", parsed.company, null, !1);
-			self.movSet("doc", e.value);
-		},
+			"set:company": [
+				function(self, e) {
+					self = this;
 
+					var docId = this.get("docId", null, !1);
 
-		"_eventSetCompany": function(self, e) {
-			self = this;
+					if (!docId)
+						return;
 
-			var docId = this.get("docId", null, !1);
+					var p = this.parseDocID(docId);
 
-			if (!docId)
-				return;
+					self.set("docId", e.value + p.year + p.prefix + p.code, null, !1);
+					self.movSet("doc", self.get("docId", null, !1));
+				}
+			],
 
-			var p = this.parseDocID(docId);
+			"set:doctype": [
+				function(self, e) {
+					self = this;
 
-			self.set("docId", e.value + p.year + p.prefix + p.code, null, !1);
-			self.movSet("doc", self.get("docId", null, !1));
-		},
+					var gands = this.getGandsInstance(),
+						docId = self.get("docId", null, !1);
 
+					if (!docId)
+						return;
 
-		"_eventSetDocType": function(self, e) {
-			self = this;
+					var p = this.parseDocID(self.get("docId", null, !1)),
+						docType = e.value,
+						prefix;
 
-			var gands = this.getGandsInstance(),
-				docId = self.get("docId", null, !1);
+					var gsGroup = gands.dataRefByGSIDGroup.get("SYОП");
 
-			if (!docId)
-				return;
+					gsGroup.some(function(row) {
+						if (8 == row.GSID.length && row.GSID.slice(4) == docType)
+							return prefix = row.GSCodeNumber;
+					});
 
-			var p = this.parseDocID(self.get("docId", null, !1)),
-				docType = e.value,
-				prefix;
+					if (!prefix)
+						return;
 
-			var gsGroup = gands.dataRefByGSIDGroup.get("SYОП");
+					self.set("docId", p.company + p.year + prefix + p.code, null, !1);
+					self.movSet("doc", self.get("docId"));
+				}
+			],
 
-			gsGroup.some(function(row) {
-				if (8 == row.GSID.length && row.GSID.slice(4) == docType)
-					return prefix = row.GSCodeNumber;
-			});
+			"add-fab-mov": [
+				function(self, e) {
+					e.mov.set("doc", this.get("docId"))
+				}
+			]
 
-			if (!prefix)
-				return;
-
-			self.set("docId", p.company + p.year + prefix + p.code, null, !1);
-			self.movSet("doc", self.get("docId"));
-		},
+		}),
 
 
 		/**
@@ -185,10 +199,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		/**
 		 * Сохранить (Добавить/обновить)
-		 * @param {Object} arg
-		 * @param {Function} arg.callback
+		 * @param {Object=} arg
+		 * @param {Function=} arg.callback
 		 * @return {Promise}
-		 * @memberof DocDataModel
 		 * */
 		"save": function(arg) {
 			arg = arg || {};
@@ -266,6 +279,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * @param {Object=} arg
+		 * @param {Function=} arg.callback
+		 * @return {Promise}
+		 * */
 		"insert": function(arg) {
 			arg = arg || {};
 
@@ -273,7 +291,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				docId           = this.get("docId", null, !1),
 				callback        = arg.callback || emptyFn,
 				dbawws          = self.getDBInstance(),
-				ownProps        = this.getFPropertyA(),
 				dbq             = [],
 				docFieldsDecl   = this.__docDataModelsDefaultFields,
 				disabledFields  = new ObjectA({ "id": 1 }),
@@ -298,22 +315,22 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				}
 
 				values.push(dbUtils.mkVal(val, fldDecl.type));
-				fields.push("[" + key + "]");
+				fields.push(dbUtils.mkFld(key));
 			});
 
 			dbq.push("INSERT INTO DOCS (" + fields.join(",") + ") VALUES (" + values.join(",") + ")");
-			dbq.push("DELETE FROM Property WHERE ExtClass = 'DOCS' AND ExtID = '" + docId + "' ");
+			dbq.push("DELETE FROM Property WHERE extClass = 'DOCS' AND extId = '" + docId + "' ");
 
-			ownProps.forEach(function(row) {
-				if (!row || typeof row != "object")
-					return;
-
-				row.set("extClass", "DOCS");
-				row.set("extId", docId);
-				row.set("pid", 0);
-			});
-
-			dbq.push.apply(dbq, [].concat(InterfaceFProperty.mkDBInsertStr(ownProps) || []));
+			dbq.push.apply(
+				dbq,
+				[].concat(
+					self.getUpsertOrDelFPropsQueryStrByDBRes([], {
+						"extClass": "DOCS",
+						"extId": docId,
+						"pid": 0
+					}) || []
+				)
+			);
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
@@ -371,12 +388,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		/**
-		 * @param {Object} ownArg                   // Аргументы для сохр. заявки
-		 * @param {Function} ownArg.callback
-		 * @param {Array} ownArg.excludeMovs        // Игнорировать изменения в перечисленных подчиненных задачах. Массив из MMID (integer)
-		 * @param {Object} parentArg                // Аргументы сохранения родительской заявки, если такая есть
-		 * @param {Object} childrenArg              // Аргумент сохр. подчиненной заявки, если такие есть
-		 * @param {Object} movArg                   // Аргументы сохранения подчиненных задач // см. MovDataModel
+		 * @param {Object=} ownArg - аргументы для сохр. заявки
+		 * @param {Function=} ownArg.callback
+		 * @param {Array=} ownArg.excludeMovs - игнорировать изменения в перечисленных подчиненных задачах. Массив из MMID (integer)
+		 * @param {Object=} parentArg - аргументы сохранения родительской заявки, если такая есть
+		 * @param {Object=} childrenArg - аргумент сохр. подчиненной заявки, если такие есть
+		 * @param {Object=} movArg - аргументы сохранения подчиненных задач // см. MovDataModel
+		 * @return {Promise}
 		 * */
 		"update": function(ownArg, parentArg, childrenArg, movArg) {
 			ownArg = ownArg || {};
@@ -441,14 +459,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					dbPropsRecs         = dbres[0].recs,
 					dbMovsRecs          = dbres[1].recs,
-					dbPropsRecsRefByUId = {},
-
-					selfFPropRefByUId   = {},
 					selfMovsRefByMMId   = {},
-
-					deletedPropsUId     = [],
-					deletedMovsMMId     = [],
-
 					values              = [],
 					dbq                 = [];
 
@@ -468,85 +479,21 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					);
 				});
 
-
 				if (values.length)
 					dbq.push("UPDATE DOCS SET " + values.join(", ") + " WHERE ID = " + self.get("ID"));
 
 				// --------------------------------------
-				// Обработка свойств
-				// Ссылки на собственные свойства
-				// --------------------------------------
-				self.setFProperty(
-					self.getFPropertyA().filter(function(row) {
-						if (!row || typeof row != "object")
-							return false;
 
-						if (
-							_utils.isEmpty(row.get("property"))
-							|| _utils.isEmpty(row.get("value"))
-						) {
-							return false;
-						}
-
-						row.set("pid", 0);
-						row.set("extId", self.get("docId", null, !1));
-						row.set("extClass", "DOCS");
-
-						if (!row.get("uid"))
-							return true;
-
-						selfFPropRefByUId[row.get("uid")] = row;
-
-						return true;
-					})
+				dbq.push.apply(
+					dbq,
+					[].concat(
+						self.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
+							"pid": 0,
+							"extId": self.get("docId", null, !1),
+							"extClass": "DOCS"
+						}) || []
+					)
 				);
-
-				// --------------------------------------
-				// Ссылки на свойства в БД
-				// --------------------------------------
-				dbPropsRecs.forEach(function(row) {
-					if (!row.uid)
-						return;
-
-					dbPropsRecsRefByUId[row.uid] = row;
-				});
-
-				// --------------------------------------
-				// INSERT
-				// --------------------------------------
-				self.getFPropertyA().forEach(function(row) {
-					if (row.get("uid"))
-						return;
-
-					dbq.push.apply(dbq, [].concat(InterfaceFProperty.mkDBInsertStr(row) || []));
-				});
-
-
-				// --------------------------------------
-				// UPDATE & DELETE
-				// --------------------------------------
-				dbPropsRecs.forEach(function(row) {
-					if (!selfFPropRefByUId[row.uid])
-						return deletedPropsUId.push(row.uid);
-
-					if (!(
-						selfFPropRefByUId[row.uid].get("value") != row.value
-						|| row.ExtID != self.get("docId", null, !1)
-					)) {
-						return;
-					}
-
-					dbq.push(
-						"UPDATE Property" +
-						" SET" +
-						"   [value] = " + dbUtils.mkVal(selfFPropRefByUId[row.uid].get("value"), "S") + "," +
-						"   [ExtID] = " + dbUtils.mkVal(self.get("docId"), "S") + "," +
-						"   [ExtClass] = 'DOCS'" +
-						" WHERE" +
-						"   [property] = '" + row.property + "'" +
-						"   AND [uid] = " + row.uid
-					);
-				});
 
 				// --------------------------------------
 
@@ -556,16 +503,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					selfMovsRefByMMId[mov.get("mmid", null, !1)] = mov;
 				});
-
-				// --------------------------------------
-
-				if (deletedPropsUId.length)
-					dbq.push("DELETE FROM Property WHERE uid IN (" + deletedPropsUId.join(",") + ")");
-
-				if (deletedMovsMMId.length) {
-					dbq.push("DELETE FROM Movement WHERE MMID IN (" + deletedMovsMMId.join(",") + ")");
-					dbq.push("DELETE FROM Property WHERE pid IN (" + deletedMovsMMId.join(",") + ")")
-				}
 
 				// --------------------------------------
 
@@ -676,8 +613,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		/**
 		 * Инициализировать заявку
-		 * @param {Object} arg
+		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @return {Promise}
 		 * */
 		"load": function(arg) {
 			arg = arg || {};
@@ -766,6 +704,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var dbRecDoc = dbres[0].recs[0],
 					dbRecsMovs = dbres[1].recs,
 					dbRecsProps = dbres[2].recs;
+
+				self.getKeys().forEach(function(k) {
+					self.unDeclField(k);
+				});
+
+				self.delMov({});
+
+				self.deleteFProperty();
 
 				self.set(dbRecDoc);
 

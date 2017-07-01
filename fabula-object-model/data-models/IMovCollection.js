@@ -138,10 +138,10 @@ IMovCollection.prototype = {
 
 		if (arg instanceof MovDataModel) {
 			this._iMovCollectionMovs = this._iMovCollectionMovs.filter(function(mov) {
-				if (!mov || typeof mov != "object")
+				if (!(mov instanceof MovDataModel))
 					return false;
 
-				return mov === arg;
+				return mov !== arg;
 			});
 
 			return this;

@@ -111,7 +111,9 @@ FabulaObjModel.prototype._setModule("ObjectB", require("./data-models/ObjectB"))
 
 	FabulaObjModel.prototype._setModule("FirmsDataModel", require("./data-models/FirmsDataModel"));
 
-	FabulaObjModel.prototype._setModule("MovDataModel	", require("./data-models/MovDataModel"));
+	FabulaObjModel.prototype._setModule("FirmDataModel", require("./data-models/FirmDataModel"));
+
+	FabulaObjModel.prototype._setModule("MovDataModel", require("./data-models/MovDataModel"));
 
 	FabulaObjModel.prototype._setModule("PathsDataModel", require("./data-models/PathsDataModel"));
 

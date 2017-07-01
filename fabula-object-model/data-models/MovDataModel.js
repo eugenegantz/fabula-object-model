@@ -21,16 +21,18 @@ function MovDataModel() {
 	InterfaceFProperty.call(this);
 
 	this.set({
-		"GSDate": new Date(),
-		"MMFlag": "1"
+		"GSDate": new Date()
 	});
 
 	// -------------------------------------
 
-	this.on("set:mmid", this._eventSetMMID);
-	this.on("set:doc", this._eventSetDoc);
-	this.on("afterset:parentdoc", this._eventSetParentDoc);
-	this.on("add-fab-mov", this._eventAddFabMov);
+	this.mMovEvents.getKeys().forEach(function(key) {
+		this.mMovEvents.get(key).forEach(function(fn) {
+			this.on(key, fn);
+		}, this);
+	}, this);
+
+	// -------------------------------------
 
 	this._mMovClsHistory();
 }
@@ -41,66 +43,76 @@ MovDataModel.prototype = _utils.createProtoChain(
 	IFabModule.prototype,
 	IMovCollection.prototype,
 	{
+		"mMovEvents": new ObjectA({
 
-		"_eventAddFabMov": function(self, e) {
-			e.mov.set("mmPId", this.get("mmId"));
-		},
+			"add-fab-mov": [
+				function(self, e) {
+					e.mov.set("mmPId", this.get("mmId"));
+				}
+			],
 
+			"afterset:parentdoc": [
+				function() {
+					var e = arguments[1],
+						nextParentDocId     = e.value,
+						prevParentDocId     = this.get("parentDoc"),
+						prevDocId           = this.get("doc"),
+						prevDocId1          = this.get("doc1");
 
-		"_eventSetMMID": function() {
-			var e = arguments[1];
+					if (!nextParentDocId && prevDocId1 == prevParentDocId)
+						this.set("doc1", prevDocId, null, !1);
 
-			this.getMov().forEach(function(mov) {
-				mov.set("MMPID", e.value, null, false);
-			});
+					else if (nextParentDocId && !prevDocId1)
+						this.set("doc1", nextParentDocId, null, !1);
+				}
+			],
 
-			this.updateFProperty(null, { "pid": e.value });
-		},
+			"set:doc": [
+				function() {
+					var e           = arguments[1],
+						parentDoc   = this.get("ParentDoc", null, !1),
+						prevDocId   = this.get("Doc"),
+						docId       = e.value;
 
+					this.getMov().forEach(function(mov) {
+						if (prevDocId == mov.get("doc1", null, !1))
+							mov.set("doc1", docId);
 
-		"_eventSetDoc": function() {
-			var e           = arguments[1],
-				parentDoc   = this.get("ParentDoc", null, !1),
-				prevDocId   = this.get("Doc"),
-				docId       = e.value;
+						if (prevDocId == mov.get("doc"))
+							mov.set("doc", docId);
+					});
 
-			this.getMov().forEach(function(mov) {
-				if (prevDocId == mov.get("doc1", null, !1))
-					mov.set("doc1", docId);
+					// Если у заявки присутствует "doc", то "doc1" приравнивается "doc"
+					// Если у заявки отсутствует "doc", то "doc1" приравнивается "parentDoc"
 
-				if (prevDocId == mov.get("doc"))
-					mov.set("doc", docId);
-			});
+					!docId
+						? this.set("doc1", parentDoc)
+						: this.set("doc1", docId);
 
-			// Если у заявки присутствует "doc", то "doc1" приравнивается "doc"
-			// Если у заявки отсутствует "doc", то "doc1" приравнивается "parentDoc"
+					this.updateFProperty(null, { "extId": this.get("doc1", null, !1) });
+				}
+			],
 
-			!docId
-				? this.set("doc1", parentDoc)
-				: this.set("doc1", docId);
+			"set:mmid": [
+				function() {
+					var e = arguments[1];
 
-			this.updateFProperty(null, { "extId": this.get("doc1", null, !1) });
-		},
+					this.getMov().forEach(function(mov) {
+						mov.set("MMPID", e.value, null, false);
+					});
 
+					this.updateFProperty(null, { "pid": e.value });
+				}
+			]
 
-		"_eventSetParentDoc": function() {
-			var e = arguments[1],
-				nextParentDocId     = e.value,
-				prevParentDocId     = this.get("parentDoc"),
-				prevDocId           = this.get("doc"),
-				prevDocId1          = this.get("doc1");
-
-			if (!nextParentDocId && prevDocId1 == prevParentDocId)
-				this.set("doc1", prevDocId, null, !1);
-
-			else if (nextParentDocId && !prevDocId1)
-				this.set("doc1", nextParentDocId, null, !1);
-		},
+		}),
 
 
 		/**
 		 * Удалить запись и подчинен. ей записи
-		 * @param {Function} arg.callback
+		 * @param {Object=} arg
+		 * @param {Function=} arg.callback
+		 * @return {Promise}
 		 * */
 		"rm": function(arg) {
 			arg = arg || {};
@@ -200,6 +212,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		/**
+		 * @param {Object=} arg
+		 * @param {Function=} arg.callback
+		 * @return {Promise}
+		 * */
 		"load": function(arg) {
 			arg = arg || {};
 
@@ -274,7 +291,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				delete _arg.callback;
 
+				self.getKeys().forEach(function(k) {
+					self.unDeclField(k);
+				});
+
+				self.delMov({});
+
+				self.deleteFProperty();
+
 				self.set(movsDBRows.shift());
+
 				self.addProperty(dbres[1].recs);
 
 				self.addMov(movsDBRows);
@@ -388,21 +414,18 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			return new Promise(function(resolve, reject) {
 				var db = self.getDBInstance(),
-					mmid = self.get("mmid", null, !1),
-					docId = self.get("Doc", null, !1),
-					selfFabProps = self.getFPropertyA(),
-					query = "DELETE FROM Property WHERE ExtClass = 'DOCS' AND pid = " + mmid + ";";
+					query = ""
+						+ " DELETE"
+						+ " FROM Property"
+						+ " WHERE"
+						+   " ExtClass = 'DOCS'"
+						+   " AND pid = " + self.get("mmid", null, !1) + ";";
 
-				selfFabProps.forEach(function(row) {
-					if (!row || typeof row != "object")
-						return;
-
-					row.set("pid", mmid);
-					row.set("extClass", "DOCS");
-					row.set("extId", docId);
+				query += self.getUpsertOrDelFPropsQueryStrByDBRes([], {
+					"pid": self.get("mmid", null, !1),
+					"extClass": "DOCS",
+					"extId": self.get("Doc", null, !1)
 				});
-
-				query += InterfaceFProperty.mkDBInsertStr(selfFabProps) + ";";
 
 				db.dbquery({
 					"query": query,
@@ -417,6 +440,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		/**
+		 * @param {Object=} arg
+		 * @param {Function=} arg.callback
+		 * @return {Promise}
+		 * */
 		"insert": function(arg) {
 			arg = arg || {};
 
@@ -499,23 +527,25 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
-		 * @param {Boolean} arg.updTalk - Включатель уведомление о смене фазы
-		 * @param {Boolean} arg.saveChildren - Применить изменения в подчиненных задачах
-		 * @param {Boolean} arg.saveParent - Применить изменения в родительской задаче // НЕ РАБОТАЕТ
-		 * @param {Array} arg.excludeMovs - Игнорировать изменения в перечисленных задачах. Массив из MMID (целые числа)
-		 * @param {Array} arg.excludeMovs - Применить изменения только в перечисленных задачах // НЕ РАБОТАЕТ
-		 * @param {Function} arg.callback(err) - callback
+		 * @param {Object=} arg
+		 * @param {Boolean=true} arg.updTalk - Включатель уведомление о смене фазы
+		 * @param {Boolean=true} arg.saveChildren - Применить изменения в подчиненных задачах
+		 * @param {Boolean=} arg.saveParent - Применить изменения в родительской задаче // НЕ РАБОТАЕТ
+		 * @param {Array=} arg.excludeMovs - Игнорировать изменения в перечисленных задачах. Массив из MMID (целые числа)
+		 * @param {Array=} arg.excludeMovs - Применить изменения только в перечисленных задачах // НЕ РАБОТАЕТ
+		 * @param {Function=} arg.callback(err) - callback
+		 * @return {Promise}
 		 * */
 		"update": function(arg) {
 			arg = arg || {};
 
 			var self = this,
-				dbawws = this.getDBInstance(),
-				callback = arg.callback || emptyFn,
-				updTalk = !("updTalk" in arg) || arg.updTalk, // по умолчанию true
-				saveChildren = !("saveChildren" in arg) || arg.saveChildren,
-				MMID = self.get("MMID", null, false),
-				excludeMovs = arg.excludeMovs || [];
+				dbawws          = this.getDBInstance(),
+				callback        = arg.callback || emptyFn,
+				updTalk         = !("updTalk" in arg) || arg.updTalk, // по умолчанию true
+				saveChildren    = !("saveChildren" in arg) || arg.saveChildren,
+				MMID            = self.get("mmId", null, false),
+				excludeMovs     = arg.excludeMovs || [];
 
 			// ------------------------------------------------------------------------------
 
@@ -547,7 +577,6 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			}).then(function(dbres) {
 				var values,
-					value,
 					dbq = [],
 					changedFields = self.getChanged(),
 					disabledFields = new ObjectA({ "gsdate": 1, "mmid": 1 });
@@ -556,16 +585,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 					return Promise.reject("MovDataModel.update(): !movs.length");
 
 				var movFieldsDecl               = self.__movDataModelDefaultFields,
-
 					dbPropsRecs                 = dbres[1].recs,
 					dbCMovsRecs                 = dbres[2].recs,
-
-					dbPropsRecsRefByUId         = {}, // Ссылки на свойства в БД
-
-					deletedPropsUId             = [],
-					deletedChildrenMMId         = [],
-
-					selfFPropsRefByUId          = {}, // Ссылки на свойства в обьекте
 					selfCMovsByMMId             = {};
 
 				// -----------------------------------------------------------------
@@ -577,69 +598,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 					selfCMovsByMMId[mmid] = mov;
 				});
 
-				// ------------------------------------------------------------------
-				// Ссылки на свойства задачи
-				// ------------------------------------------------------------------
-				self.setFProperty(
-					self.getFPropertyA().filter(function(row) {
-						if (typeof row != "object" || !row)
-							return false;
-
-						if (!row.get("property") || !row.get("value"))
-							return false;
-
-						row.set("pid", self.get("MMID", null, false));
-						row.set("extClass", "DOCS");
-						row.set("extId", self.get("Doc", null, false));
-
-						if (!row.get("uid"))
-							return true;
-
-						selfFPropsRefByUId[row.get("uid")] = row;
-
-						return true;
-					})
+				dbq.push.apply(
+					dbq,
+					[].concat(self.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
+						"pid": self.get("MMID", null, false),
+						"extClass": "DOCS",
+						"extId": self.get("Doc", null, false)
+					}) || [])
 				);
-
-				// ------------------------------------------------------------------
-				// Создание ссылок на свойства в базе.
-				// Создание списка удаленных, добавленных и обновленных свойств
-				// ------------------------------------------------------------------
-				dbPropsRecs.forEach(function(row) {
-					dbPropsRecsRefByUId[row.uid] = row;
-
-					if (!selfFPropsRefByUId[row.uid])
-						return deletedPropsUId.push(row.uid);
-
-					if (selfFPropsRefByUId[row.uid].get("value") != row.value) {
-						dbq.push(
-							""
-							+ "UPDATE Property"
-							+ " SET"
-							+   " [value] = " + dbUtils.mkVal(selfFPropsRefByUId[row.uid].get("value"), "S")
-							+   ", [ExtClass] = 'DOCS'"
-							+   ", [ExtID] = " + dbUtils.mkVal(self.get("Doc", null, !1), "S")
-							+ " WHERE"
-							+   " property = '" + row.property + "'"
-							+   " AND uid = " + row.uid
-						);
-					}
-				});
-
-				// ------------------------------------------------------------------
-				// Запись новых свойств
-				// ------------------------------------------------------------------
-				self.getFPropertyA().forEach(function(row) {
-					if (dbPropsRecsRefByUId[row.get("uid")])
-						return;
-
-					dbq.push.apply(dbq, [].concat(InterfaceFProperty.mkDBInsertStr(row) || []));
-				});
-
-				// ------------------------------------------------------------------
-
-				if (deletedPropsUId.length)
-					dbq.push("DELETE FROM Property WHERE uid IN (" + deletedPropsUId.join(",") + ")");
 
 				// -----------------------------------------------------------------
 				// Обновление полей в строке
@@ -821,6 +787,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 		}),
 
 
+		/**
+		 * @param {Object=} arg
+		 * @param {Function=} arg.callback
+		 * @return {Promise}
+		 * */
 		"save": function(arg) {
 			arg = arg || {};
 
