@@ -9,6 +9,10 @@ var DefaultDataModel    = require("./DefaultDataModel"),
 	utils               = require("./../utils/utils");
 
 var FirmDataModel = function() {
+	DefaultDataModel.call(this);
+	IFabModule.call(this);
+	InterfaceFProperty.call(this);
+
 	this._mFirmBranches = [];
 };
 
@@ -76,7 +80,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					fields = [];
 
 				self.getChanged().forEach(function(key) {
-					var fldDecl = self._firmsTableFldDecl.get(key || ''),
+					var fldDecl = self._firmsTableFldDecl.get(key || ""),
 						val = self.get(key, null, !1);
 
 					if (!fldDecl || utils.isEmpty(val))
@@ -108,13 +112,13 @@ FirmDataModel.prototype = utils.createProtoChain(
 					cond = [];
 
 				changed.forEach(function(key) {
-					var fldDecl = self._firmsTableFldDecl.get(key || ''),
+					var fldDecl = self._firmsTableFldDecl.get(key || ""),
 						val = self.get(key, null, !1);
 
 					if (!fldDecl || utils.isEmpty(val))
 						return;
 
-					cond.push(dbUtils.mkFld(key) + ' = ' + dbUtils.mkVal(val, fldDecl.type));
+					cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl.type));
 				});
 
 				db.dbquery({
@@ -128,7 +132,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 						var id = dbres.recs[0].firmId;
 
-						self.set('firmId', id);
+						self.set("firmId", id);
 
 						resolve(id);
 					}
@@ -141,22 +145,26 @@ FirmDataModel.prototype = utils.createProtoChain(
 			var self = this;
 
 			return new Promise(function(resolve, reject) {
-				var sealedFLd = ObjectA({ "firmId": 1 }),
+				var sealedFLd = new ObjectA({ "firmId": 1 }),
 					db = self.getDBInstance(),
+					changed = self.getChanged(),
 					values = [];
 
-				self.getChanged().forEach(function(key) {
-					var dbFldDecl = self._firmsTableFldDecl.get(key || ''),
+				if (!changed.length)
+					return resolve();
+
+				changed.forEach(function(key) {
+					var dbFldDecl = self._firmsTableFldDecl.get(key || ""),
 						val = self.get(key, null, !1);
 
 					if (!dbFldDecl || utils.isEmpty(val) || sealedFLd.get(key))
 						return;
 
-					values.push(dbUtils.mkFld(key) + ' = ' + dbUtils.mkVal(val, dbFldDecl.type));
+					values.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, dbFldDecl.type));
 				});
 
 				db.dbquery({
-					"query": "UPDATE _firms SET (" + values.join(", ") + ") WHERE firmId = " + self.get("firmId"),
+					"query": "UPDATE _firms SET " + values.join(", ") + " WHERE firmId = " + self.get("firmId"),
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
 							return reject(err);
@@ -180,7 +188,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 			var self = this,
 				db = self.getDBInstance(),
 				callback = arg.callback || emptyFn,
-				cond = ["firmId = " + self.get("id") || "NULL"];
+				cond = ["firmId = " + self.get("firmId") || "NULL"];
 
 			["tel3", "tel2", "tel1", "email"].forEach(function(fld) {
 				self.get(fld) && cond.push("[" + fld + "] = " + "'" + self.get(fld) + "'")
@@ -351,15 +359,32 @@ FirmDataModel.prototype = utils.createProtoChain(
 				.then(self._promiseInsertUsr.bind(self))
 				.then(self._promiseGetInsertedId.bind(self))
 				.then(function() {
-					self.getUpsertOrDelFPropsQueryStrByDBRes([], {
-						"pid": null,
-						"extClass": "FIRMS",
-						"extId": self.get("firmId", null, !1)
+					return new Promise(function(resolve, reject) {
+						var query = self.getUpsertOrDelFPropsQueryStrByDBRes([], {
+							"pid": null,
+							"extClass": "FIRMS",
+							"extId": self.get("firmId", null, !1)
+						});
+
+						if (!query)
+							return resolve();
+
+						self.getDBInstance().dbquery({
+							"query": query,
+							"callback": function(dbres, err) {
+								if (err = dbUtils.fetchErrStrFromRes(dbres))
+									return reject(err);
+
+								resolve();
+							}
+						});
 					});
 				})
 				.then(function() {
 					return Promise.all(
 						self.getBranch().map(function(firm) {
+							firm.set("parent_id", self.get("FirmId"));
+
 							return firm.save();
 						})
 					);
@@ -389,6 +414,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 			arg = arg || {};
 
 			var self = this,
+				db = this.getDBInstance(),
 				callback = arg.callback || emptyFn;
 
 			self.trigger("before-update");
@@ -409,26 +435,44 @@ FirmDataModel.prototype = utils.createProtoChain(
 							+ " FROM Property"
 							+ " WHERE"
 							+   " extClass = 'FIRMS'"
-							+   " AND extId = '" + this.self('firmId') + "'",
+							+   " AND extId = '" + self.get('firmId') + "'",
 							"callback": function(dbres, err) {
 								if (err = dbUtils.fetchErrStrFromRes(dbres))
 									return reject(err);
 
-								self.getUpsertOrDelFPropsQueryStrByDBRes(dbres, {
-									"pid": null,
-									"extClass": "FIRMS",
-									"extId": self.get("firmId", null, !1)
-								});
-
-								resolve();
+								resolve(dbres);
 							}
 						});
 
 					})
 				})
+				.then(function(dbres) {
+					return new Promise(function(resolve, reject) {
+						var query = self.getUpsertOrDelFPropsQueryStrByDBRes(dbres.recs, {
+							"pid": null,
+							"extClass": "FIRMS",
+							"extId": self.get("firmId", null, !1)
+						});
+
+						if (!query)
+							return resolve();
+
+						self.getDBInstance().dbquery({
+							"query": query,
+							"callback": function(dbres, err) {
+								if (err = dbUtils.fetchErrStrFromRes(dbres))
+									return reject(err);
+
+								resolve();
+							}
+						});
+					});
+				})
 				.then(function() {
 					return Promise.all(
 						self.getBranch().map(function(firm) {
+							firm.set("parent_id", self.get("FirmId"));
+
 							return firm.save();
 						})
 					);
@@ -468,7 +512,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					return reject("FirmDataModel.rm(): !usrId");
 
 				db.dbquery({
-					query: "" +
+					"query": "" +
 					"DELETE FROM Property WHERE extClass = 'FIRMS' AND extId = '" + id + "';" +
 					"DELETE FROM _firms WHERE firmId = " + id,
 					"callback": function(dbres, err) {
@@ -507,7 +551,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					return reject("FirmDataModel.exists(): firmId is empty");
 
 				db.dbquery({
-					query: ''
+					query: ""
 					+ " SELECT email"
 					+ " FROM _firms AS firms"
 					+ " WHERE"
