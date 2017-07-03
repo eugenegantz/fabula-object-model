@@ -359,9 +359,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 					// сравнить результаты округления
 					if (dbUtils.numberTypes[fldDecl.type]) {
 						return cond.push(
-							"ROUND(" + dbUtils.mkFld(key) + ")"
+							"-INT(-" + dbUtils.mkFld(key) + ")"
 							+ " = "
-							+ dbUtils.mkVal(Math.round(val), fldDecl.type)
+							+ dbUtils.mkVal(Math.ceil(val), fldDecl.type)
 						);
 					}
 
