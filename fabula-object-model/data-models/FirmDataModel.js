@@ -233,21 +233,19 @@ FirmDataModel.prototype = utils.createProtoChain(
 					firmsTable = dbres[0].recs,
 					propsTable = dbres[1].recs;
 
-				self._mFirmBranches = [];
-
-				self.getKeys().forEach(function(k) {
-					self.unDeclField(k);
-				});
-
-				self.deleteFProperty();
-
 				if (!firmsTable.length)
 					return Promise.reject("FirmDataModel.load(): !dbres.recs.length");
 
-				firmsTable.forEach(function(row) {
-					var _row = new ObjectA(row);
+				self._mFirmBranches = [];
 
-					if (!_row.get("parent_id")) {
+				firmsTable.forEach(function(row) {
+					var _row = new ObjectA(row),
+
+						isParent = ["firmId", "tel3", "tel2", "tel1", "email"].some(function(key) {
+							return self.get(key) == _row.get(key);
+						});
+
+					if (isParent) {
 						parentFirmRow = row;
 
 					} else {
@@ -261,6 +259,16 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 				if (!parentFirmRow)
 					return Promise.reject("FirmDataModel.load(): parent firm not found");
+
+				// ------------
+
+				self.getKeys().forEach(function(k) {
+					self.unDeclField(k);
+				});
+
+				self.deleteFProperty();
+
+				// ------------
 
 				self.set(parentFirmRow);
 
