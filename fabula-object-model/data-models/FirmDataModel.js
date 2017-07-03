@@ -188,7 +188,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 			var self = this,
 				db = self.getDBInstance(),
 				callback = arg.callback || emptyFn,
-				cond = ["firmId = " + self.get("firmId") || "NULL"];
+				cond = ["firmId = " + (self.get("firmId") || "NULL")];
 
 			["tel3", "tel2", "tel1", "email"].forEach(function(fld) {
 				self.get(fld) && cond.push("[" + fld + "] = " + "'" + self.get(fld) + "'")

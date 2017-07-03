@@ -21,10 +21,15 @@ var DocDataModel = function() {
 	IMovCollection.call(this);
 	IFabModule.call(this);
 
-	this.on("set:docid", this._eventSetDocID);
-	this.on("set:company", this._eventSetCompany);
-	this.on("set:doctype", this._eventSetDocType);
-	this.on("add-fab-mov", this._eventAddFabMov);
+	// -------------------------------------
+
+	this.mDocEvents.getKeys().forEach(function(key) {
+		this.mDocEvents.get(key).forEach(function(fn) {
+			this.on(key, fn);
+		}, this);
+	}, this);
+
+	// -------------------------------------
 
 	this._mDocClsHistory();
 };
@@ -36,71 +41,80 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 	IFabModule.prototype,
 	{
 
-		"_eventAddFabMov": function(self, e) {
-			e.mov.set("doc", this.get("docId"))
-		},
+		"mDocEvents": new ObjectA({
 
+			"set:docid": [
+				function(self, e) {
+					self = this;
 
-		"_eventSetDocID": function(self, e) {
-			self = this;
+					if (
+						!e.value
+						|| typeof e.value != "string"
+						|| e.value.length != 10
+					) {
+						return;
+					}
 
-			if (
-				!e.value
-				|| typeof e.value != "string"
-				|| e.value.length != 10
-			) {
-				return;
-			}
+					var parsed = this.parseDocID(e.value);
 
-			var parsed = this.parseDocID(e.value);
+					self.set("docType", parsed.docType, null, !1);
+					self.set("company", parsed.company, null, !1);
+					self.movSet("doc", e.value);
+				}
+			],
 
-			self.set("docType", parsed.docType, null, !1);
-			self.set("company", parsed.company, null, !1);
-			self.movSet("doc", e.value);
-		},
+			"set:company": [
+				function(self, e) {
+					self = this;
 
+					var docId = this.get("docId", null, !1);
 
-		"_eventSetCompany": function(self, e) {
-			self = this;
+					if (!docId)
+						return;
 
-			var docId = this.get("docId", null, !1);
+					var p = this.parseDocID(docId);
 
-			if (!docId)
-				return;
+					self.set("docId", e.value + p.year + p.prefix + p.code, null, !1);
+					self.movSet("doc", self.get("docId", null, !1));
+				}
+			],
 
-			var p = this.parseDocID(docId);
+			"set:doctype": [
+				function(self, e) {
+					self = this;
 
-			self.set("docId", e.value + p.year + p.prefix + p.code, null, !1);
-			self.movSet("doc", self.get("docId", null, !1));
-		},
+					var gands = this.getGandsInstance(),
+						docId = self.get("docId", null, !1);
 
+					if (!docId)
+						return;
 
-		"_eventSetDocType": function(self, e) {
-			self = this;
+					var p = this.parseDocID(self.get("docId", null, !1)),
+						docType = e.value,
+						prefix;
 
-			var gands = this.getGandsInstance(),
-				docId = self.get("docId", null, !1);
+					var gsGroup = gands.dataRefByGSIDGroup.get("SYОП");
 
-			if (!docId)
-				return;
+					gsGroup.some(function(row) {
+						if (8 == row.GSID.length && row.GSID.slice(4) == docType)
+							return prefix = row.GSCodeNumber;
+					});
 
-			var p = this.parseDocID(self.get("docId", null, !1)),
-				docType = e.value,
-				prefix;
+					if (!prefix)
+						return;
 
-			var gsGroup = gands.dataRefByGSIDGroup.get("SYОП");
+					self.set("docId", p.company + p.year + prefix + p.code, null, !1);
+					self.movSet("doc", self.get("docId"));
+				}
+			],
 
-			gsGroup.some(function(row) {
-				if (8 == row.GSID.length && row.GSID.slice(4) == docType)
-					return prefix = row.GSCodeNumber;
-			});
+			"add-fab-mov": [
+				function(self, e) {
+					e.mov.set("doc", this.get("docId"))
+				}
+			]
 
-			if (!prefix)
-				return;
-
-			self.set("docId", p.company + p.year + prefix + p.code, null, !1);
-			self.movSet("doc", self.get("docId"));
-		},
+		}),
 
 
 		/**
@@ -185,10 +199,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		/**
 		 * Сохранить (Добавить/обновить)
-		 * @param {Object} arg
-		 * @param {Function} arg.callback
+		 * @param {Object=} arg
+		 * @param {Function=} arg.callback
 		 * @return {Promise}
-		 * @memberof DocDataModel
 		 * */
 		"save": function(arg) {
 			arg = arg || {};
@@ -266,6 +279,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * @param {Object=} arg
+		 * @param {Function=} arg.callback
+		 * @return {Promise}
+		 * */
 		"insert": function(arg) {
 			arg = arg || {};
 
@@ -370,12 +388,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		/**
-		 * @param {Object} ownArg                   // Аргументы для сохр. заявки
-		 * @param {Function} ownArg.callback
-		 * @param {Array} ownArg.excludeMovs        // Игнорировать изменения в перечисленных подчиненных задачах. Массив из MMID (integer)
-		 * @param {Object} parentArg                // Аргументы сохранения родительской заявки, если такая есть
-		 * @param {Object} childrenArg              // Аргумент сохр. подчиненной заявки, если такие есть
-		 * @param {Object} movArg                   // Аргументы сохранения подчиненных задач // см. MovDataModel
+		 * @param {Object=} ownArg - аргументы для сохр. заявки
+		 * @param {Function=} ownArg.callback
+		 * @param {Array=} ownArg.excludeMovs - игнорировать изменения в перечисленных подчиненных задачах. Массив из MMID (integer)
+		 * @param {Object=} parentArg - аргументы сохранения родительской заявки, если такая есть
+		 * @param {Object=} childrenArg - аргумент сохр. подчиненной заявки, если такие есть
+		 * @param {Object=} movArg - аргументы сохранения подчиненных задач // см. MovDataModel
+		 * @return {Promise}
 		 * */
 		"update": function(ownArg, parentArg, childrenArg, movArg) {
 			ownArg = ownArg || {};
@@ -594,8 +613,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		/**
 		 * Инициализировать заявку
-		 * @param {Object} arg
+		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @return {Promise}
 		 * */
 		"load": function(arg) {
 			arg = arg || {};
