@@ -95,7 +95,6 @@ describe("GandsDataModel", function() {
 
 	describe.skip(".getExt", function() {
 		// TODO Провести рефакторинг
-
 		describe('onlyPriority==false', function() {
 			it(".getExt(ГППО35В1, {GSExType:Анкета, GSExName:Материал})", function() {
 				var res = gm.getExt("ГППО35В1", { "GSExType": "Анкета", "GSExName": "Комментарий" });
