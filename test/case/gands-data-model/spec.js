@@ -2,6 +2,134 @@ describe("GandsDataModel", function() {
 	var fom,
 		gm;
 
+	var testGsRows = [
+		globTestUtils.mkGsRow({
+			"GSID": "T1",
+			"GSName": "Тестирование номеклатуры",
+			"gandsExtRef": [],
+			"gandsPropertiesRef": [
+
+			]
+		}),
+		globTestUtils.mkGsRow({
+			"GSID": "T1T1",
+			"GSName": "Тестирование номеклатуры",
+			"gandsExtRef": [],
+			"gandsPropertiesRef": []
+		}),
+		globTestUtils.mkGsRow({
+			"GSID": "T1T1T1",
+			"GSName": "Тестирование номеклатуры",
+			"gandsExtRef": [],
+			"gandsPropertiesRef": []
+		})
+	];
+
+	testGsRows[0].gandsExtRef.push(
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_1",
+			"GSExID": globTestUtils[0],
+			"GSExSort": "1",
+			"GSExName": "name_1",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		}),
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_1",
+			"GSExID": globTestUtils[0],
+			"GSExSort": "2",
+			"GSExName": "name_1",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		}),
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_1",
+			"GSExID": globTestUtils[0],
+			"GSExSort": "3",
+			"GSExName": "name_2",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		}),
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_2",
+			"GSExID": globTestUtils[0],
+			"GSExSort": "4",
+			"GSExName": "name_2",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		})
+	);
+
+	testGsRows[1].gandsExtRef.push(
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_1",
+			"GSExID": globTestUtils[1],
+			"GSExSort": "1",
+			"GSExName": "name_1",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		}),
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_1",
+			"GSExID": globTestUtils[1],
+			"GSExSort": "2",
+			"GSExName": "name_1",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		}),
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_1",
+			"GSExID": globTestUtils[1],
+			"GSExSort": "3",
+			"GSExName": "name_2",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		}),
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_2",
+			"GSExID": globTestUtils[1],
+			"GSExSort": "4",
+			"GSExName": "name_2",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		})
+	);
+
+	testGsRows[2].gandsExtRef.push(
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_1",
+			"GSExID": globTestUtils[2],
+			"GSExSort": "1",
+			"GSExName": "name_1",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		}),
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_1",
+			"GSExID": globTestUtils[2],
+			"GSExSort": "2",
+			"GSExName": "name_1",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		}),
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_1",
+			"GSExID": globTestUtils[2],
+			"GSExSort": "3",
+			"GSExName": "name_2",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		}),
+		globTestUtils.mkGsExtRow({
+			"GSExType": "type_2",
+			"GSExID": globTestUtils[2],
+			"GSExSort": "4",
+			"GSExName": "name_2",
+			"GSExAttr1": "attr1",
+			"GSExAttr2": "attr2"
+		})
+	);
+
 	before(function() {
 		fom = globTestUtils.getFabulaObjectModel();
 		gm = fom.create("GandsDataModel");

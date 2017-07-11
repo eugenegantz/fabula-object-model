@@ -511,9 +511,7 @@ GandsDataModel.prototype = utils.createProtoChain(IEvents, {
 				if (ex[prop] && ex[prop].extID.length > propRow.extID.length)
 					return false;
 
-				ex[prop] = propRow;
-
-				return true;
+				return !!(ex[prop] = propRow);
 			});
 		}
 
