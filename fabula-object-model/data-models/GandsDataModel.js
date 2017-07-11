@@ -395,13 +395,15 @@ GandsDataModel.prototype = utils.createProtoChain(IEvents, {
 	 * @param {Object=} opt
 	 * */
 	"getExt": function(row, fld, opt) {
-		if (utils.getType(row) == "object" && row.GSID)
+		if (utils.getType(row) == "object" && row.GSID){
 			row = this.dataReferences.get(row.GSID);
 
-		else if (utils.getType(row) == "string")
+		} else if (utils.getType(row) == "string") {
 			row = this.dataReferences.get(row);
-		else
+
+		} else {
 			throw new Error("1st argument suppose to be String or Object");
+		}
 
 		if (!row)
 			return [];
@@ -459,74 +461,60 @@ GandsDataModel.prototype = utils.createProtoChain(IEvents, {
 
 	/**
 	 * Получить свойства записи. Собственные и наследуемые
-	 * @param {Object | String} row - код либо запись номенклатуры
-	 * @param {Array | String=} fld - массив свойств
+	 * @param {Object | String} argRow - код либо объект (строка) из номенклатуры
+	 * @param {Array | String=} argProps - перечень свойств
 	 * @param {Object=} opt - параметры выборки
+	 * @param {Boolean} opt.onlyPriority
 	 * @return {undefined | Array}
 	 * */
-	"getProperty": function(row, fld, opt) {
-		var ret = [];
+	"getProperty": function(argRow, argProps, opt) {
+		if (utils.getType(argRow) == "object" && argRow.GSID) {
+			argRow = this.dataReferences.get(argRow.GSID);
 
-		if (utils.getType(row) == "object" && row.GSID) {
-			row = this.dataReferences.get(row.GSID);
-
-		} else if (utils.getType(row) == "string") {
-			row = this.dataReferences.get(row);
+		} else if (utils.getType(argRow) == "string") {
+			argRow = this.dataReferences.get(argRow);
 
 		} else {
 			throw new Error("1st argument suppose to be String or Object");
 		}
 
-		if (!row) return ret;
+		opt = opt || {};
 
-		if (utils.getType(fld) == "array") {
+		var ex,
+			ret = [],
+			gsRow = argRow;
 
-		} else if (typeof fld == "string") {
-			fld = [fld];
-		} else {
-			fld = [];
-		}
+		if (utils.getType(argProps) != "array")
+			argProps = [argProps + ""];
 
-		var props_ = [], row_ = row, c;
+		argProps = argProps.reduce(function(obj, str) {
+			obj[str.toLowerCase()] = 1;
 
-		for (c = 0; c < fld.length; c++) {
-			if (typeof fld[c] != "string") continue;
-			props_[c] = fld[c].toLowerCase();
-		}
+			return obj;
+		}, {});
 
 		do {
-			if (!props_.length) {
-				ret = ret.concat(row_.gandsPropertiesRef);
+			!argProps.length
+				? ret.push.apply(ret, gsRow.gandsPropertiesRef)
+				: gsRow.gandsPropertiesRef.forEach(function(propRow) {
+					argProps[propRow.property.toLowerCase()] && ret.push(propRow);
+				});
 
-			} else {
-				for (c = 0; c < row_.gandsPropertiesRef.length; c++) {
-					if (props_.indexOf(row_.gandsPropertiesRef[c].property.toLowerCase()) > -1) {
-						ret.push(row_.gandsPropertiesRef[c]);
-					}
-				}
-
-			}
-		} while (row_ = this.getParent(row_));
-
-		if (utils.getType(opt) != "object") {
-			opt = {};
-		}
+		} while (gsRow = this.getParent(gsRow));
 
 		if (opt.onlyPriority) {
-			var priorProps = {};
-			for (c = 0; c < ret.length; c++) {
-				if (
-					typeof priorProps[ret[c].property] != "object"
-					|| priorProps[ret[c].property].extID.length < ret[c].extID.length
-				) {
-					priorProps[ret[c].property] = ret[c];
-				}
-			}
-			ret = [];
-			for (var prop in priorProps) {
-				if (!priorProps.hasOwnProperty(prop)) continue;
-				ret.push(priorProps[prop]);
-			}
+			ret = ret.sort(function(a, b) {
+				return a.extID.length > b.extID.length ? -1 : 1;
+			}).filter(function(propRow) {
+				var prop = propRow.property;
+
+				if (ex[prop] && ex[prop].extID.length > propRow.extID.length)
+					return false;
+
+				ex[prop] = propRow;
+
+				return true;
+			});
 		}
 
 		return ret;
@@ -540,11 +528,14 @@ GandsDataModel.prototype = utils.createProtoChain(IEvents, {
 	 * */
 	"get": function(arg) {
 		if (typeof arg != "object") arg = Object.create(null);
+
 		var type = utils.getType(arg.type) == "array" ? arg.type : [];
+
 		if (utils.getType(arg.group) == "array") type = arg.group;
-		var cop = utils.getType(arg.cop) == "array" ? arg.cop : [];
-		var flags = utils.getType(arg.flags) == "array" ? arg.flags : [];
-		var useDraft = typeof arg.useDraft == "undefined" ? true : Boolean(arg.useDraft);
+
+		var cop = utils.getType(arg.cop) == "array" ? arg.cop : [],
+			flags = utils.getType(arg.flags) == "array" ? arg.flags : [],
+			useDraft = typeof arg.useDraft == "undefined" ? true : Boolean(arg.useDraft);
 
 		if (!type.length && !cop.length) return this.data;
 
@@ -556,9 +547,9 @@ GandsDataModel.prototype = utils.createProtoChain(IEvents, {
 			&& !flags.length
 			&& useDraft
 		) {
-			if (typeof this._indexData[type[0]] != "object") {
+			if (typeof this._indexData[type[0]] != "object")
 				return [];
-			}
+
 			return this._indexData[type[0]];
 		}
 
@@ -568,19 +559,18 @@ GandsDataModel.prototype = utils.createProtoChain(IEvents, {
 
 			if (tmp.indexOf(this.data[c]) > -1) continue;
 
-			if (this._isDraft(this.data[c]) && !useDraft) {
+			if (this._isDraft(this.data[c]) && !useDraft)
 				continue;
-			}
 
-			if (flags.length && !this.data[c].GSFlag.match(flagsRegEx)) {
+			if (flags.length && !this.data[c].GSFlag.match(flagsRegEx))
 				continue;
-			}
 
 			match = this._groupMatcher(this.data[c]);
 
 			for (v = 0; v < match.length; v++) {
 				if (type.indexOf(match[v]) > -1) {
 					tmp.push(this.data[c]);
+
 					break;
 				}
 			}
