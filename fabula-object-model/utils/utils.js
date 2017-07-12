@@ -557,7 +557,7 @@ _utils.parseArg = function(arg){
  * @param {String} str
  * */
 _utils.rmGsTags = function(str) {
-	return str.replace(/\[\/?\w+\]/ig, "");
+	return str.replace(/\[\/?[a-zA-Zа-яА-Я\s=+\-_!@#$%^&*()|\\/]+]/ig, "");
 };
 
 
