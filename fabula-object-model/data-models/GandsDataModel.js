@@ -634,9 +634,13 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 	 * @return {Array | undefined}
 	 * */
 	"matchGsLinks": function(str) {
-		return (str.match(/\[gs\][a-zA-Z0-9а-яА-Я]+\[\/gs\]/ig) || []).map(function(a) {
-			return _utils.rmGsTags(a);
-		});
+		return (str.match(/\[gs\][a-zA-Z0-9а-яА-Я;\s]+\[\/gs\]/ig) || []).reduce(function(arr, gsLnk) {
+			gsLnk = _utils.rmGsTags(gsLnk).split(/;\s*/ig);
+
+			arr.push.apply(arr, gsLnk);
+
+			return arr;
+		}, []);
 	},
 
 
