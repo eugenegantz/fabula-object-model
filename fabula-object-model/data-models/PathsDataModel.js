@@ -1,7 +1,6 @@
 "use strict";
 
-var modPath = require("path"),
-	stdUtils = require("./../utils/utils.js");
+var stdUtils = require("./../utils/utils.js");
 
 // Для совместимости
 var getContextDB = function() {
@@ -113,9 +112,10 @@ PathsDataModel.prototype = {
 			path = paths[c].value.split(/[;,]/ig)[0].trim();
 
 			argPath = argPath.replace(pattern, "");
-			argPath = modPath.join(
-				stdUtils.rtrim(path, ["\\", "/"]),
-				stdUtils.trim(argPath, ["\\", "/"])
+			argPath = (
+				stdUtils.rtrim(path, ["\\", "/"])
+				+ '/'
+				+ stdUtils.trim(argPath, ["\\", "/"])
 			).replace(/[\\]/g, "/");
 		}
 
