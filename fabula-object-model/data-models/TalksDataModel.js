@@ -1,122 +1,115 @@
 "use strict";
 
-var _utils = require("./../utils/utils");
+var utils = require("./../utils/utils"),
+	dbUtils = require("./../utils/dbUtils.js"),
+	voidFn = function() {};
 
 // Для совместимости
-var getContextDB = function(){
-	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
-	var DBModel = FabulaObjectModel.prototype._getModule("DBModel");
+var getContextDB = function() {
+	var FabulaObjectModel = require("./../_FabulaObjectModel.js"),
+		DBModel = FabulaObjectModel.prototype._getModule("DBModel");
 
-	if (  this._fabulaInstance ){
+	if (this._fabulaInstance)
 		return this._fabulaInstance.getDBInstance();
-	}
+
 	return DBModel.prototype.getInstance();
 };
 
-var TalksDataModel = function(){
-
+var TalksDataModel = function() {
 	this.instances.push(this);
-	// this.db = DBModel.prototype.getInstance();
-
 };
+
 
 TalksDataModel.prototype = {
 
 	"instances": [],
 
-	"postTalk": function(A){
 
-		if (typeof A != "object") A = Object.create(null);
-		// var self				= this;
-		var MMID			= typeof A.MMID == "undefined" || isNaN(A.agent) ? null : parseInt(A.MMID);
-		var message		= typeof A.message == "string" ? A.message : "" ;
-		var newMMFlag	= typeof A.MMFlag == "string" ? A.MMFlag : "";
-		var agent			= typeof A.agent == "undefiend" || isNaN(A.agent) ? 999 : A.agent ;
-		var callback			= typeof A.callback == "function" ? A.callback : function(){};
+	"STR_LIMIT": 250,
 
-		var db = getContextDB.call(this);
 
-		if (!db) {
-			callback("!db");
-			console.error("!db");
-			return;
-		}
+	"postTalk": function(arg) {
+		arg = arg || {};
 
-		if (typeof db.dbquery != "function") {
-			callback("!db");
-			console.error("!db");
-			return;
-		}
+		var self            = this,
+			mmId            = arg.MMID,
+			message         = arg.message || "",
+			nextMMFlag      = arg.MMFlag || "",
+			agent           = arg.agent || 999,
+			callback        = arg.callback || voidFn,
+			db              = getContextDB.call(this);
 
-		if (!MMID) return;
+		return new Promise(function(resolve, reject) {
+			if (!db)
+				return reject("TalksDataModel.postTalk(): !db");
 
-		db.dbquery({
-			"query": "SELECT Txt FROM Talk WHERE Txt LIKE '%&rArr;%' AND MM = " + MMID + " ORDER BY TalkID DESC",
-			"callback": function(dbres){
+			if (!mmId)
+				return reject("TalksDataModel.postTalk(): !arg.mmid");
 
-				var err = [];
+			var msg = message.match(new RegExp(".{1," + (self.STR_LIMIT - 1) + "}(\\s|$)|.{1," + self.STR_LIMIT + "}", "g")) || [];
 
-				if (dbres.info.errors){
+			// Если сообщений нет, но необходимо записать смену фазы - записать пустую строку
+			!msg.length && nextMMFlag && msg.push("");
 
-					if (
-						Array.isArray(dbres.info.errors)
-						&& dbres.info.errors.length
-					){
-						err = err.concat(dbres.info.errors);
+			var query = msg.reduce(function(str, msg, idx) {
+				msg = dbUtils.secureStr(msg).replace("'", "\\'");
 
-					} else if (  typeof dbres.info.errors == "string"  ) {
-						err.push(dbres.info.errors);
-
-					}
-					callback(err);
-					return;
-
+				if (!idx && nextMMFlag) {
+					return str + ""
+						+ " INSERT INTO Talk (Dt, Txt, Agent, [MM], [Tm], [Key], [part])"
+						+ " SELECT"
+						+   " DATE()"
+						+   " ," + "'Фаза: ' & mmFlag & ' &rArr; " + nextMMFlag + (msg ? "<br>" + msg : "") + "'"
+						+   " ," + agent
+						+   " ," + "mmId"
+						+   " ," + "FORMAT(TIME(),'HH:MM')"
+						+   " ," + "NOW()"
+						+   " ," + idx
+						+ " FROM Movement"
+						+ " WHERE"
+						+   " mmId = " + mmId
+						+ ";";
 				}
 
-				var prevMMFlag = "";
+				return str + ""
+					+ " INSERT INTO Talk (Dt, Txt, Agent, [MM], [Tm], [Key], [part])"
+					+ " VALUES ("
+					+   " DATE()"
+					+   " ," + "'" + msg + "'"
+					+   " ," + agent
+					+   " ," + mmId
+					+   " ," + "FORMAT(TIME(),'HH:MM')"
+					+   " ," + "NOW()"
+					+   " ," + idx
+					+ " );";
+			}, "");
 
-				if (!dbres.recs.length){
-					if (newMMFlag) prevMMFlag = newMMFlag;
+			if (!query)
+				return resolve();
 
-				} else {
-					prevMMFlag = dbres.recs[0].Txt.match(/(&rArr;).[0-9]/g);
-					if (prevMMFlag){
-						prevMMFlag = prevMMFlag[0];
-						prevMMFlag = prevMMFlag[prevMMFlag.length - 1];
-					}
-					if (!newMMFlag) newMMFlag = prevMMFlag;
+			db.dbquery({
+				"query": query,
+				"callback": function(dbres, err) {
+					if (err = dbUtils.fetchErrStrFromRes(dbres))
+						return reject(err);
+
+					resolve();
 				}
+			});
 
-				db.dbquery({
-					"query": "" +
-					"INSERT INTO Talk (Dt, Txt, Agent, [MM], [Tm], [Key]) " +
-					"VALUES (DATE(), '"+(!newMMFlag ? "" : "Фаза: " + prevMMFlag + ' &rArr; ' + newMMFlag )+'<br>'+_utils.DBSecureStr(message)+"', "+agent+", "+MMID+",  FORMAT(TIME(),'HH:MM'), NOW())",
+		}).then(function() {
+			callback(null, self);
 
-					"callback": function(dbres){
-						if (dbres.info.errors){
-							if (Array.isArray(dbres.info.errors) && dbres.info.errors.length){
-								err = err.concat(dbres.info.errors);
-
-							} else if (typeof dbres.info.errors == "string") {
-								err.push(dbres.info.errors);
-
-							}
-						}
-						callback(err.length ? err : null);
-					}
-				});
-
-			} // close.db.callback
+		}).catch(function(err) {
+			callback(err, self);
 		});
 	},
 
 
-	"getTalks": function(){},
-
-
-	"getInstance": function(){
-		return this.instances.length ? this.instances[0] : new TalksDataModel();
+	"getInstance": function() {
+		return this.instances[0] || new TalksDataModel();
 	}
+
 };
 
 module.exports = TalksDataModel;
