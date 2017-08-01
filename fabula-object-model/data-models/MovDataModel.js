@@ -347,7 +347,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 						return;
 					}
 
-					values.push(dbUtils.mkVal(val, fldDecl.type));
+					values.push(dbUtils.mkVal(val, fldDecl));
 					fields.push(dbUtils.mkFld(key));
 				});
 
@@ -387,11 +387,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 						return cond.push(
 							"-INT(-" + dbUtils.mkFld(key) + ")"
 							+ " = "
-							+ dbUtils.mkVal(Math.ceil(val), fldDecl.type)
+							+ dbUtils.mkVal(Math.ceil(val), fldDecl)
 						);
 					}
 
-					cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl.type));
+					cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl));
 				});
 
 				dbawws.dbquery({
@@ -618,9 +618,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 						return prev;
 
 					var value = self.get(fldKey, null, !1),
-						type = movFieldsDecl.get(fldKey).type;
+						fldDecl = movFieldsDecl.get(fldKey);
 
-					prev.push(dbUtils.mkFld(fldKey) + " = " + dbUtils.mkVal(value, type));
+					prev.push(dbUtils.mkFld(fldKey) + " = " + dbUtils.mkVal(value, fldDecl));
 
 					return prev;
 				}, []);
@@ -746,44 +746,44 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		"__movDataModelDefaultFields": new ObjectA({
-			"MMID":         {"type": "integer"},
-			"MMPID":        {"type": "integer"},
-			"IsDraft":      {"type": "integer"},
-			"Tick":         {"type": "integer"},
-			"Doc":          {"type": "string"},
-			"Doc1":         {"type": "string"},
-			"ParentDoc":    {"type": "string"},
-			"MMFlag":       {"type": "string"},
-			"InOut":        {"type": "integer"},
-			"GSDate":       {"type": "date"},
-			"GSDate2":      {"type": "date"},
-			"Mark":         {"type": "boolean"},
-			"CodeOp":       {"type": "string"},
-			"CodeDc":       {"type": "string"},
-			"ExtCode":      {"type": "string"},
-			"Storage":      {"type": "string"},
-			"GS":           {"type": "string"},
-			"GSSpec":       {"type": "string"},
-			"GSExt":        {"type": "integer"},
-			"Consigment":   {"type": "integer"},
-			"Amount":       {"type": "float"},
-			"Rest":         {"type": "float"},
-			"RestSum":      {"type": "float"},
-			"Price":        {"type": "float"},
-			"PrimeCost":    {"type": "float"},
-			"Sum":          {"type": "float"},
-			"Sum2":         {"type": "float"},
-			"MAttr1":       {"type": "string"},
-			"MAttr2":       {"type": "string"},
-			"MAttr3":       {"type": "string"},
-			"MAttr4":       {"type": "string"},
-			"FirmProduct":  {"type": "integer"},
-			"Remark":       {"type": "string"},
-			"NameAVR":      {"type": "string"},
-			"Agent2":       {"type": "string"},
-			"Manager2":     {"type": "string"},
-			"Performer":    {"type": "string"},
-			"Stock":        {"type": "boolean"}
+			"MMID":         { "type": "integer" },
+			"MMPID":        { "type": "integer" },
+			"IsDraft":      { "type": "integer" },
+			"Tick":         { "type": "integer" },
+			"Doc":          { "type": "string" },
+			"Doc1":         { "type": "string" },
+			"ParentDoc":    { "type": "string" },
+			"MMFlag":       { "type": "string" },
+			"InOut":        { "type": "integer" },
+			"GSDate":       { "type": "date" },
+			"GSDate2":      { "type": "date" },
+			"Mark":         { "type": "boolean" },
+			"CodeOp":       { "type": "string" },
+			"CodeDc":       { "type": "string" },
+			"ExtCode":      { "type": "string" },
+			"Storage":      { "type": "string" },
+			"GS":           { "type": "string" },
+			"GSSpec":       { "type": "string", "length": 120 },
+			"GSExt":        { "type": "integer" },
+			"Consigment":   { "type": "integer" },
+			"Amount":       { "type": "float" },
+			"Rest":         { "type": "float" },
+			"RestSum":      { "type": "float" },
+			"Price":        { "type": "float" },
+			"PrimeCost":    { "type": "float" },
+			"Sum":          { "type": "float" },
+			"Sum2":         { "type": "float" },
+			"MAttr1":       { "type": "string" },
+			"MAttr2":       { "type": "string" },
+			"MAttr3":       { "type": "string" },
+			"MAttr4":       { "type": "string" },
+			"FirmProduct":  { "type": "integer" },
+			"Remark":       { "type": "string" },
+			"NameAVR":      { "type": "string" },
+			"Agent2":       { "type": "string" },
+			"Manager2":     { "type": "string" },
+			"Performer":    { "type": "string" },
+			"Stock":        { "type": "boolean" }
 		}),
 
 

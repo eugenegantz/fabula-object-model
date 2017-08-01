@@ -81,8 +81,8 @@ InterfaceFProperty.mkDBInsertStr = function(argProp) {
 			return prev;
 
 		row.getKeys().forEach(function(colKey) {
-			var type,
-				colVal = row.get(colKey);
+			var colVal = row.get(colKey),
+				fldDecl = propDecl.get(colKey);
 
 			// Если значение свойства пустое - не записывать
 			if (utils.isEmpty(colVal))
@@ -90,16 +90,14 @@ InterfaceFProperty.mkDBInsertStr = function(argProp) {
 
 			// Если такого поля не существует или поле специальное - пропустить
 			if (
-				!propDecl.get(colKey)
-				|| propDecl.get(colKey).spec
+				!fldDecl
+				|| fldDecl.spec
 			) {
 				return prev;
 			}
 
-			type = propDecl.get(colKey).type.toLowerCase();
-
 			fields.push(dbUtils.mkFld(colKey));
-			values.push(dbUtils.mkVal(colVal, type));
+			values.push(dbUtils.mkVal(colVal, fldDecl));
 		});
 
 		if (!fields.length || !values.length)
@@ -125,7 +123,7 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			"uid":          { "type": "integer" },
 			"pid":          { "type": "integer" },
 			"sort":         { "type": "integer" },
-			"value":        { "type": "string" },
+			"value":        { "type": "string", "length": 250 },
 			"valuetype":    { "type": "string" },
 			"extclass":     { "type": "string" },
 			"extid":        { "type": "string" },
@@ -432,7 +430,7 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						return;
 
 					if (selfRow.get(k) != row.get(k))
-						sets.push(dbUtils.mkFld(k) + " = " + dbUtils.mkVal(selfRow.get(k), fldDecl.type));
+						sets.push(dbUtils.mkFld(k) + " = " + dbUtils.mkVal(selfRow.get(k), fldDecl));
 				});
 
 				if (!sets.length)

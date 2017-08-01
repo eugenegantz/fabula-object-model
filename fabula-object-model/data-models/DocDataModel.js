@@ -314,7 +314,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					return;
 				}
 
-				values.push(dbUtils.mkVal(val, fldDecl.type));
+				values.push(dbUtils.mkVal(val, fldDecl));
 				fields.push(dbUtils.mkFld(key));
 			});
 
@@ -467,7 +467,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				// Обновление полей в строке
 				// ------------------------------------
 				changedFields.forEach(function(key) {
-					if (!docFieldsDecl.get(key))
+					var fldDecl = docFieldsDecl.get(key);
+
+					if (!fldDecl)
 						return;
 
 					if (disabledFields.get(key))
@@ -475,7 +477,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					values.push(
 						dbUtils.mkFld(key) + " = " +
-						dbUtils.mkVal(self.get(key), docFieldsDecl.get(key).type)
+						dbUtils.mkVal(self.get(key), fldDecl)
 					);
 				});
 

@@ -87,7 +87,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 						return;
 
 					fields.push(dbUtils.mkFld(key));
-					values.push(dbUtils.mkVal(val, fldDecl.type));
+					values.push(dbUtils.mkVal(val, fldDecl));
 				});
 
 				db.dbquery({
@@ -118,7 +118,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					if (!fldDecl || utils.isEmpty(val))
 						return;
 
-					cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl.type));
+					cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl));
 				});
 
 				db.dbquery({
@@ -160,7 +160,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					if (!dbFldDecl || utils.isEmpty(val) || sealedFLd.get(key))
 						return;
 
-					values.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, dbFldDecl.type));
+					values.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, dbFldDecl));
 				});
 
 				db.dbquery({

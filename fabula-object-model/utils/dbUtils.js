@@ -31,12 +31,15 @@ module.exports = {
 	},
 
 
-	"mkVal": function(val, type) {
+	"mkVal": function(val, fldDecl) {
+		var type = fldDecl.type,
+			len = fldDecl.length;
+
 		if (utils.isEmpty(val))
 			return "NULL";
 
 		if (this.stringTypes[type])
-			return "\"" + this.secureStr(val) + "\"";
+			return "\"" + this.secureStr(val).slice(0, len || 255) + "\"";
 
 		if (this.dateTypes[type])
 			return "CDate(\"" + this.secureDate(val) + "\")";
