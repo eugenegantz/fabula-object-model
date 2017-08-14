@@ -254,23 +254,33 @@ MovDataModel.prototype = _utils.createProtoChain(
 				}
 
 				fields = fields.map(function(fld) {
+					fld = (fld + '').toLowerCase();
+
 					if (/[()]/g.test(fld))
 						return fld;
 
 					return "[" + fld + "]";
 				});
 
-				var query = "" +
+				var query = ""
 					// Записи движения ТиУ
-					"SELECT " + fields.join(",") +
-					" FROM Movement " +
-					" WHERE" +
-					"   mmid = " + mmid +
-					"   OR mmpid = " + mmid +
-					" ORDER BY mmpid ASC;" +
+					+ " SELECT " + fields.join(",")
+					+ " FROM Movement "
+					+ " WHERE"
+					+   " mmid = " + mmid
+					+   " OR mmpid = " + mmid
 
 					// Свойства записи
-					" SELECT uid, pid, ExtClass, ExtID, property, value FROM Property WHERE pid = " + mmid;
+					+ "; SELECT"
+					+   " uid,"
+					+   " pid,"
+					+   " ExtClass,"
+					+   " ExtID,"
+					+   " property,"
+					+   " value"
+					+ " FROM Property"
+					+ " WHERE"
+					+   " pid = " + mmid;
 
 				dbawws.dbquery({
 					"query": query,
@@ -284,12 +294,27 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			}).then(function(dbres) {
 				if (!dbres[0].recs.length)
-					return Promise.reject("MovDataModel.load(): !mov.length");
+					return Promise.reject("MovDataModel.load(): !movs.length");
 
-				var movsDBRows = dbres[0].recs,
-					_arg = Object.assign({}, arg);
+				var movRow,
+					cMovsRows   = dbres[0].recs,
+					_arg        = Object.assign({}, arg);
 
-				delete _arg.callback;
+				// ----------------
+
+				cMovsRows = cMovsRows.filter(function(row) {
+					if (row.mmid == self.get("mmid"))
+						movRow = row;
+
+					return row.mmid != self.get("mmid");
+				});
+
+				if (!movRow)
+					return Promise.reject("MovDataModel.load(): !movRow");
+
+				// ----------------
+
+				_arg.callback = void 0;
 
 				self.getKeys().forEach(function(k) {
 					self.unDeclField(k);
@@ -299,14 +324,21 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				self.deleteFProperty();
 
-				self.set(movsDBRows.shift());
+				// ----------------
 
-				self.addProperty(dbres[1].recs);
+				self.set(movRow);
 
-				self.addMov(movsDBRows);
+				self.addFProperty(dbres[1].recs);
+
+				self.addMov(cMovsRows);
 
 				return Promise.all(
 					self.getMov().map(function(mov) {
+						mov._setParentMovInstance(self);
+
+						if (mov._isRecursiveMov())
+							return;
+
 						return mov.load(_arg);
 					})
 				);
@@ -785,6 +817,32 @@ MovDataModel.prototype = _utils.createProtoChain(
 			"Performer":    { "type": "string" },
 			"Stock":        { "type": "boolean" }
 		}),
+
+
+		"_isRecursiveMov": function() {
+			var c = 0,
+				pMov = this;
+
+			while (pMov = pMov._getParentMovInstance()) {
+				if (++c >= 100)
+					throw new Error("MovDataModel._isRecursiveMov(): Превышено допустимое количество итераций");
+
+				if (pMov.get("mmId", null, !1) == this.get("mmId", null, !1))
+					return true;
+			}
+
+			return false;
+		},
+
+
+		"_setParentMovInstance": function(mov) {
+			this._mMovParentMovInstance = mov;
+		},
+
+
+		"_getParentMovInstance": function() {
+			return this._mMovParentMovInstance;
+		},
 
 
 		/**
