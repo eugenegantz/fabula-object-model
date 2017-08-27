@@ -14,7 +14,8 @@ var getContextDB = function() {
 	return DBModel.prototype.getInstance();
 };
 
-var ObjectA = require("./ObjectA.js");
+var voidFn,
+	ObjectA = require("./ObjectA.js");
 
 var FirmsDataModel = function() {
 	this.init();
@@ -112,6 +113,85 @@ FirmsDataModel.prototype = {
 
 			callback(null, self);
 		});
+	},
+
+
+	"loadFirm": function(arg) {
+		arg = arg || {};
+
+		var callback = arg.callback || voidFn,
+			db = getContextDB.call(this),
+			self = this;
+
+		return new Promise(function(resolve, reject) {
+			if (!arg.firmId)
+				return reject("FirmsDataModel().loadFirm(): arg.firmId is not specified");
+
+			var query = ""
+				+ " SELECT"
+				+   "  FirmID"
+				+   ", ID"
+				+   ", NDS"
+				+   ", Parent_ID"
+				+   ", Name"
+				+   ", FullName"
+				+   ", UrName"
+				+   ", City_ID"
+				+   ", UrAddress"
+				+   ", Tel"
+				+   ", INN"
+				+   ", OKPO"
+				+   ", KPP"
+				+   ", isAgency"
+				+ " FROM _firms"
+				+ " WHERE"
+				+   " firmId = " + arg.firmId
+
+				+ "; SELECT"
+				+   "  pid"
+				+   ", extID"
+				+   ", property"
+				+   ", [value]"
+				+ " FROM property"
+				+ " WHERE"
+				+   " extClass = 'firms'"
+				+   " AND extId = '" + arg.firmId + "'";
+
+			db.dbquery({
+				"query": query,
+				"callback": function(dbres) {
+					resolve(dbres);
+				}
+			});
+
+		}).then(function(dbres) {
+			var prevFirmRow,
+				firmRow = dbres[0].recs[0];
+
+			if (!firmRow)
+				return;
+
+			firmRow.firmsPropertiesRef = [];
+
+			dbres[1].recs.forEach(function(row) {
+				firmRow.firmsPropertiesRef.push(row);
+			});
+
+			if (prevFirmRow = self.dataRefByFirmId.get(firmRow.FirmID + '')) {
+				Object.assign(prevFirmRow, firmRow);
+
+			} else {
+				self.data.push(firmRow);
+				self.dataRefByFirmId.set(firmRow.FirmID, firmRow);
+			}
+
+			callback(null, self);
+
+		}).catch(function(err) {
+			callback(err);
+
+			return Promise.reject(err);
+		})
 	},
 
 
