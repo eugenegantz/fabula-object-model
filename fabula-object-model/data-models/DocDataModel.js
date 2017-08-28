@@ -32,6 +32,8 @@ var DocDataModel = function() {
 	// -------------------------------------
 
 	this._mDocClsHistory();
+
+	this.state = this.STATE_DOC_INITIAL;
 };
 
 DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
@@ -40,6 +42,17 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 	IMovCollection.prototype,
 	IFabModule.prototype,
 	{
+		// только что созданный, неинициализированный объект
+		"STATE_DOC_INITIAL": Math.random(),
+
+
+		// объект инициализирован из БД
+		"STATE_DOC_READY": Math.random(),
+
+
+		// объект удален из БД
+		"STATE_DOC_REMOVED": Math.random(),
+
 
 		"mDocEvents": new ObjectA({
 
@@ -139,54 +152,66 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @param {Function=} arg.callback
 		 * */
 		"rm": function(arg) {
-			var db          = this.getDBInstance(),
+			var self        = this,
+				db          = this.getDBInstance(),
 				callback    = arg.callback || emptyFn,
 				docId       = this.get("docId", null, !1);
 
-			if (!docId)
-				return callback("DocDataMode.rm(): !this.docId");
+			return Promise.resolve().then(function() {
+				if (!docId)
+					return Promise.reject("DocDataMode.rm(): !this.docId");
 
-			var promises = [
-				new Promise(function(resolve, reject) {
-					db.dbquery({
-						"query": "" +
-						"DELETE " +
-						"FROM Property " +
-						"WHERE " +
-						"   extClass = 'DOCS'" +
-						"   AND pid = 0" +
-						"   AND extId = '" + docId + "';" +
+				if (self.state == self.STATE_DOC_READY)
+					return Promise.resolve();
 
-						"DELETE " +
-						"FROM Ps_property " +
-						"WHERE " +
-						"   extClass = 'DOCS'" +
-						"   AND pid = 0" +
-						"   AND extId = '" + docId + "';" +
+				return self.load();
 
-						"DELETE " +
-						"FROM Docs " +
-						"WHERE " +
-						"   docId = '" + docId + "'",
+			}).then(function() {
+				var promises = [
+					new Promise(function(resolve, reject) {
+						db.dbquery({
+							"query": ""
+							+ " DELETE"
+							+ " FROM Property"
+							+ " WHERE"
+							+   " extClass = 'DOCS'"
+							+   " AND pid = 0"
+							+   " AND extId = '" + docId + "'"
 
-						"callback": function(dbres, err) {
-							if (err = dbUtils.fetchErrStrFromRes(dbres))
-								return reject(err);
+							+ "; DELETE"
+							+ " FROM Ps_property"
+							+ " WHERE"
+							+   " extClass = 'DOCS'"
+							+   " AND pid = 0"
+							+   " AND extId = '" + docId + "'"
 
-							resolve();
-						}
-					});
-				})
-			];
+							+ "; DELETE"
+							+   " FROM Docs"
+							+   " WHERE"
+							+       " docId = '" + docId + "'",
 
-			this.getMov().forEach(function(mov) {
-				if (!mov.get("mmid", null, !1))
-					return;
+							"callback": function(dbres, err) {
+								if (err = dbUtils.fetchErrStrFromRes(dbres))
+									return reject(err);
 
-				promises.push(mov.rm());
-			});
+								resolve();
+							}
+						});
+					})
+				];
 
-			return Promise.all(promises).then(function() {
+				self.getMov().forEach(function(mov) {
+					if (!mov.get("mmId", null, !1))
+						return;
+
+					promises.push(mov.rm());
+				});
+
+				return Promise.all(promises);
+
+			}).then(function() {
+				self.state = self.STATE_DOC_REMOVED;
+
 				callback(null, self);
 
 			}).catch(function(err) {
@@ -756,6 +781,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				});
 
 				self._mDocClsHistory();
+
+				self.state = self.STATE_DOC_READY;
 
 				callback(null, self);
 

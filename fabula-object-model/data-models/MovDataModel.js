@@ -35,6 +35,8 @@ function MovDataModel() {
 	// -------------------------------------
 
 	this._mMovClsHistory();
+
+	this.state = this.STATE_MOV_INITIAL;
 }
 
 MovDataModel.prototype = _utils.createProtoChain(
@@ -43,6 +45,18 @@ MovDataModel.prototype = _utils.createProtoChain(
 	IFabModule.prototype,
 	IMovCollection.prototype,
 	{
+		// только что созданный, неинициализированный объект
+		"STATE_MOV_INITIAL": Math.random(),
+
+
+		// объект инициализирован из БД
+		"STATE_MOV_READY": Math.random(),
+
+
+		// объект удален из БД
+		"STATE_MOV_REMOVED": Math.random(),
+
+
 		"mMovEvents": new ObjectA({
 
 			"add-fab-mov": [
@@ -117,33 +131,38 @@ MovDataModel.prototype = _utils.createProtoChain(
 		"rm": function(arg) {
 			arg = arg || {};
 
-			var db = this.getDBInstance(),
-				callback = arg.callback || emptyFn,
-				movs = this.getMov(),
-				mmid = this.get("mmid", null, !1),
+			var self        = this,
+				db          = this.getDBInstance(),
+				callback    = arg.callback || emptyFn,
+				mmid        = this.get("mmid", null, !1);
 
-				promises = [
+			return Promise.resolve().then(function() {
+				if (self.state == self.STATE_MOV_READY)
+					return Promise.resolve();
+
+				// Если модель не инициализирована - инициализировать и получить подчиненные
+				return self.load();
+
+			}).then(function() {
+				var promises = [
 					new Promise(function(resolve, reject) {
 						db.dbquery({
-							"query": "" +
-							"DELETE FROM Movement WHERE MMID = " + mmid +
-							";" +
+							"query": ""
+							+ "DELETE FROM Movement WHERE MMID = " + mmid
 
-							"DELETE " +
-							"FROM Property " +
-							"WHERE " +
-							"   extClass = 'DOCS'" +
-							"   AND pid = " + mmid +
-							";" +
+							+ "; DELETE"
+							+ " FROM Property"
+							+ " WHERE"
+							+   " extClass = 'DOCS'"
+							+   " AND pid = " + mmid
 
-							"DELETE " +
-							"FROM Ps_property " +
-							"WHERE " +
-							"   extClass = 'DOCS'" +
-							"   AND pid = " + mmid +
-							";" +
+							+ "; DELETE"
+							+ " FROM Ps_property"
+							+ " WHERE"
+							+   " extClass = 'DOCS'"
+							+   " AND pid = " + mmid
 
-							"DELETE FROM talk WHERE mm = " + mmid,
+							+ "; DELETE FROM talk WHERE mm = " + mmid,
 
 							"callback": function(dbres, err) {
 								if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -155,27 +174,30 @@ MovDataModel.prototype = _utils.createProtoChain(
 					})
 				];
 
-			movs.reduce(
-				function(prev, mov) {
-					if (!mov || !mov.get("mmid", null, !1))
+				self.getMov().reduce(
+					function(prev, mov) {
+						if (!mov || !mov.get("mmid", null, !1))
+							return prev;
+
+						prev.push(mov.rm());
+
 						return prev;
+					},
+					promises
+				);
 
-					prev.push(mov.rm());
+				return Promise.all(promises);
 
-					return prev;
-				},
-				promises
-			);
+			}).then(function() {
+				self.state = self.STATE_MOV_REMOVED;
 
-			return Promise.all(promises)
-				.then(function() {
-					callback(null);
-				})
-				.catch(function(err) {
-					callback(err);
+				callback(null);
 
-					return Promise.reject(err);
-				});
+			}).catch(function(err) {
+				callback(err);
+
+				return Promise.reject(err);
+			});
 		},
 
 
@@ -345,6 +367,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			}).then(function() {
 				self._mMovClsHistory();
+
+				self.state = self.STATE_MOV_READY;
 
 				callback(null, self);
 
