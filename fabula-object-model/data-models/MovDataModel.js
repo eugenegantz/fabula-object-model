@@ -635,7 +635,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				var values,
 					dbq = [],
 					changedFields = self.getChanged(),
-					disabledFields = new ObjectA({ "gsdate": 1, "mmid": 1 });
+					disabledFields = new ObjectA({ "mmid": 1 });
 
 				if (!dbres[0].recs.length)
 					return Promise.reject("MovDataModel.update(): !movs.length");
