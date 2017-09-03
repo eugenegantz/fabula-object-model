@@ -4,6 +4,7 @@ function MField() {
 	this.maxHistoryLen = 100;
 	this._stash = {};
 	this._val = void 0;
+	this._modelCtx = void 0;
 
 	this.clearHistory();
 }
@@ -22,6 +23,16 @@ MField.prototype = {
 
 		if (this._history.length > this.maxHistoryLen)
 			this._history[0] = this._history.shift();
+	},
+
+
+	"getModelCtx": function() {
+		return this._modelCtx;
+	},
+
+
+	"setModelCtx": function(ctx) {
+		this._modelCtx = ctx;
 	},
 
 
