@@ -339,7 +339,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				_arg.callback = void 0;
 
 				self.getKeys().forEach(function(k) {
-					self.unDeclField(k);
+					self.set(k, void 0, null, !1);
 				});
 
 				self.delMov({});

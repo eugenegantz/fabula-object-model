@@ -9,17 +9,17 @@ var DefaultDataModel    = require("./DefaultDataModel"),
 	utils               = require("./../utils/utils");
 
 var FirmDataModel = function() {
+	InterfaceFProperty.call(this);
 	DefaultDataModel.call(this);
 	IFabModule.call(this);
-	InterfaceFProperty.call(this);
 
 	this._mFirmBranches = [];
 };
 
 FirmDataModel.prototype = utils.createProtoChain(
+	InterfaceFProperty.prototype,
 	DefaultDataModel.prototype,
 	IFabModule.prototype,
-	InterfaceFProperty.prototype,
 	{
 
 		_firmsTableFldDecl: ObjectA.create({
@@ -263,7 +263,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 				// ------------
 
 				self.getKeys().forEach(function(k) {
-					self.unDeclField(k);
+					self.set(k, void 0, null, !1);
 				});
 
 				self.deleteFProperty();

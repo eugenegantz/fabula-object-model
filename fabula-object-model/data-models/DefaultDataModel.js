@@ -12,11 +12,11 @@ var DefaultDataModel = function() {
 	InterfaceEvents.call(this);
 
 	// хэш-таблица для экземпляров полей
-	this._mDefaultFields = Object.create(null);
+	this._mDefaultFields = {};
 
 	// Инициализация предварительно задекларированных полей для модели
 	Object.keys(this._mDefaultPreDeclFields).forEach(function(k) {
-		this.declField(k, new this._mDefaultPreDeclFields[k]);
+		this.declField(k, new this._mDefaultPreDeclFields[k]({ modelCtx: this }));
 	}, this);
 
 	this._DataModelSettings = {
@@ -34,7 +34,7 @@ DefaultDataModel.prototype = utils.createProtoChain(
 		/**
 		 * Хэш-таблица для моделей полей
 		 * */
-		"_mDefaultPreDeclFields": Object.create(null),
+		"_mDefaultPreDeclFields": {},
 
 
 		/**
@@ -88,7 +88,7 @@ DefaultDataModel.prototype = utils.createProtoChain(
 			}
 
 			if (!this.hasField(key))
-				this.declField(key, new MField());
+				this.declField(key, new MField({ modelCtx: this }));
 
 			this._mDefaultFields[key].set(value);
 
@@ -204,10 +204,21 @@ DefaultDataModel.prototype = utils.createProtoChain(
 
 
 DefaultDataModel.declField = function(_class, key, mdl) {
+	// Объявлять поля только на своем уровне определения
+	if (!_class.prototype.hasOwnProperty('_mDefaultPreDeclFields'))
+		_class.prototype._mDefaultPreDeclFields = Object.create(_class.prototype._mDefaultPreDeclFields || {});
+
 	_class.prototype._mDefaultPreDeclFields[(key + "").toLowerCase()] = mdl;
 };
 
 DefaultDataModel.unDeclField = function(_class, key) {
+	if (!_class.prototype.hasOwnProperty('_mDefaultPreDeclFields'))
+		return;
+
+	// Удалять поля только на своем уровне определения
+	if (!_class.prototype._mDefaultPreDeclFields.hasOwnProperty(key))
+		return;
+
 	delete _class.prototype._mDefaultPreDeclFields[(key + "").toLowerCase()];
 };
 

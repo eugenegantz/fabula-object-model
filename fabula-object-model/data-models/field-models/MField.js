@@ -1,10 +1,12 @@
 "use strict";
 
-function MField() {
+function MField(arg) {
+	arg = arg || {};
+
 	this.maxHistoryLen = 100;
 	this._stash = {};
 	this._val = void 0;
-	this._modelCtx = void 0;
+	this._modelCtx = arg.modelCtx;
 
 	this.clearHistory();
 }
