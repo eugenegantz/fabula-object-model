@@ -729,7 +729,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					dbRecsProps = dbres[2].recs;
 
 				self.getKeys().forEach(function(k) {
-					self.unDeclField(k);
+					self.set(k, void 0, null, !1);
 				});
 
 				self.delMov({});

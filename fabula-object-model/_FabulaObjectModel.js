@@ -7,13 +7,11 @@ var FabulaObjModel = function(arg){
 
 	/*#if browser-s*/
 	if (typeof window == "object" && typeof document == "object"){
-		if (typeof arg != "object"){
+		if (typeof arg != "object")
 			throw new Error("!arg");
-		}
 
-		if (typeof arg.url != "string" || !arg.url){
+		if (typeof arg.url != "string" || !arg.url)
 			throw new Error("!arg.url");
-		}
 
 		this.url = arg.url;
 	}
@@ -28,6 +26,9 @@ var FabulaObjModel = function(arg){
 
 FabulaObjModel.prototype = {};
 
+/**
+ * @deprecated use getModule instead
+ * */
 FabulaObjModel.prototype.mod = Object.create(null);
 
 FabulaObjModel.prototype._lowMethods = Object.create(null);
@@ -39,87 +40,87 @@ FabulaObjModel.prototype._lowMethods = Object.create(null);
  * @param {Object | Function} _module
  * */
 FabulaObjModel.prototype._setModule = function(name, _module){
-	if (typeof name != "string"){
+	if (typeof name != "string")
 		throw new Error("1st argument suppose to be String");
-	}
+
 	name = name.trim();
+
 	this.mod[name] = _module;
 	this._lowMethods[name.toLowerCase()] = _module;
+};
+
+FabulaObjModel.setModule = function(name, _module) {
+	FabulaObjModel.prototype._setModule(name, _module);
 };
 
 // ------------------------------------------------------------------------
 
 FabulaObjModel.prototype._getModule = function(name){
-	if (typeof name != "string"){
+	if (typeof name != "string")
 		throw new Error("1st argument suppose to be String");
-	}
+
 	return this._lowMethods[name.toLowerCase()];
+};
+
+FabulaObjModel.getModule = function(name) {
+	return FabulaObjModel.prototype._getModule(name);
 };
 
 // ------------------------------------------------------------------------
 
-FabulaObjModel.prototype._setModule("GandsDataModel", require("./data-models/GandsDataModel"));
+FabulaObjModel.setModule("GandsDataModel", require("./data-models/GandsDataModel"));
 
-FabulaObjModel.prototype._setModule("CalcDefaultPrint",  require("./data-models/calc/DefaultPrintCalc"));
+FabulaObjModel.setModule("CalcDefaultPrint", require("./data-models/calc/DefaultPrintCalc"));
+FabulaObjModel.setModule("CalcPrintDefault", require("./data-models/calc/DefaultPrintCalc"));
+FabulaObjModel.setModule("CalcPrintBrochure", require("./data-models/calc/CalcPrintBrochure"));
+FabulaObjModel.setModule("CalcPrintOffset", require("./data-models/calc/CalcPrintOffset"));
+FabulaObjModel.setModule("CalcPrintCarton", require("./data-models/calc/CalcPrintCarton"));
+FabulaObjModel.setModule("CalcPrintDigital", require("./data-models/calc/CalcPrintDigital"));
+FabulaObjModel.setModule("CalcPrintPostprocCreasing", require("./data-models/calc/CalcPrintPostprocCreasing"));
+FabulaObjModel.setModule("CalcPrintPostprocRounding", require("./data-models/calc/CalcPrintPostprocRounding"));
+FabulaObjModel.setModule("CalcPrintPostprocFolding", require("./data-models/calc/CalcPrintPostprocFolding"));
+FabulaObjModel.setModule("CalcPrintPostprocLaminating", require("./data-models/calc/CalcPrintPostprocLaminating"));
+FabulaObjModel.setModule("CalcUtils", require("./data-models/calc/CalcUtils"));
 
-FabulaObjModel.prototype._setModule("CalcPrintDefault",  require("./data-models/calc/DefaultPrintCalc"));
+FabulaObjModel.setModule("printUtils", require("./utils/printUtils"));
 
-FabulaObjModel.prototype._setModule("CalcPrintBrochure",  require("./data-models/calc/CalcPrintBrochure"));
+FabulaObjModel.setModule("utils", require("./utils/utils"));
 
-FabulaObjModel.prototype._setModule("CalcPrintOffset",  require("./data-models/calc/CalcPrintOffset"));
+FabulaObjModel.setModule("dbUtils", require("./utils/dbUtils"));
 
-FabulaObjModel.prototype._setModule("CalcPrintCarton",  require("./data-models/calc/CalcPrintCarton"));
-
-FabulaObjModel.prototype._setModule("CalcPrintDigital",  require("./data-models/calc/CalcPrintDigital"));
-
-FabulaObjModel.prototype._setModule("CalcPrintPostprocCreasing",  require("./data-models/calc/CalcPrintPostprocCreasing"));
-
-FabulaObjModel.prototype._setModule("CalcPrintPostprocRounding",  require("./data-models/calc/CalcPrintPostprocRounding"));
-
-FabulaObjModel.prototype._setModule("CalcPrintPostprocFolding",  require("./data-models/calc/CalcPrintPostprocFolding"));
-
-FabulaObjModel.prototype._setModule("CalcPrintPostprocLaminating",  require("./data-models/calc/CalcPrintPostprocLaminating"));
-
-FabulaObjModel.prototype._setModule("CalcUtils",  require("./data-models/calc/CalcUtils"));
-
-FabulaObjModel.prototype._setModule("printUtils",  require("./utils/printUtils"));
-
-FabulaObjModel.prototype._setModule("utils", require("./utils/utils"));
-
-FabulaObjModel.prototype._setModule("dbUtils", require("./utils/dbUtils"));
-
-FabulaObjModel.prototype._setModule("ObjectA", require("./data-models/ObjectA"));
-
-FabulaObjModel.prototype._setModule("ObjectB", require("./data-models/ObjectB"));
+FabulaObjModel.setModule("ObjectA", require("./data-models/ObjectA"));
+FabulaObjModel.setModule("ObjectB", require("./data-models/ObjectB"));
 
 /* #if browser,node */
-	FabulaObjModel.prototype._setModule("DefaultDataModel", require("./data-models/DefaultDataModel"));
+FabulaObjModel.setModule("MField", require("./data-models/field-models/MField"));
+FabulaObjModel.setModule("MFieldArray", require("./data-models/field-models/MFieldArray"));
+FabulaObjModel.setModule("MFieldObject", require("./data-models/field-models/MFieldObject"));
 
-	FabulaObjModel.prototype._setModule("InterfaceEvents", require("./data-models/InterfaceEvents"));
+FabulaObjModel.setModule("DefaultDataModel", require("./data-models/DefaultDataModel"));
 
-	FabulaObjModel.prototype._setModule("InterfaceFProperty", require("./data-models/InterfaceFProperty"));
+FabulaObjModel.setModule("InterfaceEvents", require("./data-models/InterfaceEvents"));
+FabulaObjModel.setModule("InterfaceFProperty", require("./data-models/InterfaceFProperty"));
 
-	FabulaObjModel.prototype._setModule("AgentsDataModel", require("./data-models/AgentsDataModel"));
+FabulaObjModel.setModule("AgentsDataModel", require("./data-models/AgentsDataModel"));
 
-	FabulaObjModel.prototype._setModule("CompanesDataModel", require("./data-models/CompanesDataModel"));
+FabulaObjModel.setModule("CompanesDataModel", require("./data-models/CompanesDataModel"));
 
-	FabulaObjModel.prototype._setModule("CompaniesDataModel", require("./data-models/CompanesDataModel"));
+FabulaObjModel.setModule("CompaniesDataModel", require("./data-models/CompanesDataModel"));
 
-	FabulaObjModel.prototype._setModule("DataModelAdapters", require("./data-models/DataModelAdapters"));
+FabulaObjModel.setModule("DataModelAdapters", require("./data-models/DataModelAdapters"));
 
-	FabulaObjModel.prototype._setModule("DocDataModel", require("./data-models/DocDataModel"));
+FabulaObjModel.setModule("DocDataModel", require("./data-models/DocDataModel"));
 
-	FabulaObjModel.prototype._setModule("FirmsDataModel", require("./data-models/FirmsDataModel"));
+FabulaObjModel.setModule("FirmsDataModel", require("./data-models/FirmsDataModel"));
+FabulaObjModel.setModule("FirmDataModel", require("./data-models/FirmDataModel"));
 
-	FabulaObjModel.prototype._setModule("FirmDataModel", require("./data-models/FirmDataModel"));
+FabulaObjModel.setModule("MovDataModel", require("./data-models/MovDataModel"));
 
-	FabulaObjModel.prototype._setModule("MovDataModel", require("./data-models/MovDataModel"));
+FabulaObjModel.setModule("PathsDataModel", require("./data-models/PathsDataModel"));
 
-	FabulaObjModel.prototype._setModule("PathsDataModel", require("./data-models/PathsDataModel"));
+FabulaObjModel.setModule("TalksDataModel", require("./data-models/TalksDataModel"));
 
-	FabulaObjModel.prototype._setModule("TalksDataModel",  require("./data-models/TalksDataModel"));
-
-	FabulaObjModel.prototype._setModule("DBModel", null);
+FabulaObjModel.setModule("DBModel", null);
 /* #end */
 
 // ------------------------------------------------------------------------
@@ -136,15 +137,14 @@ FabulaObjModel.prototype.create = function(name, arg){
 
 	name = name.toLowerCase().trim();
 
-	if (typeof this._lowMethods[name] == "undefined"){
+	if (typeof this._lowMethods[name] == "undefined")
 		throw new Error("Class \"" + name + "\" does not exist");
-	}
 
 	// var rest = utils.arrayRest(arguments, 1);
 	// TODO передать ...rest в конструктор. Например через bind
-	var method = this._lowMethods[name];
-	var obj;
-	var type = this.mod.utils.getType(method);
+	var method = this._lowMethods[name],
+		obj,
+		type = this.mod.utils.getType(method);
 
 	if (  type == "object"  ) {
 		obj = method;
@@ -205,11 +205,12 @@ FabulaObjModel.getInstance = function(arg){
 // Инициализация всех важных компонентов
 FabulaObjModel.prototype.load = function(arg){
 	var _utils = this.create("utils");
-	if (_utils.getType(arg) != "object") arg = Object.create(null);
-	var callback = typeof arg.callback == "function" ? arg.callback : new Function();
-	var self = this;
 
-	var gdm = this.create("GandsDataModel");
+	if (_utils.getType(arg) != "object") arg = Object.create(null);
+
+	var callback = typeof arg.callback == "function" ? arg.callback : new Function(),
+		self = this,
+		gdm = this.create("GandsDataModel");
 
 	gdm.load({
 		callback: function(err){
@@ -225,6 +226,7 @@ FabulaObjModel.prototype.load = function(arg){
  * */
 FabulaObjModel.prototype._initCalcConst = function(){
 	var cConst = require("./data-models/calc/CalcConsts");
+
 	cConst._init();
 };
 

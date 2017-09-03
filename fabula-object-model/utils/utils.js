@@ -374,7 +374,10 @@ _utils.awwsBase64 = {
 
 
 _utils.detectEnvironment = function(){
-	var globClassName = Object.prototype.toString.call(new Function("return this")());
+	// Странное поведение в nodejs 8.2.1
+	// new Function(...) - возвращает undefined
+	var ctx = (new Function("return this;") || function() { return this; })(),
+		globClassName = Object.prototype.toString.call(ctx);
 
 	if (globClassName == "[object Window]")
 		return "browser";
