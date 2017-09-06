@@ -475,11 +475,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					docFieldsDecl = self.__docDataModelsDefaultFields,
 
 					disabledFields = new ObjectA({
-						"id": 1,
-						"regdate": 1,
-						"datenew": 1,
-						"useredit": 1,
-						"dateedit": 1
+						"id": 1
 					}),
 
 					dbPropsRecs         = dbres[0].recs,
