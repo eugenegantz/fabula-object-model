@@ -569,6 +569,20 @@ _utils.isEmpty = function(val) {
 };
 
 
+_utils.toBool = function(val) {
+	var s = (val + '').toLowerCase(),
+		n = +val;
+
+	if (s === 'да')
+		return true;
+
+	if (s === 'нет')
+		return false;
+
+	return Boolean(n);
+};
+
+
 _utils.createProtoChain = function() {
 	var args = Array.prototype.slice.call(arguments, 0),
 		proto,
