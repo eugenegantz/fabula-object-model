@@ -163,6 +163,9 @@ FirmDataModel.prototype = utils.createProtoChain(
 					values.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, dbFldDecl));
 				});
 
+				if (!values.length)
+					return resolve();
+
 				db.dbquery({
 					"query": "UPDATE _firms SET " + values.join(", ") + " WHERE firmId = " + self.get("firmId"),
 					"callback": function(dbres, err) {
