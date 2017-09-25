@@ -144,6 +144,12 @@ IMovCollection.prototype = {
 				return mov !== arg;
 			});
 
+			var e = new IEvent("del-fab-mov");
+
+			e.mov = arg;
+
+			this.trigger("del-fab-mov", e);
+
 			return this;
 		}
 

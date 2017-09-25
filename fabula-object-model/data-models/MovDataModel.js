@@ -62,6 +62,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 			"add-fab-mov": [
 				function(self, e) {
 					e.mov.set("mmPId", this.get("mmId"));
+					e.mov._setParentMovInstance(self);
 				}
 			],
 
@@ -866,6 +867,15 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 		"_getParentMovInstance": function() {
 			return this._mMovParentMovInstance;
+		},
+
+
+		/**
+		 * Получить экземпляр родительской задачи
+		 * @return {MovDataModel}
+		 * */
+		getParentMovInstance: function() {
+			return this._getParentMovInstance();
 		},
 
 
