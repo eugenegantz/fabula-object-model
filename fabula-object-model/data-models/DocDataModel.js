@@ -722,7 +722,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			}).then(function(dbres) {
 				if (!dbres[0].recs.length)
-					return reject("DocDataMode.load(): specified doc record have not found in DOCS table");
+					return Promise.reject("DocDataMode.load(): specified doc record have not found in DOCS table");
 
 				var dbRecDoc = dbres[0].recs[0],
 					dbRecsMovs = dbres[1].recs,
