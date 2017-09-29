@@ -152,6 +152,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @param {Function=} arg.callback
 		 * */
 		"rm": function(arg) {
+			arg = arg || {};
+
 			var self        = this,
 				db          = this.getDBInstance(),
 				callback    = arg.callback || emptyFn,
