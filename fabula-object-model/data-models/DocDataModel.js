@@ -857,14 +857,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				}
 
 				if (typeof docType != "string" || docType.length != 4) {
-					return Promise.reject(
+					return reject(
 						"DocDataModel.getNewDocID(): " +
 						"arg.docType expected to be not empty String of length == 2"
 					);
 				}
 
 				if (!docTypeGsRow) {
-					return Promise.reject(
+					return reject(
 						"DocDataModel.getNewDocID(): " +
 						"specified docType not found in GANDS"
 					);
