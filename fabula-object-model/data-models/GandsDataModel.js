@@ -1,13 +1,13 @@
 "use strict";
 
-// ------------------------------------------------------
-// Номенклатура
+var MODULE_NAME = "GandsDataModel";
 
-var DefaultDataModel    = require("./DefaultDataModel"),
-	IEvents             = require("./InterfaceEvents"),
-	ObjectA             = require("./ObjectA"),
-	_utils              = require("./../utils/utils"),
-	voidFn              = function() {};
+var IEvents     = require("./InterfaceEvents"),
+	IFabModule  = require("./IFabModule.js"),
+	ObjectA     = require("./ObjectA"),
+	_utils      = require("./../utils/utils"),
+	dbUtils     = require("./../utils/dbUtils.js"),
+	voidFn      = function() {};
 
 // Для совместимости
 var getContextDB = function() {
@@ -23,697 +23,703 @@ var getContextDB = function() {
 
 /**
  * @constructor
+ * Коллекция номеклатуры из фабулы
  * */
 var GandsDataModel = function() {
 	this.init();
 };
 
-GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvents, {
+GandsDataModel.prototype = _utils.createProtoChain(
+	IEvents.prototype,
+	IFabModule.prototype,
+	{
 
-	"init": function() {
-		this.dbModel = null;
+		"init": function() {
+			this.data = [];
 
-		this.data = [];
+			this.instances.push(this);
 
-		this.instances.push(this);
+			this.GSUnits = Object.create(null);
 
-		this.GSUnits = Object.create(null);
+			this.state = 0;
 
-		this.state = 0;
+			this._init_timestamp = null;
 
-		this._init_timestamp = null;
-
-		this._indexData = {}; // after init => Object
-	},
-
-
-	"instances": [],
-
-
-	"_knownGSUnits": {
-		"ед": {
-			"type": 'num',
-			"val": 1
+			this._indexData = {}; // after init => Object
 		},
-		"шт": {
-			"type": 'num',
-			"val": 1
+
+
+		"instances": [],
+
+
+		"_knownGSUnits": {
+			"ед": {
+				"type": 'num',
+				"val": 1
+			},
+			"шт": {
+				"type": 'num',
+				"val": 1
+			},
+			"шт.": {
+				"type": 'num',
+				"val": 1
+			},
+			"1000 шт.": {
+				"type": 'num',
+				"val": 1000
+			}
 		},
-		"шт.": {
-			"type": 'num',
-			"val": 1
+
+
+		/**
+		 * Получить экземпляр
+		 * @return {GandsDataModel}
+		 * */
+		"getInstance": function() {
+			return this.instances[0] || new GandsDataModel();
 		},
-		"1000 шт.": {
-			"type": 'num',
-			"val": 1000
-		}
-	},
 
 
-	/**
-	 * @return {GandsDataModel}
-	 * */
-	"getInstance": function() {
-		if (this.instances.length)
-			return this.instances[0];
+		/**
+		 * @param {Object} arg
+		 * @param {Function} arg.callback
+		 * */
+		"load": function(arg) {
+			arg = arg || {};
 
-		return new GandsDataModel();
-	},
+			var self                = this,
+				callback            = arg.callback || voidFn,
+				useCache            = typeof arg.useCache == "undefined" ? true : !!arg.useCache,
+				db                  = getContextDB.call(this),
+				configRow           = { "GSID": "ТСFM", "GSName": "Настройки FOM", "GSKindName": "", "GSCOP": "" },
+				configRowProps      = [];
 
+			return new Promise(function(resolve, reject) {
+				/*#if browser,node*/
+				// Номеклатура
+				db.dbquery({
+					"dbsrc": "*main",
+					"query": ""
+						+ " SELECT"
+						+   "  pid"
+						+   ", extID"
+						+   ", property"
+						+   ", value"
+						+ " FROM Property"
+						+ " WHERE"
+						+   " ExtID IN ("
+						+       " SELECT [value]"
+						+       " FROM Property"
+						+       " WHERE"
+						+           "     extClass = 'config'"
+						+           " AND property = 'fom-config-entry-gsid'"
+						+   ")",
+					"callback": function(dbres, err) {
+						if (err = dbUtils.fetchErrStrFromRes(dbres))
+							return reject(err);
 
-	/**
-	 * @param {Object} arg
-	 * @param {Function} arg.callback
-	 * */
-	"load": function(arg) {
-		arg = arg || {};
+						// Конфиг по-умолчанию
+						var dbq = [""
+							+ " SELECT * FROM Gands"
+							+ " WHERE"
+							+   "    GSCOP LIKE '87%'"
+							+   " OR GSCOP LIKE '17%'"
+							+   " OR GSCOP LIKE '27%'"
+							+   " OR GSCOP LIKE '07%'"
+							+   " OR GSID LIKE 'ТСПо%'"
+						];
 
-		var self            = this,
-			useCache        = typeof arg.useCache == "undefined" ? true : !!arg.useCache,
-			callback        = arg.callback || voidFn,
-			db              = getContextDB.call(this),
-			configRow       = { "GSID": "ТСFM", "GSName": "Настройки FOM", "GSKindName": "", "GSCOP": "" },
-			configRowProps  = [];
+						dbres.recs.forEach(function(row) {
+							// Запрос из конфига
+							if (row.property == "запрос-номенклатура")
+								dbq[0] = "SELECT * FROM Gands WHERE " + row.value;
 
-		/*#if browser,node*/
-		// Номеклатура
-		db.dbquery({
-			"query": ""
-			+ " SELECT"
-			+   "  pid"
-			+   ", extID"
-			+   ", property"
-			+   ", value"
-			+ " FROM Property"
-			+ " WHERE"
-			+   " ExtID IN ("
-			+       " SELECT [value]"
-			+       " FROM Property"
-			+       " WHERE"
-			+           " extClass = 'config'"
-			+           " AND property = 'fom-config-entry-gsid'"
-			+   ")",
-			"callback": function(dbres) {
-				var c;
+							configRowProps.push(row);
+						});
 
-				// Конфиг по-умолчанию
-				var dbq = [""
-					+ " SELECT * FROM Gands"
-					+ " WHERE"
-					+   " GSCOP LIKE '87%'"
-					+   " OR GSCOP LIKE '17%'"
-					+   " OR GSCOP LIKE '27%'"
-					+   " OR GSCOP LIKE '07%'"
-					+   " OR GSID LIKE 'ТСПо%'"
-				];
+						// На случай если необходимо переопределить запрос на уровне проекта
+						if (self.sql)
+							dbq[0] = self.sql;
 
-				if (dbres.recs.length) {
-					for (c = 0; c < dbres.recs.length; c++) {
-						// Запрос из конфига
-						if (dbres.recs[c].property == "запрос-номенклатура")
-							dbq[0] = "SELECT * FROM Gands WHERE " + dbres.recs[c].value;
+						// Расширение номенклатуры
+						dbq.push(""
+							+ " SELECT * FROM GandsExt"
+							+ " WHERE"
+							+   " GSExID IN (" + dbq[0].replace(/[*]/gi, "GSID") + ")"
+						);
 
-						configRowProps.push(dbres.recs[c]);
+						// Свойства номенклатуры
+						dbq.push(""
+							+ " SELECT"
+							+   "  pid"
+							+   ", extID"
+							+   ", property"
+							+   ", value"
+							+ " FROM Property "
+							+ " WHERE "
+							+   " ExtID IN (" + dbq[0].replace(/[*]/gi, "GSID") + ")"
+						);
+
+						if (!db)
+							return reject(MODULE_NAME + ".load(): !db");
+
+						db.dbquery({
+							"dbsrc": "*main",
+							"query": dbq.join(";"),
+							"callback": function(dbres, err) {
+								if (err = dbUtils.fetchErrStrFromRes(dbres))
+									return reject(err);
+
+								self._afterLoad(
+									{
+										"data": dbres[0].recs.concat(configRow),
+										"ext": dbres[1].recs,
+										"props": dbres[2].recs.concat(configRowProps)
+									}
+								);
+
+								self._init_timestamp = Date.now();
+
+								resolve();
+							}
+						});
 					}
-				}
+				});
+				/*#end*/
 
-				// На случай если необходимо переопределить запрос на уровне проекта
-				if (self.sql)
-					dbq[0] = self.sql;
+				/*  #if browser-s */
+				if (_utils.isBrowser()) {
+					var Ajax = require("./../browser/Ajax");
 
-				// Расширение номенклатуры
-				dbq.push(""
-					+ " SELECT * FROM GandsExt"
-					+ " WHERE"
-					+   " GSExID IN (" + dbq[0].replace(/[*]/gi, "GSID") + ")"
-				);
+					Ajax.req({
+						"url": self._fabulaInstance.url,
+						"method": "POST",
+						"data": {
+							"model": "GandsDataModel",
+							"argument": {
+								"useCache": useCache
+							}
+						},
+						"callback": function(err, http) {
+							if (err)
+								return reject(err);
 
-				// Свойства номенклатуры
-				dbq.push(""
-					+ " SELECT"
-					+   "  pid"
-					+   ", extID"
-					+   ", property"
-					+   ", value"
-					+ " FROM Property "
-					+ " WHERE "
-					+   " ExtID IN (" + dbq[0].replace(/[*]/gi, "GSID") + ")"
-				);
+							self._afterLoad(JSON.parse(http.responseText));
 
-				if (db) {
-					db.dbquery({
-						"query": dbq.join(";"),
-						"callback": function(res) {
-							self._afterLoad(
-								{
-									"data": res[0].recs.concat(configRow),
-									"ext": res[1].recs,
-									"props": res[2].recs.concat(configRowProps)
-								},
-								callback
-							);
-							self._init_timestamp = Date.now();
+							resolve();
 						}
 					});
 				}
+				/*#end*/
 
+			}).then(function() {
+				callback(null, self);
 
-			}
-		});
-		/*#end*/
+			}).catch(function(err) {
+				callback(err, self);
 
-		/*  #if browser-s */
-		if (_utils.isBrowser()) {
-			var Ajax = require("./../browser/Ajax");
-
-			Ajax.req({
-				"url": self._fabulaInstance.url,
-				"method": "POST",
-				"data": {
-					"model": "GandsDataModel",
-					"argument": {
-						"useCache": useCache
-					}
-				},
-				"callback": function(err, http) {
-					if (err)
-						return callback(err);
-
-					self._afterLoad(JSON.parse(http.responseText), callback);
-				}
+				return Promise.reject(err);
 			});
-		}
-		/*#end*/
-	},
+		},
 
 
-	/**
-	 * @ignore
-	 * */
-	"_afterLoad": function(dbres, callback) {
-		var c,
-			L,
-			v,
-			gsid,
-			gslv,
-			lvs = [2, 4, 6],
-			self = this,
-			gandsRef = Object.create(null),
-			dataRefByGSIDGroup = Object.create(null);
+		/**
+		 * @ignore
+		 * */
+		"_afterLoad": function(dbres, callback) {
+			callback = callback || voidFn;
 
-		self.data = dbres.data;
-		self.state = 1;
+			var lvs                     = [2, 4, 6],
 
-		for (c = 0; c < self.data.length; c++) {
-			gandsRef[self.data[c].GSID] = self.data[c];
+				self                    = this,
 
-			if (!self.data[c].gandsExtRef)
-				self.data[c].gandsExtRef = [];
+				gandsRef                = Object.create(null),
+				dataRefByGSIDGroup      = Object.create(null),
 
-			if (!self.data[c].gandsPropertiesRef)
-				self.data[c].gandsPropertiesRef = [];
-		}
+				gandsExt                = dbres.ext,
+				gandsProps              = dbres.props;
 
-		var gandsExt = dbres.ext;
+			self.data = dbres.data;
+			self.state = 1;
 
-		for (c = 0; c < gandsExt.length; c++) {
-			if (typeof gandsRef[gandsExt[c].GSExID] == "undefined")
-				continue;
+			self.data.forEach(function(row) {
+				gandsRef[row.GSID] = row;
 
-			gandsRef[gandsExt[c].GSExID].gandsExtRef.push(gandsExt[c]);
-		}
+				if (!row.gandsExtRef)
+					row.gandsExtRef = [];
 
-		var gandsProps = dbres.props;
+				if (!row.gandsPropertiesRef)
+					row.gandsPropertiesRef = [];
+			});
 
-		for (c = 0; c < gandsProps.length; c++) {
-			if (typeof gandsRef[gandsProps[c].extID] == "undefined")
-				continue;
+			// Таблица расширения
+			gandsExt.forEach(function(row) {
+				if (!gandsRef[row.GSExID])
+					return;
 
-			gandsRef[gandsProps[c].extID].gandsPropertiesRef.push(gandsProps[c]);
-		}
+				gandsRef[row.GSExID].gandsExtRef.push(row);
+			});
 
-		for (c = 0, L = self.data.length; c < L; c++) {
-			if (typeof self.GSUnits[self.data[c].GSID] == "undefined")
-				self.GSUnits[self.data[c].GSID] = self.data[c].GSUnit;
+			// Свойства номенклатуры
+			gandsProps.forEach(function(row) {
+				if (!gandsRef[row.extID])
+					return;
 
-			gsid = self.data[c].GSID;
+				gandsRef[row.extID].gandsPropertiesRef.push(row);
+			});
 
-			for (v = 0; v < lvs.length; v++) {
-				gslv = gsid.substr(0, lvs[v]);
+			// кэш по уровням.
+			// кэшируются 1, 2, 3 уровни номенклатуры
+			self.data.forEach(function(gsRow) {
+				if (!self.GSUnits[gsRow.GSID])
+					self.GSUnits[gsRow.GSID] = gsRow.GSUnit;
 
-				if (gslv.length == lvs[v]) {
-					if (!dataRefByGSIDGroup[gslv]) dataRefByGSIDGroup[gslv] = [];
+				var gsId = gsRow.GSID;
 
-					dataRefByGSIDGroup[gslv].push(self.data[c]);
+				lvs.forEach(function(lv) {
+					var lvGSId = gsId.substr(0, lv);
+
+					if (lvGSId.length != lv)
+						return;
+
+					if (!dataRefByGSIDGroup[lvGSId])
+						dataRefByGSIDGroup[lvGSId] = [];
+
+					dataRefByGSIDGroup[lvGSId].push(gsRow);
+				});
+			});
+
+			self.dataReferences = new ObjectA(gandsRef);
+			self.dataRefByGSID = self.dataReferences;
+			self.dataRefByGSIDGroup = new ObjectA(dataRefByGSIDGroup);
+
+			// -------------------------------------------------------------------------------------
+
+			var proto = Object.getPrototypeOf(self),
+				configRow = self.dataReferences.get("ТСFM");
+
+			proto._matcherPatterns = [];
+
+			if (configRow) {
+				// Заполнение недостающих полей в configRow
+				if (self.data.length)
+					configRow = Object.assign({}, self.data[0], configRow);
+
+				configRow.gandsPropertiesRef.forEach(function(row) {
+					if (row.property != "номенклатура-группы")
+						return;
+
+					proto._matcherPatterns = proto._matcherPatterns.concat(eval("(" + row.value + ")"));
+				});
+			}
+
+			// -------------------------------------------------------------------------------------
+
+			self._buildIndexData();
+
+			callback(null, self);
+		},
+
+
+		"_buildIndexData": function() {
+			this._indexData = {};
+
+			this.data.forEach(function(row) {
+				var match = this._groupMatcher(row);
+
+				match.forEach(function(m) {
+					if (typeof this._indexData[m] != "object")
+						this._indexData[m] = [];
+
+					this._indexData[m].push(row);
+				}, this);
+			}, this);
+		},
+
+
+		/**
+		 * @ignore
+		 * */
+		"_matcherPatterns": [],
+
+
+		/**
+		 * @ignore
+		 * */
+		"_groupMatcher": function(row) {
+			var c,
+				tmp = [];
+
+			for (c = 0; c < this._matcherPatterns.length; c++) {
+				if (
+					this._matcherPatterns[c].GS
+					&& row.GSID.match(this._matcherPatterns[c].GS)
+				) {
+					tmp.push(this._matcherPatterns[c].gr);
+
+				} else if (
+					this._matcherPatterns[c].COP
+					&& row.GSCOP.match(this._matcherPatterns[c].COP)
+				) {
+					tmp.push(this._matcherPatterns[c].gr);
 				}
 			}
-		}
 
-		self.dataReferences         = new ObjectA(gandsRef);
-		self.dataRefByGSID          = self.dataReferences;
-		self.dataRefByGSIDGroup     = new ObjectA(dataRefByGSIDGroup);
-
-		// -------------------------------------------------------------------------------------
-
-		var tmp,
-			prop,
-			proto = Object.getPrototypeOf(self),
-			configRow = self.dataReferences.get("ТСFM");
-
-		proto._matcherPatterns = [];
-
-		if (configRow) {
-			// Заполнение недостающих полей в configRow
-			if (self.data.length) {
-				tmp = self.data[0];
-
-				for (prop in tmp) {
-					if (!Object.prototype.hasOwnProperty.call(tmp, prop))
-						continue;
-
-					if (configRow[prop] === void 0)
-						configRow[prop] = "";
-				}
-			}
-
-			for (c = 0; c < configRow.gandsPropertiesRef.length; c++) {
-				if (configRow.gandsPropertiesRef[c].property == "номенклатура-группы") {
-					proto._matcherPatterns = proto._matcherPatterns.concat(
-						eval("(" + configRow.gandsPropertiesRef[c].value + ")")
-					);
-				}
-			}
-		}
-
-		// -------------------------------------------------------------------------------------
-
-		self._buildIndexData();
-
-		callback(null, self);
-	},
+			return tmp;
+		},
 
 
-	"_buildIndexData": function() {
-		var v,
-			c,
-			match;
+		/**
+		 * @ignore
+		 * */
+		"_indexHas": function() {
 
-		this._indexData = {};
-
-		for (c = 0; c < this.data.length; c++) {
-			match = this._groupMatcher(this.data[c]);
-
-			for (v = 0; v < match.length; v++) {
-				if (typeof this._indexData[match[v]] != "object")
-					this._indexData[match[v]] = [];
-
-				this._indexData[match[v]].push(this.data[c]);
-			}
-		}
-	},
+		},
 
 
-	/**
-	 * @ignore
-	 * */
-	"_matcherPatterns": [],
+		/**
+		 * @ignore
+		 * */
+		"_indexBuild": function() {
+
+		},
 
 
-	/**
-	 * @ignore
-	 * */
-	"_groupMatcher": function(row) {
-		var c,
-			tmp = [];
+		"_isDraft": function(row) {
+			return Boolean(row.GSName.match(/^[*]/gi) || row.GSKindName.match(/^[*]/gi));
+		},
 
-		for (c = 0; c < this._matcherPatterns.length; c++) {
+
+		/**
+		 * Получить родительскую запись
+		 * @param {Object | String} row
+		 * return {Object | undefined}
+		 * */
+		"getParent": function(row) {
 			if (
-				this._matcherPatterns[c].GS
-				&& row.GSID.match(this._matcherPatterns[c].GS)
+				_utils.getType(row) == "object"
+				&& row.GSID
 			) {
-				tmp.push(this._matcherPatterns[c].gr);
-
-			} else if (
-				this._matcherPatterns[c].COP
-				&& row.GSCOP.match(this._matcherPatterns[c].COP)
-			) {
-				tmp.push(this._matcherPatterns[c].gr);
+				return this.dataReferences.get(row.GSID.slice(0, -2))
 			}
-		}
 
-		return tmp;
-	},
+			if (typeof row == "string") {
+				row = this.dataReferences.get(row);
 
-
-	/**
-	 * @ignore
-	 * */
-	"_indexHas": function() {
-
-	},
+				if (row && row.GSID.length >= 4)
+					return this.dataReferences.get(row.GSID.slice(0, -2));
+			}
+		},
 
 
-	/**
-	 * @ignore
-	 * */
-	"_indexBuild": function() {
+		/**
+		 * Получить данные из таблицы расширения номенклатуры GandsExt
+		 * @param {Object | String} row
+		 * @param {Object=} fld
+		 * @param {Object=} opt
+		 * */
+		"getExt": function(row, fld, opt) {
+			if (_utils.getType(row) == "object" && row.GSID)
+				row = this.dataReferences.get(row.GSID);
 
-	},
+			else if (_utils.getType(row) == "string")
+				row = this.dataReferences.get(row);
+
+			else
+				throw new Error("1st argument suppose to be String or Object");
+
+			if (!row)
+				return [];
+
+			if (fld && typeof fld != "object")
+				throw new Error("2nd argument supposed to be type Object");
+
+			opt = opt || {};
+
+			var res = !fld ? row.gandsExtRef : this._fetchRowExtFields(row, fld);
+
+			res = res.concat(
+				this.getExt(
+					this.getParent(row) || '',
+					fld,
+					Object.assign({}, opt, { onlyPriority: false })
+				) || []
+			);
+
+			if (opt.onlyPriority) {
+				var ex = {};
+
+				res = res.sort(function(a, b) {
+					return a.GSExID.length > b.GSExID.length ? -1 : 1;
+				}).filter(function(extRow) {
+					var key = extRow.GSExType + extRow.GSExName;
+
+					// Если такой ключ уже был и этот ключ лежит в таблице с меньшим весом - исключить его из выборки
+					// (чтобы избежать выбрасывания родственников из одной таблицы)
+					if (ex[key] && extRow.GSExID.length < ex[key])
+						return false;
+
+					return ex[key] = extRow.GSExID.length;
+				});
+			}
+
+			return res;
+		},
 
 
-	"_isDraft": function(row) {
-		return Boolean(row.GSName.match(/^[*]/gi) || row.GSKindName.match(/^[*]/gi));
-	},
+		"_fetchRowExtFields": function(row, fld) {
+			fld = ObjectA.create(fld);
 
+			return row.gandsExtRef.filter(function(extRow) {
+				extRow = ObjectA.create(extRow);
 
-	/**
-	 * Получить родительскую запись
-	 * @param {Object | String} row
-	 * return {Object}
-	 * */
-	"getParent": function(row) {
-		if (
-			_utils.getType(row) == "object"
-			&& row.GSID
-		) {
-			return this.dataReferences.get(row.GSID.slice(0, -2))
-
-		} else if (typeof row == "string") {
-			row = this.dataReferences.get(row);
-
-			if (row && row.GSID.length >= 4)
-				return this.dataReferences.get(row.GSID.slice(0, -2));
-		}
-
-		return void 0;
-	},
-
-
-	/**
-	 * Получить данные из таблицы расширения номенклатуры GandsExt
-	 * @param {Object | String} row
-	 * @param {Object=} fld
-	 * @param {Object=} opt
-	 * */
-	"getExt": function(row, fld, opt) {
-		if (_utils.getType(row) == "object" && row.GSID)
-			row = this.dataReferences.get(row.GSID);
-
-		else if (_utils.getType(row) == "string")
-			row = this.dataReferences.get(row);
-
-		else
-			throw new Error("1st argument suppose to be String or Object");
-
-		if (!row)
-			return [];
-
-		if (fld && typeof fld != "object")
-			throw new Error("2nd argument supposed to be type Object");
-
-		opt = opt || {};
-
-		var res = !fld ? row.gandsExtRef : this._fetchRowExtFields(row, fld);
-
-		res = res.concat(
-			this.getExt(
-				this.getParent(row) || '',
-				fld,
-				Object.assign({}, opt, { onlyPriority: false })
-			) || []
-		);
-
-		if (opt.onlyPriority) {
-			var ex = {};
-
-			res = res.sort(function(a, b) {
-				return a.GSExID.length > b.GSExID.length ? -1 : 1;
-			}).filter(function(extRow) {
-				var key = extRow.GSExType + extRow.GSExName;
-
-				// Если такой ключ уже был и этот ключ лежит в таблице с меньшим весом - исключить его из выборки
-				// (чтобы избежать выбрасывания родственников из одной таблицы)
-				if (ex[key] && extRow.GSExID.length < ex[key])
-					return false;
-
-				return ex[key] = extRow.GSExID.length;
+				return fld.getKeys().every(function(key) {
+					return extRow.get(key) == fld.get(key);
+				});
 			});
-		}
-
-		return res;
-	},
+		},
 
 
-	"_fetchRowExtFields": function(row, fld) {
-		fld = ObjectA.create(fld);
+		/**
+		 * Получить свойства записи. Собственные и наследуемые
+		 * @param {Object | String} row - код либо запись номенклатуры
+		 * @param {Array | String=} props - массив свойств
+		 * @param {Object=} options - параметры выборки
+		 * @return {undefined | Array}
+		 * */
+		"getProperty": function(row, props, options) {
+			var ret = [];
 
-		return row.gandsExtRef.filter(function(extRow) {
-			extRow = ObjectA.create(extRow);
+			if (_utils.getType(row) == "object" && row.GSID) {
+				row = this.dataReferences.get(row.GSID);
 
-			return fld.getKeys().every(function(key) {
-				return extRow.get(key) == fld.get(key);
-			});
-		});
-	},
-
-
-	/**
-	 * Получить свойства записи. Собственные и наследуемые
-	 * @param {Object | String} row - код либо запись номенклатуры
-	 * @param {Array | String=} props - массив свойств
-	 * @param {Object=} options - параметры выборки
-	 * @return {undefined | Array}
-	 * */
-	"getProperty": function(row, props, options) {
-		var ret = [];
-
-		if (_utils.getType(row) == "object" && row.GSID) {
-			row = this.dataReferences.get(row.GSID);
-
-		} else if (_utils.getType(row) == "string") {
-			row = this.dataReferences.get(row);
-
-		} else {
-			throw new Error("1st argument suppose to be String or Object");
-		}
-
-		if (!row)
-			return ret;
-
-		if (_utils.getType(props) == "array") {
-
-		} else if (typeof props == "string") {
-			props = [props];
-
-		} else {
-			props = [];
-		}
-
-		var c,
-			props_ = [],
-			row_ = row;
-
-		for (c = 0; c < props.length; c++) {
-			if (typeof props[c] != "string")
-				continue;
-
-			props_[c] = props[c].toLowerCase();
-		}
-
-		do {
-			if (!props_.length) {
-				ret = ret.concat(row_.gandsPropertiesRef);
+			} else if (_utils.getType(row) == "string") {
+				row = this.dataReferences.get(row);
 
 			} else {
-				for (c = 0; c < row_.gandsPropertiesRef.length; c++) {
-					if (props_.indexOf(row_.gandsPropertiesRef[c].property.toLowerCase()) > -1) {
-						ret.push(row_.gandsPropertiesRef[c]);
+				throw new Error("1st argument suppose to be String or Object");
+			}
+
+			if (!row)
+				return ret;
+
+			if (_utils.getType(props) == "array") {
+
+			} else if (typeof props == "string") {
+				props = [props];
+
+			} else {
+				props = [];
+			}
+
+			var c,
+				props_ = [],
+				row_ = row;
+
+			for (c = 0; c < props.length; c++) {
+				if (typeof props[c] != "string")
+					continue;
+
+				props_[c] = props[c].toLowerCase();
+			}
+
+			do {
+				if (!props_.length) {
+					ret = ret.concat(row_.gandsPropertiesRef);
+
+				} else {
+					for (c = 0; c < row_.gandsPropertiesRef.length; c++) {
+						if (props_.indexOf(row_.gandsPropertiesRef[c].property.toLowerCase()) > -1) {
+							ret.push(row_.gandsPropertiesRef[c]);
+						}
+					}
+
+				}
+			} while (row_ = this.getParent(row_));
+
+			if (_utils.getType(options) != "object") {
+				options = {};
+			}
+
+			if (options.onlyPriority) {
+				var priorProps = {};
+
+				for (c = 0; c < ret.length; c++) {
+					if (
+						typeof priorProps[ret[c].property] != "object"
+						|| priorProps[ret[c].property].extID.length < ret[c].extID.length
+					) {
+						priorProps[ret[c].property] = ret[c];
 					}
 				}
 
-			}
-		} while (row_ = this.getParent(row_));
+				ret = [];
 
-		if (_utils.getType(options) != "object") {
-			options = {};
-		}
-
-		if (options.onlyPriority) {
-			var priorProps = {};
-
-			for (c = 0; c < ret.length; c++) {
-				if (
-					typeof priorProps[ret[c].property] != "object"
-					|| priorProps[ret[c].property].extID.length < ret[c].extID.length
-				) {
-					priorProps[ret[c].property] = ret[c];
+				for (var prop in priorProps) {
+					if (!priorProps.hasOwnProperty(prop)) continue;
+					ret.push(priorProps[prop]);
 				}
 			}
 
-			ret = [];
-
-			for (var prop in priorProps) {
-				if (!priorProps.hasOwnProperty(prop)) continue;
-				ret.push(priorProps[prop]);
-			}
-		}
-
-		return ret;
-	},
+			return ret;
+		},
 
 
-	/**
-	 * @param {Object} arg
-	 * @param {Array} arg.cop - Массив из RegExp для поиска среди КОПов
-	 * @param {Array} arg.type
-	 * */
-	"get": function(arg) {
-		if (typeof arg != "object") arg = Object.create(null);
+		/**
+		 * @param {Object} arg
+		 * @param {Array} arg.cop - Массив из RegExp для поиска среди КОПов
+		 * @param {Array} arg.type
+		 * */
+		"get": function(arg) {
+			if (typeof arg != "object") arg = Object.create(null);
 
-		var type = _utils.getType(arg.type) == "array"
-			? arg.type
-			: [];
+			var type = _utils.getType(arg.type) == "array"
+				? arg.type
+				: [];
 
-		if (_utils.getType(arg.group) == "array")
-			type = arg.group;
+			if (_utils.getType(arg.group) == "array")
+				type = arg.group;
 
-		var cop         = _utils.getType(arg.cop) == "array" ? arg.cop : [],
-			flags       = _utils.getType(arg.flags) == "array" ? arg.flags : [],
-			useDraft    = typeof arg.useDraft == "undefined" ? true : Boolean(arg.useDraft);
+			var cop = _utils.getType(arg.cop) == "array" ? arg.cop : [],
+				flags = _utils.getType(arg.flags) == "array" ? arg.flags : [],
+				useDraft = typeof arg.useDraft == "undefined" ? true : Boolean(arg.useDraft);
 
-		if (!type.length && !cop.length) return this.data;
+			if (!type.length && !cop.length) return this.data;
 
-		var c,
-			v,
-			match,
-			tmp = [];
+			var c,
+				v,
+				match,
+				tmp = [];
 
-		if (
-			type.length == 1
-			&& !cop.length
-			&& !flags.length
-			&& useDraft
-		) {
-			if (typeof this._indexData[type[0]] != "object") {
-				return [];
-			}
-			return this._indexData[type[0]];
-		}
-
-		var flagsRegEx = new RegExp(flags.join("|"));
-
-		for (c = 0; c < this.data.length; c++) {
-
-			if (tmp.indexOf(this.data[c]) > -1) continue;
-
-			if (this._isDraft(this.data[c]) && !useDraft) {
-				continue;
-			}
-
-			if (flags.length && !this.data[c].GSFlag.match(flagsRegEx)) {
-				continue;
-			}
-
-			match = this._groupMatcher(this.data[c]);
-
-			for (v = 0; v < match.length; v++) {
-				if (type.indexOf(match[v]) > -1) {
-					tmp.push(this.data[c]);
-					break;
+			if (
+				type.length == 1
+				&& !cop.length
+				&& !flags.length
+				&& useDraft
+			) {
+				if (typeof this._indexData[type[0]] != "object") {
+					return [];
 				}
+				return this._indexData[type[0]];
 			}
 
-			for (v = 0; v < cop.length; v++) {
-				if (cop[v] instanceof RegExp) {
-					if (this.data[c].GSCOP.match(cop[v])) {
+			var flagsRegEx = new RegExp(flags.join("|"));
+
+			for (c = 0; c < this.data.length; c++) {
+
+				if (tmp.indexOf(this.data[c]) > -1) continue;
+
+				if (this._isDraft(this.data[c]) && !useDraft) {
+					continue;
+				}
+
+				if (flags.length && !this.data[c].GSFlag.match(flagsRegEx)) {
+					continue;
+				}
+
+				match = this._groupMatcher(this.data[c]);
+
+				for (v = 0; v < match.length; v++) {
+					if (type.indexOf(match[v]) > -1) {
 						tmp.push(this.data[c]);
+						break;
 					}
+				}
 
-				} else if (typeof cop[v].GSCOP == "string") {
-					if (cop[v] == this.data[c]) {
-						tmp.push(this.data[c]);
+				for (v = 0; v < cop.length; v++) {
+					if (cop[v] instanceof RegExp) {
+						if (this.data[c].GSCOP.match(cop[v])) {
+							tmp.push(this.data[c]);
+						}
+
+					} else if (typeof cop[v].GSCOP == "string") {
+						if (cop[v] == this.data[c]) {
+							tmp.push(this.data[c]);
+						}
 					}
 				}
 			}
+
+			return tmp;
+		},
+
+
+		"getGSUnit": function(GSID) {
+			if (typeof GSID == "undefined") return;
+
+			if (typeof this.GSUnits[GSID] == "undefined") return;
+
+			return this.GSUnits[GSID];
+		},
+
+
+		"GSUnitConvert": function(from, to, value) {
+			from = this._knownGSUnits[from];
+			to = this._knownGSUnits[to];
+
+			if (!to || !from)
+				throw new Error("GSUnitConvert: Unknown unit type");
+
+			if (from.type != to.type)
+				throw new Error("GSUnitConvert: must be same type");
+
+			return (+value * from.val) / to.val;
+		},
+
+
+		"getJSON": function() {
+			var ret = Object.create(null);
+
+			ret.data = this.data;
+			ret.GSUnits = this.GSUnits;
+
+			return ret
+		},
+
+
+		/**
+		 * Является ли данная строка ссылкой на номенклатуру
+		 * @param {String} str
+		 * */
+		"hasGsLinks": function(str) {
+			return !!this.matchGsLinks(str).length;
+		},
+
+
+		/**
+		 * Получить подстроки из строки, в которых содержатся ссылки на номенклатуру
+		 * @param {String} str
+		 * @return {Array | undefined}
+		 * */
+		"matchGsLinks": function(str) {
+			return (str.match(/\[gs\][a-zA-Z0-9а-яА-Я;\s]+\[\/gs\]/ig) || []).reduce(function(arr, gsLnk) {
+				gsLnk = _utils.rmGsTags(gsLnk).split(/;\s*/ig);
+
+				arr.push.apply(arr, gsLnk);
+
+				return arr;
+			}, []);
+		},
+
+
+		/**
+		 * @param {String} str
+		 * @param {Boolean} withNested - получить запись вместе с вложенными в нее
+		 * @return {Array}
+		 * */
+		"parseGsLink": function(str, withNested) {
+			var self = this;
+
+			return (self.matchGsLinks(str) || []).reduce(function(prev, curr) {
+				return prev.concat((
+						withNested
+							? self.dataRefByGSIDGroup.get(curr) || self.dataRefByGSID.get(curr)
+							: self.dataRefByGSID.get(curr)
+					) || [])
+			}, []);
 		}
 
-		return tmp;
-	},
-
-
-	"getGSUnit": function(GSID) {
-		if (typeof GSID == "undefined") return;
-
-		if (typeof this.GSUnits[GSID] == "undefined") return;
-
-		return this.GSUnits[GSID];
-	},
-
-
-	"GSUnitConvert": function(from, to, value) {
-		from = this._knownGSUnits[from];
-		to = this._knownGSUnits[to];
-
-		if (!to || !from)
-			throw new Error("GSUnitConvert: Unknown unit type");
-
-		if (from.type != to.type)
-			throw new Error("GSUnitConvert: must be same type");
-
-		return (+value * from.val) / to.val;
-	},
-
-
-	"getJSON": function() {
-		var ret = Object.create(null);
-		ret.data = this.data;
-		ret.GSUnits = this.GSUnits;
-		return ret
-	},
-
-
-	/**
-	 * Является ли данная строка ссылкой на номенклатуру
-	 * @param {String} str
-	 * */
-	"hasGsLinks": function(str) {
-		return !!this.matchGsLinks(str).length;
-	},
-
-
-	/**
-	 * Получить подстроки из строки, в которых содержатся ссылки на номенклатуру
-	 * @param {String} str
-	 * @return {Array | undefined}
-	 * */
-	"matchGsLinks": function(str) {
-		return (str.match(/\[gs\][a-zA-Z0-9а-яА-Я;\s]+\[\/gs\]/ig) || []).reduce(function(arr, gsLnk) {
-			gsLnk = _utils.rmGsTags(gsLnk).split(/;\s*/ig);
-
-			arr.push.apply(arr, gsLnk);
-
-			return arr;
-		}, []);
-	},
-
-
-	/**
-	 * @param {String} str
-	 * @param {Boolean} withNested - получить запись вместе с вложенными в нее
-	 * @return {Array}
-	 * */
-	"parseGsLink": function(str, withNested) {
-		var self = this;
-
-		return (self.matchGsLinks(str) || []).reduce(function(prev, curr) {
-			return prev.concat((
-					withNested
-						? self.dataRefByGSIDGroup.get(curr) || self.dataRefByGSID.get(curr)
-						: self.dataRefByGSID.get(curr)
-				) || [])
-		}, []);
-	}
-
-});
+	});
 
 module.exports = GandsDataModel;
