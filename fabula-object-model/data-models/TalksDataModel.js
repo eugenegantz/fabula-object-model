@@ -88,6 +88,7 @@ TalksDataModel.prototype = {
 				return resolve();
 
 			db.dbquery({
+				"dbworker": " ",
 				"query": query,
 				"callback": function(dbres, err) {
 					if (err = dbUtils.fetchErrStrFromRes(dbres))

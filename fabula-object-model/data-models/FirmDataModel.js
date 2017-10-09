@@ -91,6 +91,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 				});
 
 				db.dbquery({
+					"dbworker": " ",
 					"query": "INSERT INTO _firms (" + fields.join(",") + ") VALUES (" + values.join(",") + ")",
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -122,6 +123,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 				});
 
 				db.dbquery({
+					"dbworker": " ",
 					"query": "SELECT firmId FROM _firms WHERE " + cond.join(" AND "),
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -167,6 +169,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					return resolve();
 
 				db.dbquery({
+					"dbworker": " ",
 					"query": "UPDATE _firms SET " + values.join(", ") + " WHERE firmId = " + self.get("firmId"),
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -381,6 +384,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 							return resolve();
 
 						self.getDBInstance().dbquery({
+							"dbworker": " ",
 							"query": query,
 							"callback": function(dbres, err) {
 								if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -469,6 +473,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 							return resolve();
 
 						self.getDBInstance().dbquery({
+							"dbworker": " ",
 							"query": query,
 							"callback": function(dbres, err) {
 								if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -562,7 +567,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					return reject("FirmDataModel.exists(): firmId is empty");
 
 				db.dbquery({
-					query: ""
+					"query": ""
 					+ " SELECT email"
 					+ " FROM _firms AS firms"
 					+ " WHERE"

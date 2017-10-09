@@ -361,6 +361,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
+					"dbworker": " ",
 					"query": dbq.join("; "),
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -374,6 +375,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var promises = [
 					new Promise(function(resolve, reject) {
 						dbawws.dbquery({
+							"dbworker": " ",
 							"query": "SELECT id FROM Docs WHERE docId = '" + self.get("docId", null, !1) + "'",
 							"callback": function(dbres, err) {
 								if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -537,6 +539,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					promises.push(
 						new Promise(function(resolve, reject) {
 							dbawws.dbquery({
+								"dbworker": " ",
 								"query": dbq.join("; "),
 								"callback": function(dbres, err) {
 									if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -871,6 +874,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				}
 
 				dbawws.dbquery({
+					"dbworker": " ",
 					"query": "" +
 						"SELECT docId FROM Docs;" +
 						"SELECT RIGHT(YEAR(DATE()), 1) AS _year",

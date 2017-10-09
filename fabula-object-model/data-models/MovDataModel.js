@@ -409,6 +409,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				});
 
 				dbawws.dbquery({
+					"dbworker": " ",
 					"query": "INSERT INTO Movement (" + fields.join(",") + ") VALUES (" + values.join(",") + ")",
 					"callback": function(dbres) {
 						var err = dbUtils.fetchErrStrFromRes(dbres);
@@ -452,6 +453,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				});
 
 				dbawws.dbquery({
+					"dbworker": " ",
 					"query": "SELECT mmid FROM Movement WHERE " + cond.join(" AND ") + " ORDER BY mmid DESC",
 					"callback": function(dbres) {
 						var err = dbUtils.fetchErrStrFromRes(dbres);
@@ -485,6 +487,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				});
 
 				db.dbquery({
+					"dbworker": " ",
 					"query": query,
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -697,6 +700,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				var promises = [
 					new Promise(function(resolve, reject) {
 						dbawws.dbquery({
+							"dbworker": " ",
 							"query": dbq.join("; "),
 							"callback": function(dbres, err) {
 								if (err = dbUtils.fetchErrStrFromRes(dbres))
