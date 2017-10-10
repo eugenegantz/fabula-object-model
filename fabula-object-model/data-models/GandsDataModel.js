@@ -397,7 +397,13 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 
 		opt = opt || {};
 
+		// Если правила наследования не указаны явно, по умолчанию - наследовать из родителя
+		opt.inherits = 'inherits' in opt ? opt.inherits : true;
+
 		var res = !fld ? row.gandsExtRef : this._fetchRowExtFields(row, fld);
+
+		if (!opt.inherits)
+			return res;
 
 		res = res.concat(
 			this.getExt(
