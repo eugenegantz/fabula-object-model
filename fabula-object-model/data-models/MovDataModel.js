@@ -142,12 +142,13 @@ MovDataModel.prototype = _utils.createProtoChain(
 					return Promise.resolve();
 
 				// Если модель не инициализирована - инициализировать и получить подчиненные
-				return self.load();
+				return self.load({ "dbworker": " " });
 
 			}).then(function() {
 				var promises = [
 					new Promise(function(resolve, reject) {
 						db.dbquery({
+							"dbworker": " ",
 							"query": ""
 							+ "DELETE FROM Movement WHERE MMID = " + mmid
 
@@ -306,6 +307,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 					+   " pid = " + mmid;
 
 				dbawws.dbquery({
+					"dbworker": arg.dbworker,
 					"query": query,
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))

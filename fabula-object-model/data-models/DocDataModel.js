@@ -166,12 +166,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				if (self.state == self.STATE_DOC_READY)
 					return Promise.resolve();
 
-				return self.load();
+				return self.load({ "dbworker": " " });
 
 			}).then(function() {
 				var promises = [
 					new Promise(function(resolve, reject) {
 						db.dbquery({
+							"dbworker": " ",
 							"query": ""
 							+ " DELETE"
 							+ " FROM Property"
@@ -691,6 +692,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
+					"dbworker": arg.dbworker,
+
 					"query": ""
 					+ " SELECT " + fields.join(",")
 					+ " FROM DOCS"
