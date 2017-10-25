@@ -417,10 +417,33 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		_getSaveOpt(arg) {
+			function get2(obj) {
+				return ['insert', 'update', 'delete'].reduce(function(obj, key) {
+					if (!(key in obj))
+						obj[key] = true;
+
+					return obj;
+				}, obj || {});
+			}
+
+			var ret = ['props', 'movs', 'fields'].reduce(function(obj, key) {
+				obj[key] = get2(obj[key]);
+
+				return obj;
+			}, arg || {});
+
+			ret.movs.except = ret.movs.except || {};
+			ret.movs.except.fields = ret.movs.except.fields || {};
+			ret.movs.except.fields.mmid = [];
+
+			return ret;
+		},
+
+
 		/**
 		 * @param {Object=} ownArg - аргументы для сохр. заявки
 		 * @param {Function=} ownArg.callback
-		 * @param {Array=} ownArg.excludeMovs - игнорировать изменения в перечисленных подчиненных задачах. Массив из MMID (integer)
 		 * @param {Object=} parentArg - аргументы сохранения родительской заявки, если такая есть
 		 * @param {Object=} childrenArg - аргумент сохр. подчиненной заявки, если такие есть
 		 * @param {Object=} movArg - аргументы сохранения подчиненных задач // см. MovDataModel
@@ -432,8 +455,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			var self            = this,
 				callback        = ownArg.callback || emptyFn,
-				excludeMovs     = ownArg.excludeMovs || [],
 				dbawws          = self.getDBInstance();
+
+			ownArg.saveOpt = self._getSaveOpt(ownArg.saveOpt);
 
 			self.trigger("before-update");
 
@@ -486,56 +510,71 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					dbPropsRecs         = dbres[0].recs,
 					dbMovsRecs          = dbres[1].recs,
 					selfMovsRefByMMId   = {},
+					dbMovsRefByMMId     = {},
 					values              = [],
 					dbq                 = [];
 
 				// ------------------------------------
 				// Обновление полей в строке
 				// ------------------------------------
-				changedFields.forEach(function(key) {
-					var fldDecl = docFieldsDecl.get(key);
+				if (ownArg.saveOpt.fields.update) {
+					changedFields.forEach(function(key) {
+						var fldDecl = docFieldsDecl.get(key);
 
-					if (!fldDecl)
-						return;
+						if (!fldDecl)
+							return;
 
-					if (disabledFields.get(key))
-						return;
+						if (disabledFields.get(key))
+							return;
 
-					values.push(
-						dbUtils.mkFld(key) + " = " +
-						dbUtils.mkVal(self.get(key), fldDecl)
+						values.push(
+							dbUtils.mkFld(key) + " = " +
+							dbUtils.mkVal(self.get(key), fldDecl)
+						);
+					});
+
+					if (values.length)
+						dbq.push("UPDATE DOCS SET " + values.join(", ") + " WHERE ID = " + self.get("ID"));
+				}
+
+				// --------------------------------------
+
+				if (
+					   ownArg.saveOpt.props.insert
+					&& ownArg.saveOpt.props.update
+					&& ownArg.saveOpt.props.delete
+				) {
+					dbq.push.apply(
+						dbq,
+						[].concat(
+							self.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
+								"pid": 0,
+								"extId": self.get("docId", null, !1),
+								"extClass": "DOCS"
+							}) || []
+						)
 					);
-				});
-
-				if (values.length)
-					dbq.push("UPDATE DOCS SET " + values.join(", ") + " WHERE ID = " + self.get("ID"));
+				}
 
 				// --------------------------------------
-
-				dbq.push.apply(
-					dbq,
-					[].concat(
-						self.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
-							"pid": 0,
-							"extId": self.get("docId", null, !1),
-							"extClass": "DOCS"
-						}) || []
-					)
-				);
-
+				// Ссылки на задачи
 				// --------------------------------------
 
+				// Ссылки на задачи внутри текущего экземпляра заявки
 				self.getMov().forEach(function(mov) {
-					if (!mov || typeof mov != "object")
-						return;
-
 					selfMovsRefByMMId[mov.get("mmid", null, !1)] = mov;
 				});
 
-				// --------------------------------------
+				// Ссылки на задачи внутри текущей БД
+				dbMovsRecs.forEach(function(row) {
+					dbMovsRefByMMId[row.MMID] = row;
+				});
 
 				var promises = [];
 
+				// --------------------------------------
+				// Запросы в БД: поля и свойства заявки
+				// --------------------------------------
 				if (dbq.length) {
 					promises.push(
 						new Promise(function(resolve, reject) {
@@ -556,27 +595,37 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				// --------------------------------------
 				// Список удаленных подчиненных задач
 				// --------------------------------------
-				dbMovsRecs.forEach(function(row) {
-					if (selfMovsRefByMMId[row.MMID])
-						return;
+				if (ownArg.saveOpt.movs.delete) {
+					dbMovsRecs.forEach(function(row) {
+						if (selfMovsRefByMMId[row.MMID])
+							return;
 
-					var mov = new MovDataModel();
+						var mov = new MovDataModel();
 
-					mov.set("mmId", row.MMID);
+						mov.set("mmId", row.MMID);
 
-					promises.push(mov.rm());
-				});
+						promises.push(mov.rm());
+					});
+				}
 
 				// --------------------------------------
 
 				return Promise.all(promises).then(function() {
 					return Promise.all(
 						self.getMov().reduce(function(prev, mov) {
+							var mmId = mov.get("MMID");
+
 							if (!mov.getChanged().length && !mov.hasChangedFProperty())
 								return prev;
 
-							if (!!~excludeMovs.indexOf(mov.get("MMID")))
+							if (!!~ownArg.saveOpt.movs.except.fields.mmid.indexOf(mmId))
 								return prev;
+
+							if (dbMovsRefByMMId[mmId] && !ownArg.saveOpt.movs.update)
+								return;
+
+							if (!dbMovsRefByMMId[mmId] && !ownArg.saveOpt.movs.insert)
+								return;
 
 							if (
 								mov.get("Doc1") != self.get("DocID")

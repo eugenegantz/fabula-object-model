@@ -573,14 +573,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 					return Promise.all(promises);
 
-				}).then(function() {
+				})
+				.then(function() {
 					self._mMovClsHistory();
 
 					callback(null, self);
 
 					self.trigger("after-insert");
 
-				}).catch(function(err) {
+				})
+				.catch(function(err) {
 					callback(err, self);
 
 					return Promise.reject(err);
@@ -588,13 +590,33 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		_getSaveOpt(arg) {
+			function get2(obj) {
+				return ['insert', 'update', 'delete'].reduce(function(obj, key) {
+					if (!(key in obj))
+						obj[key] = true;
+
+					return obj;
+				}, obj || {});
+			}
+
+			var ret = ['props', 'movs', 'fields', 'talk'].reduce(function(obj, key) {
+				obj[key] = get2(obj[key]);
+
+				return obj;
+			}, arg || {});
+
+			ret.movs.except = ret.movs.except || {};
+			ret.movs.except.fields = ret.movs.except.fields || {};
+			ret.movs.except.fields.mmid = [];
+
+			return ret;
+		},
+
+
 		/**
 		 * @param {Object=} arg
-		 * @param {Boolean=true} arg.updTalk - Включатель уведомление о смене фазы
-		 * @param {Boolean=true} arg.saveChildren - Применить изменения в подчиненных задачах
 		 * @param {Boolean=} arg.saveParent - Применить изменения в родительской задаче // НЕ РАБОТАЕТ
-		 * @param {Array=} arg.excludeMovs - Игнорировать изменения в перечисленных задачах. Массив из MMID (целые числа)
-		 * @param {Array=} arg.excludeMovs - Применить изменения только в перечисленных задачах // НЕ РАБОТАЕТ
 		 * @param {Function=} arg.callback(err) - callback
 		 * @return {Promise}
 		 * */
@@ -604,10 +626,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 			var self = this,
 				dbawws          = this.getDBInstance(),
 				callback        = arg.callback || emptyFn,
-				updTalk         = !("updTalk" in arg) || arg.updTalk, // по умолчанию true
-				saveChildren    = !("saveChildren" in arg) || arg.saveChildren,
-				MMID            = self.get("mmId", null, false),
-				excludeMovs     = arg.excludeMovs || [];
+				MMID            = self.get("mmId", null, false);
+
+			arg.saveOpt = this._getSaveOpt(arg.saveOpt);
 
 			// ------------------------------------------------------------------------------
 
@@ -621,12 +642,18 @@ MovDataModel.prototype = _utils.createProtoChain(
 				dbawws.dbquery({
 					"query": ""
 					// Получение записи движения ТиУ
-					+ "SELECT MMID FROM Movement WHERE MMID = " + MMID + ";"
+					+ " SELECT MMID"
+					+ " FROM Movement"
+					+ " WHERE"
+					+   "    MMID = " + MMID
+					+   " OR MMPID = " + MMID
 
 					// Получение свойств записи
-					+ "SELECT uid, pid, ExtClass, ExtID, property, [value] FROM Property WHERE pid = " + MMID + ";"
+					+ "; SELECT uid, pid, ExtClass, ExtID, property, [value]"
+					+ " FROM Property"
+					+ " WHERE"
+					+   " pid = " + MMID,
 
-					+ "SELECT MMID FROM Movement WHERE MMPID = " + MMID,
 					"callback": function(dbres) {
 						var err = dbUtils.fetchErrStrFromRes(dbres);
 
@@ -643,52 +670,80 @@ MovDataModel.prototype = _utils.createProtoChain(
 					changedFields = self.getChanged(),
 					disabledFields = new ObjectA({ "mmid": 1 });
 
-				if (!dbres[0].recs.length)
-					return Promise.reject("MovDataModel.update(): !movs.length");
-
 				var movFieldsDecl               = self.__movDataModelDefaultFields,
+					dbCMovsRecs                 = dbres[0].recs,
 					dbPropsRecs                 = dbres[1].recs,
-					dbCMovsRecs                 = dbres[2].recs,
-					selfCMovsByMMId             = {};
+					dbMovRec                    = void 0,
+					dbCMovsRefByMMId            = {},
+					selfCMovsRefByMMId          = {};
+
+				// Оставить только подчиненные задачи
+				dbCMovsRecs = dbCMovsRecs.filter(function(row) {
+					if (row.MMID == MMID) {
+						// выбрать текущую задача
+						dbMovRec = row;
+
+						return false;
+					}
+
+					return true;
+				});
+
+				// Такой строки в БД нет
+				if (!dbMovRec)
+					return Promise.reject("MovDataModel.update(): entry with mmId = " + MMID + " is not exists");
 
 				// -----------------------------------------------------------------
 				// Ссылки на подчиненные задачи по MMID
 				// -----------------------------------------------------------------
 				self.getMov().forEach(function(mov) {
-					var mmid = mov.get("mmId");
-
-					selfCMovsByMMId[mmid] = mov;
+					selfCMovsRefByMMId[mov.get("mmId", null, !1)] = mov;
 				});
 
-				dbq.push.apply(
-					dbq,
-					[].concat(self.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
-						"pid": self.get("MMID", null, false),
-						"extClass": "DOCS",
-						"extId": self.get("Doc", null, false)
-					}) || [])
-				);
+				dbCMovsRecs.forEach(function(row) {
+					dbCMovsRefByMMId[row.MMID] = row;
+				});
+
+				// -----------------------------------------------------------------
+				// upd, ins, del property
+				// -----------------------------------------------------------------
+				if (
+					   arg.saveOpt.props.insert
+					&& arg.saveOpt.props.update
+					&& arg.saveOpt.props.delete
+				) {
+					dbq.push.apply(
+						dbq,
+						[].concat(self.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
+							"pid": self.get("MMID", null, false),
+							"extClass": "DOCS",
+							"extId": self.get("Doc", null, false)
+						}) || [])
+					);
+				}
 
 				// -----------------------------------------------------------------
 				// Обновление полей в строке
 				// -----------------------------------------------------------------
-				values = changedFields.reduce(function(prev, fldKey) {
-					if (!movFieldsDecl.get(fldKey))
+				if (arg.saveOpt.fields.update) {
+					values = changedFields.reduce(function(prev, fldKey) {
+						if (!movFieldsDecl.get(fldKey))
+							return prev;
+
+						if (disabledFields.get(fldKey))
+							return prev;
+
+						var value = self.get(fldKey, null, !1),
+							fldDecl = movFieldsDecl.get(fldKey);
+
+						prev.push(dbUtils.mkFld(fldKey) + " = " + dbUtils.mkVal(value, fldDecl));
+
 						return prev;
+					}, []);
 
-					if (disabledFields.get(fldKey))
-						return prev;
-
-					var value = self.get(fldKey, null, !1),
-						fldDecl = movFieldsDecl.get(fldKey);
-
-					prev.push(dbUtils.mkFld(fldKey) + " = " + dbUtils.mkVal(value, fldDecl));
-
-					return prev;
-				}, []);
-
-				if (values.length)
-					dbq.push("UPDATE Movement SET " + values.join(", ") + " WHERE MMID = " + MMID);
+					if (values.length)
+						dbq.push("UPDATE Movement SET " + values.join(", ") + " WHERE MMID = " + MMID);
+				}
 
 				// -----------------------------------------------------------------
 				// Если ничего не изменилось вернуть успешный промис
@@ -717,43 +772,49 @@ MovDataModel.prototype = _utils.createProtoChain(
 				// -----------------------------------------------------------------
 				// Список удаленных подчиненных задач
 				// -----------------------------------------------------------------
-				dbCMovsRecs.forEach(function(row) {
-					if (selfCMovsByMMId[row.MMID])
+				if (arg.saveOpt.movs.delete) {
+					dbCMovsRecs.forEach(function(row) {
+						if (selfCMovsRefByMMId[row.MMID])
+							return;
+
+						var mov = new MovDataModel();
+
+						mov.set("mmId", row.MMID);
+
+						promises.push(mov.rm());
+					});
+				}
+
+				// -----------------------------------------------------------------
+
+				self.getMov().forEach(function(mov) {
+					var selfMMID = self.get("MMID", null, false),
+						eachMMID = mov.get("MMID", null, false);
+
+					// Если в списке исключений, игнорировать любые изменения
+					if (!!~arg.saveOpt.movs.except.fields.mmid.indexOf(eachMMID))
 						return;
 
-					var mov = new MovDataModel();
+					// Если ничего не менялось, то и выполнять сохранения нет смысла
+					if (!mov.getChanged().length && !mov.hasChangedFProperty())
+						return;
 
-					mov.set("mmId", row.MMID);
+					if (dbCMovsRefByMMId[eachMMID] && !arg.saveOpt.movs.update)
+						return;
 
-					promises.push(mov.rm());
+					if (!dbCMovsRefByMMId[eachMMID] && !arg.saveOpt.movs.insert)
+						return;
+
+					if (mov.get("MMPID", null, !1) != selfMMID)
+						mov.set("MMPID", selfMMID, null, !1);
+
+					promises.push(mov.save({ "useNotification": false }));
 				});
 
 				// -----------------------------------------------------------------
 
-				if (saveChildren) {
-					self.getMov().forEach(function(mov) {
-						var selfMMID = self.get("MMID", null, false),
-							eachMMID = mov.get("MMID", null, false);
-
-						// Если в списке исключений, игнорировать любые изменения
-						if (!!~excludeMovs.indexOf(eachMMID))
-							return;
-
-						// Если ничего не менялось, то и выполнять сохранения нет смысла
-						if (!mov.getChanged().length && !mov.hasChangedFProperty())
-							return;
-
-						if (mov.get("MMPID", null, !1) != selfMMID)
-							mov.set("MMPID", selfMMID, null, !1);
-
-						promises.push(mov.save({ "useNotification": false }));
-					});
-				} // close.save.children
-
-				// -----------------------------------------------------------------
-
 				if (
-					updTalk
+					arg.saveOpt.talk.update
 					&& self.get("MMFlag", null, !1)
 					&& self.get("MMID", null, !1)
 					&& !!~changedFields.indexOf("mmflag")
