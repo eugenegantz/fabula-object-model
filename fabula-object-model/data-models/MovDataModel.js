@@ -37,6 +37,8 @@ function MovDataModel() {
 	this._mMovClsHistory();
 
 	this.state = this.STATE_MOV_INITIAL;
+
+	this.iFabModuleSetDefDBCache("*m-mov");
 }
 
 MovDataModel.prototype = _utils.createProtoChain(
@@ -142,12 +144,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 					return Promise.resolve();
 
 				// Если модель не инициализирована - инициализировать и получить подчиненные
-				return self.load({ "dbworker": " " });
+				return self.load({
+					"dbworker": " ",
+					"dbcache": self.iFabModuleGetDBCache(arg) + "-rm"
+				});
 
 			}).then(function() {
 				var promises = [
 					new Promise(function(resolve, reject) {
 						db.dbquery({
+							"dbcache": self.iFabModuleGetDBCache(arg) + "-rm",
 							"dbworker": " ",
 							"query": ""
 							+ "DELETE FROM Movement WHERE MMID = " + mmid
@@ -155,13 +161,13 @@ MovDataModel.prototype = _utils.createProtoChain(
 							+ "; DELETE"
 							+ " FROM Property"
 							+ " WHERE"
-							+   " extClass = 'DOCS'"
+							+   "     extClass = 'DOCS'"
 							+   " AND pid = " + mmid
 
 							+ "; DELETE"
 							+ " FROM Ps_property"
 							+ " WHERE"
-							+   " extClass = 'DOCS'"
+							+   "     extClass = 'DOCS'"
 							+   " AND pid = " + mmid
 
 							+ "; DELETE FROM talk WHERE mm = " + mmid,
@@ -291,22 +297,23 @@ MovDataModel.prototype = _utils.createProtoChain(
 					+ " SELECT " + fields.join(",")
 					+ " FROM Movement "
 					+ " WHERE"
-					+   " mmid = " + mmid
+					+   "    mmid = " + mmid
 					+   " OR mmpid = " + mmid
 
 					// Свойства записи
 					+ "; SELECT"
-					+   " uid,"
-					+   " pid,"
-					+   " ExtClass,"
-					+   " ExtID,"
-					+   " property,"
-					+   " value"
+					+   "  uid"
+					+   ", pid"
+					+   ", ExtClass"
+					+   ", ExtID"
+					+   ", property"
+					+   ", value"
 					+ " FROM Property"
 					+ " WHERE"
 					+   " pid = " + mmid;
 
 				dbawws.dbquery({
+					"dbcache": self.iFabModuleGetDBCache(arg) + "-load",
 					"dbworker": arg.dbworker,
 					"query": query,
 					"callback": function(dbres, err) {
@@ -479,7 +486,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 						+ " DELETE"
 						+ " FROM Property"
 						+ " WHERE"
-						+   " ExtClass = 'DOCS'"
+						+   "     ExtClass = 'DOCS'"
 						+   " AND pid = " + self.get("mmid", null, !1) + ";";
 
 				query += self.getUpsertOrDelFPropsQueryStrByDBRes([], {
@@ -640,6 +647,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
+					"dbcache": self.iFabModuleGetDBCache(arg) + "-upd-init",
+
 					"query": ""
 					// Получение записи движения ТиУ
 					+ " SELECT MMID"
@@ -757,6 +766,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				var promises = [
 					new Promise(function(resolve, reject) {
 						dbawws.dbquery({
+							"dbcache": self.iFabModuleGetDBCache(arg) + "-upd",
 							"dbworker": " ",
 							"query": dbq.join("; "),
 							"callback": function(dbres, err) {
@@ -968,6 +978,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 			} else {
 				promise = new Promise(function(resolve, reject) {
 					dbawws.dbquery({
+						"dbcache": self.iFabModuleGetDBCache(arg) + "-save",
 						"query": "SELECT mmid FROM Movement WHERE mmid = " + mmid,
 						"callback": function(dbres, err) {
 							if (err = dbUtils.fetchErrStrFromRes(dbres))

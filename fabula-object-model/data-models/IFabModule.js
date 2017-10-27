@@ -6,6 +6,24 @@ module.exports = IFabModule;
 
 module.exports.prototype = {
 
+	DB_CACHE_RAND: Math.random(),
+
+
+	iFabModuleGetDBCache(arg) {
+		arg = arg || {};
+
+		if (arg.dbcache == this.DB_CACHE_RAND)
+			return this.iFabModuleDefDBCacheStr + Math.random().toString().replace("0.", "");
+
+		return arg.dbcache || this.iFabModuleDefDBCacheStr;
+	},
+
+
+	iFabModuleSetDefDBCache(str) {
+		this.iFabModuleDefDBCacheStr = str;
+	},
+
+
 	getFabulaInstance: function() {
 		return this._fabulaInstance;
 	},

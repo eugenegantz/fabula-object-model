@@ -34,6 +34,8 @@ var DocDataModel = function() {
 	this._mDocClsHistory();
 
 	this.state = this.STATE_DOC_INITIAL;
+
+	this.iFabModuleSetDefDBCache("*m-doc");
 };
 
 DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
@@ -166,32 +168,38 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				if (self.state == self.STATE_DOC_READY)
 					return Promise.resolve();
 
-				return self.load({ "dbworker": " " });
+				return self.load({
+					"dbcache": self.iFabModuleGetDBCache(arg) + "-rm",
+					"dbworker": " "
+				});
 
 			}).then(function() {
 				var promises = [
 					new Promise(function(resolve, reject) {
 						db.dbquery({
+							"dbcache": self.iFabModuleGetDBCache(arg) + "-rm",
+
 							"dbworker": " ",
+
 							"query": ""
 							+ " DELETE"
 							+ " FROM Property"
 							+ " WHERE"
-							+   " extClass = 'DOCS'"
+							+   "     extClass = 'DOCS'"
 							+   " AND pid = 0"
 							+   " AND extId = '" + docId + "'"
 
 							+ "; DELETE"
 							+ " FROM Ps_property"
 							+ " WHERE"
-							+   " extClass = 'DOCS'"
+							+   "     extClass = 'DOCS'"
 							+   " AND pid = 0"
 							+   " AND extId = '" + docId + "'"
 
 							+ "; DELETE"
-							+   " FROM Docs"
-							+   " WHERE"
-							+       " docId = '" + docId + "'",
+							+ " FROM Docs"
+							+ " WHERE"
+							+   " docId = '" + docId + "'",
 
 							"callback": function(dbres, err) {
 								if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -256,14 +264,19 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				return new Promise(function(resolve, reject) {
 					dbawws.dbquery({
-						"query": "" +
-						"SELECT" +
-						"   ID," +
-						"   DocID" +
-						" FROM DOCS" +
-						" WHERE" +
-						"   DocID = '" + self.get("docId") + "'" +
-						"   OR id = " + self.get("id"),
+						"dbcache": self.iFabModuleGetDBCache(arg) + "-save",
+
+						"dbworker": " ",
+
+						"query": ""
+						+ " SELECT"
+						+   "  ID"
+						+   ", DocID"
+						+ " FROM DOCS"
+						+ " WHERE"
+						+   "    DocID = '" + self.get("docId") + "'"
+						+   " OR id = " + self.get("id"),
+
 						"callback": function(dbres, err) {
 							if (err = dbUtils.fetchErrStrFromRes(dbres))
 								return reject(err);
@@ -362,6 +375,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
+					"dbcache": self.iFabModuleGetDBCache(arg) + "-ins",
 					"dbworker": " ",
 					"query": dbq.join("; "),
 					"callback": function(dbres, err) {
@@ -376,8 +390,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var promises = [
 					new Promise(function(resolve, reject) {
 						dbawws.dbquery({
+							"dbcache": self.iFabModuleGetDBCache(arg) + "-get-id",
+
 							"dbworker": " ",
+
 							"query": "SELECT id FROM Docs WHERE docId = '" + self.get("docId", null, !1) + "'",
+
 							"callback": function(dbres, err) {
 								if (err = dbUtils.fetchErrStrFromRes(dbres))
 									return reject(err);
@@ -463,16 +481,18 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
+					"dbcache": self.iFabModuleGetDBCache(ownArg) + "-upd-init",
+
 					"query": ""
 					+ "SELECT"
-					+   " uid,"
-					+   " property,"
-					+   " [value],"
-					+   " ExtID"
-					+ " FROM Property "
-					+ " WHERE "
-					+   " pid = 0"
-					+   " AND ExtClass = 'DOCS' "
+					+   "  uid"
+					+   ", property"
+					+   ", [value]"
+					+   ", ExtID"
+					+ " FROM Property"
+					+ " WHERE"
+					+   "     pid = 0"
+					+   " AND ExtClass = 'DOCS'"
 					+   " AND ExtID IN ("
 					+       " SELECT DocID"
 					+       " FROM DOCS"
@@ -480,8 +500,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					+           " id = " + self.get("id", null, !1)
 					+   ")"
 
-					+ ";"
-					+ " SELECT MMID"
+					+ "; SELECT MMID"
 					+ " FROM Movement"
 					+ " WHERE"
 					+   " Doc IN ("
@@ -579,6 +598,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					promises.push(
 						new Promise(function(resolve, reject) {
 							dbawws.dbquery({
+								"dbcache": self.iFabModuleGetDBCache(ownArg) + "-upd",
 								"dbworker": " ",
 								"query": dbq.join("; "),
 								"callback": function(dbres, err) {
@@ -699,6 +719,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			arg = arg || {};
 
 			var self        = this,
+				movArg      = arg.movArg,
 				dbawws      = self.getDBInstance(),
 				callback    = arg.callback || emptyFn,
 				docId       = self.get("docId", null, !1),
@@ -741,6 +762,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
+					"dbcache": self.iFabModuleGetDBCache(arg) + "-load",
+
 					"dbworker": arg.dbworker,
 
 					"query": ""
@@ -749,23 +772,21 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					+ " WHERE"
 					+   " DocID = '" + docId + "'"
 
-					+ ";"
-					+ " SELECT mmid"
+					+ "; SELECT mmid"
 					+ " FROM Movement"
 					+ " WHERE"
 					+   " Doc = '" + docId + "'"
 					+ (useSubMovs ? " OR ParentDoc = '" + docId + "' " : "")
 
-					+ ";"
-					+ " SELECT"
-					+   " uid,"
-					+   " extClass,"
-					+   " extID,"
-					+   " property,"
-					+   " value"
+					+ "; SELECT"
+					+   "  uid"
+					+   ", extClass"
+					+   ", extID"
+					+   ", property"
+					+   ", value"
 					+ " FROM Property"
 					+ " WHERE"
-					+   " pid = 0"
+					+   "     pid = 0"
 					+   " AND ExtClass = 'DOCS'"
 					+   " AND ExtID = '" + docId + "'",
 
@@ -805,7 +826,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 						self.addMov(mov);
 
-						return mov.load();
+						return mov.load(movArg);
 					})
 				);
 
@@ -926,10 +947,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				}
 
 				dbawws.dbquery({
+					"dbcache": "new-doc-id-" + Math.random().toString().replace("0.", ""),
+
 					"dbworker": " ",
+
 					"query": "" +
-						"SELECT docId FROM Docs;" +
-						"SELECT RIGHT(YEAR(DATE()), 1) AS _year",
+						"  SELECT docId FROM Docs" +
+						"; SELECT RIGHT(YEAR(DATE()), 1) AS _year",
+
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
 							return reject(err);
