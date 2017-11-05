@@ -62,7 +62,7 @@ module.exports = {
 
 		return str
 			.replace(new RegExp(/["']/ig), "")
-			.replace(new RegExp(/[№]/ig), "N");
+			// .replace(new RegExp(/[№]/ig), "N");
 	},
 
 

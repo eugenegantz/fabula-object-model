@@ -7,7 +7,7 @@ _utils.DBSecureStr = function(str){
 	if (typeof str != "string") return str;
 	var a = [
 		[new RegExp(/["']/g),""],
-		[new RegExp(/[№]/gi),"N"]
+		// [new RegExp(/[№]/gi),"N"]
 		// [new RegExp(/[\n\v\r]/gi),""]
 	];
 	for(var c=0; c< a.length; c++){
