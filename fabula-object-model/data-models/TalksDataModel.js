@@ -56,9 +56,9 @@ TalksDataModel.prototype = {
 
 				if (!idx && nextMMFlag) {
 					return str + ""
-						+ " INSERT INTO Talk (Dt, Txt, Agent, [MM], [Tm], [Key], [part])"
+						+ " INSERT INTO Talk (dt, txt, agent, [mm], [tm], [key], [part])"
 						+ " SELECT"
-						+   " DATE()"
+						+   " NOW()"
 						+   " ," + "'Фаза: ' & mmFlag & ' &rArr; " + nextMMFlag + (msg ? "<br>" + msg : "") + "'"
 						+   " ," + agent
 						+   " ," + "mmId"
@@ -72,9 +72,9 @@ TalksDataModel.prototype = {
 				}
 
 				return str + ""
-					+ " INSERT INTO Talk (Dt, Txt, Agent, [MM], [Tm], [Key], [part])"
+					+ " INSERT INTO Talk (dt, txt, agent, [mm], [tm], [key], [part])"
 					+ " VALUES ("
-					+   " DATE()"
+					+   " NOW()"
 					+   " ," + "'" + msg + "'"
 					+   " ," + agent
 					+   " ," + mmId
