@@ -1,17 +1,22 @@
 "use strict";
 
 function MField(arg) {
-	arg = arg || {};
-
-	this.maxHistoryLen = 100;
-	this._stash = {};
-	this._val = void 0;
-	this._modelCtx = arg.modelCtx;
-
-	this.clearHistory();
+	this.mFieldConstructor(arg);
 }
 
 MField.prototype = {
+
+	"mFieldConstructor": function(arg) {
+		arg = arg || {};
+
+		this.maxHistoryLen = 100;
+		this._stash = {};
+		this._val = void 0;
+		this._modelCtx = arg.modelCtx;
+
+		this.clearHistory();
+	},
+
 
 	"get": function() {
 		return this._val;
