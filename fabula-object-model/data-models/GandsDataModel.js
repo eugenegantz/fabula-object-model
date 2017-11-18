@@ -7,6 +7,7 @@ var DefaultDataModel = require("./DefaultDataModel");
 var IEvents = require("./InterfaceEvents");
 var ObjectA = require("./ObjectA");
 var _utils = require("./../utils/utils");
+var dbUtils = require("./../utils/dbUtils");
 
 // Для совместимости
 var getContextDB = function(){
@@ -97,8 +98,11 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 		/*#if browser,node*/
 		// Номеклатура
 		db.dbquery({
+			"dbcache": Math.random().toString().replace("0.", ""),
 			"query": "SELECT pid, extID, property, value FROM Property WHERE ExtID IN(SELECT [value] FROM Property WHERE extClass = 'config' AND property = 'fom-config-entry-gsid')",
-			"callback": function(dbres){
+			"callback": function(dbres, err){
+				if (err = dbUtils.fetchErrStrFromRes(dbres))
+					return callback(err);
 
 				// Конфиг по-умолчанию
 				var dbq = [
@@ -144,8 +148,12 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 
 				if (db){
 					db.dbquery({
+						"dbcache": Math.random().toString().replace("0.", ""),
 						"query" : dbq.join("; "),
-						"callback" : function(res){
+						"callback" : function(res, err){
+							if (err = dbUtils.fetchErrStrFromRes(res))
+								return callback(err);
+
 							self._afterLoad(
 								{
 									"data": res[0].recs.concat(configRow),

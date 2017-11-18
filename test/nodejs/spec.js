@@ -17,17 +17,12 @@ assert.notOk = function(val) {
 	assert.strictEqual(val, false);
 };
 
-global.globFabulaObjectModelConfig = {
-	"dburl": "http://127.0.0.1:9000/db?",
-	"dbname": "well.demo",
-	"dbsrc": "main"
-};
+global.globFabulaObjectModelConfig = require("./../db-config-awws.js").dbconfigs[0];
 
 require('./../case/fabula-object-model/spec.js');
 require('./../case/object-a/spec.js');
 require('./../case/object-b/spec.js');
 require('./../case/utils/spec.js');
-require('./../case/ajax-module/spec.js');
 require('./../case/default-data-model/spec.js');
 require("./../case/firms-data-model/spec.js");
 require('./../case/gands-data-model/spec.js');

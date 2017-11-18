@@ -6,7 +6,7 @@ module.exports = IFabModule;
 
 module.exports.prototype = {
 
-	DB_CACHE_RAND: Math.random(),
+	DB_CACHE_RAND: Math.random().toString().replace("0.", ""),
 
 
 	iFabModuleGetDBCache(arg) {

@@ -54,20 +54,20 @@ describe("DocDataModel", function() {
 		this.timeout(5000);
 
 		db.dbquery({
+			"dbcache": Math.random() + "",
+
+			"dbworker": " ",
+
 			"query": ""
 			+ "DELETE FROM talk WHERE mm IN (SELECT mmid FROM Movement WHERE gsSpec = '" + sid +  "')"
 
-			+ ";"
-			+ "DELETE FROM Property WHERE property = 'mov" + sid + "'"
+			+ "; DELETE FROM Property WHERE property = 'mov" + sid + "'"
 
-			+ ";"
-			+ "DELETE FROM Property WHERE property = 'doc" + sid + "'"
+			+ "; DELETE FROM Property WHERE property = 'doc" + sid + "'"
 
-			+ ";"
-			+ "DELETE FROM Movement WHERE gsSpec = '" + sid + "'"
+			+ "; DELETE FROM Movement WHERE gsSpec = '" + sid + "'"
 
-			+ ";"
-			+ "DELETE FROM Docs WHERE notice = '" + sid + "' AND notice IS NOT NULL",
+			+ "; DELETE FROM Docs WHERE notice = '" + sid + "' AND notice IS NOT NULL",
 			callback: function() {
 				cb();
 			}
@@ -117,7 +117,12 @@ describe("DocDataModel", function() {
 
 			}).then(function() {
 				db.dbquery({
+					"dbworker": " ",
+
+					"dbcache": Math.random() + "",
+
 					"query": "SELECT docId FROM DOCS WHERE docId = '" + docId + "'",
+
 					"callback": function(dbres) {
 						checkDBRecs = dbres.recs;
 
@@ -150,7 +155,7 @@ describe("DocDataModel", function() {
 			}).then(function(docId) {
 				doc.set("docId", docId);
 
-				return doc.insert();
+				return doc.insert({ "dbcache": Math.random() + "" });
 
 			}).then(function() {
 				return new Promise(function(resolve, reject) {
@@ -163,11 +168,14 @@ describe("DocDataModel", function() {
 						+   " AND firmContract = 1";
 
 					db.dbquery({
+						"dbworker": " ",
+
+						"dbcache": Math.random() + "",
+
 						"query": ""
 							+ _query
 
-							+ ";"
-							+ "SELECT [value]"
+							+ "; SELECT [value]"
 							+ " FROM Property"
 							+ " WHERE"
 							+   " pid = 0"
@@ -175,8 +183,7 @@ describe("DocDataModel", function() {
 							+   " AND extClass = 'DOCS'"
 							+   " AND extId IN (" + _query + ")"
 
-							+ ";"
-							+ "SELECT mmId"
+							+ "; SELECT mmId"
 							+ " FROM Movement"
 							+ " WHERE"
 							+   " doc IN (" + _query + ")",
@@ -213,6 +220,8 @@ describe("DocDataModel", function() {
 		afterEach(clearDB);
 
 		describe("Изменились только поля заявки", function() {
+			this.timeout(6000);
+
 			var doc,
 				dbRecsMovs,
 				dbRecsProps,
@@ -220,6 +229,8 @@ describe("DocDataModel", function() {
 				eventMovUpd = 0;
 
 			before(function(done) {
+				this.timeout(6000);
+
 				doc = mkDoc();
 
 				doc.getNewDocID({
@@ -228,7 +239,7 @@ describe("DocDataModel", function() {
 				}).then(function(docId) {
 					doc.set("docId", docId);
 
-					return doc.insert();
+					return doc.insert({ "dbcache": Math.random() + "" });
 
 				}).then(function() {
 					doc.set({
@@ -243,7 +254,7 @@ describe("DocDataModel", function() {
 						});
 					});
 
-					return doc.update();
+					return doc.update({ "dbcache": Math.random() + "" });
 
 				}).then(function() {
 					return new Promise(function(resolve, reject) {
@@ -251,18 +262,21 @@ describe("DocDataModel", function() {
 							+ "SELECT docId"
 							+ " FROM Docs"
 							+ " WHERE"
-							+ " notice = '" + sid + "'"
+							+   "     notice = '" + sid + "'"
 							+   " AND agent = '888'"
 							+   " AND docId = '" + doc.get("docId") + "'"
 							+   " AND company = '" + doc.get("company") + "'"
 							+   " AND firmContract = 1";
 
 						db.dbquery({
+							"dbcache": Math.random() + "",
+
+							"dbworker": " ",
+
 							"query": ""
 							+ _query
 
-							+ ";"
-							+ "SELECT [value]"
+							+ "; SELECT [value]"
 							+ " FROM Property"
 							+ " WHERE"
 							+   " pid = 0"
@@ -270,8 +284,7 @@ describe("DocDataModel", function() {
 							+   " AND extClass = 'DOCS'"
 							+   " AND extId IN (" + _query + ")"
 
-							+ ";"
-							+ "SELECT mmId"
+							+ "; SELECT mmId"
 							+ " FROM Movement"
 							+ " WHERE"
 							+   " doc IN (" + _query + ")",
@@ -316,6 +329,8 @@ describe("DocDataModel", function() {
 				movChangedFields = [];
 
 			before(function(done) {
+				this.timeout(6000);
+
 				doc = mkDoc();
 
 				doc.getNewDocID({
@@ -324,10 +339,13 @@ describe("DocDataModel", function() {
 				}).then(function(docId) {
 					doc.set("docId", docId);
 
-					return doc.insert();
+					return doc.insert({ "dbcache": Math.random() + "" });
 
 				}).then(function() {
-					return doc.load();
+					return doc.load({
+						"dbcache": Math.random() + "",
+						"dbworker": " ",
+					});
 
 				}).then(function() {
 					doc.set({
@@ -344,7 +362,7 @@ describe("DocDataModel", function() {
 						});
 					});
 
-					return doc.update();
+					return doc.update({ "dbcache": Math.random() + "" });
 
 				}).then(function() {
 					return new Promise(function(resolve, reject) {
@@ -359,20 +377,22 @@ describe("DocDataModel", function() {
 							+   " AND firmContract = 1";
 
 						db.dbquery({
+							"dbworker": " ",
+
+							"dbcache": Math.random() + "",
+
 							"query": ""
 							+ _query
 
-							+ ";"
-							+ "SELECT [value]"
+							+ "; SELECT [value]"
 							+ " FROM Property"
 							+ " WHERE"
-							+   " pid = 0"
+							+   "     pid = 0"
 							+   " AND property = 'doc" + sid + "'"
 							+   " AND extClass = 'DOCS'"
 							+   " AND extId IN (" + _query + ")"
 
-							+ ";"
-							+ "SELECT mmId"
+							+ "; SELECT mmId"
 							+ " FROM Movement"
 							+ " WHERE"
 							+   " doc IN (" + _query + ")",
@@ -419,6 +439,8 @@ describe("DocDataModel", function() {
 				movChangedFields = [];
 
 			before(function(done) {
+				this.timeout(6000);
+
 				doc = mkDoc();
 
 				doc.getNewDocID({
@@ -427,7 +449,7 @@ describe("DocDataModel", function() {
 				}).then(function(docId) {
 					doc.set("docId", docId);
 
-					return doc.insert();
+					return doc.insert({ "dbcache": Math.random() + "" });
 
 				}).then(function() {
 					// Событие ОБЯЗАНО выстрелить
@@ -442,7 +464,7 @@ describe("DocDataModel", function() {
 						});
 					});
 
-					return doc.update();
+					return doc.update({ "dbcache": Math.random() + "" });
 
 				}).then(function() {
 					done();
@@ -468,15 +490,23 @@ describe("DocDataModel", function() {
 				dbRecsMovs;
 
 			before(function(done) {
+				this.timeout(6000);
+
 				doc = mkDoc();
 
-				doc.save().then(function() {
+				doc.save({
+					"dbcache": Math.random() + "",
+				}).then(function() {
 					doc.delMov(doc.getMov()[0]);
 
-					return doc.save();
+					return doc.save({ "dbcache": Math.random() + "" });
 
 				}).then(function() {
 					db.dbquery({
+						"dbworker": " ",
+
+						"dbcache": Math.random() + "",
+
 						"query": ""
 						+ "SELECT mmId FROM Movement"
 						+ " WHERE"
@@ -509,6 +539,8 @@ describe("DocDataModel", function() {
 				eventDocBeforeInsert = false;
 
 			before(function(done) {
+				this.timeout(6000);
+
 				doc = mkDoc();
 
 				doc.on("before-insert", function() {
@@ -517,7 +549,9 @@ describe("DocDataModel", function() {
 					nextDocId = doc.get("docId");
 				});
 
-				doc.save().then(function() {
+				doc.save({
+					"dbcache": Math.random() + ""
+				}).then(function() {
 					done();
 				}).catch(done);
 			});
@@ -540,24 +574,30 @@ describe("DocDataModel", function() {
 				eventDocBeforeUpdate = false;
 
 			before(function(done) {
+				this.timeout(6000);
+
 				doc = mkDoc();
 
 				doc.on("before-update", function() {
 					eventDocBeforeUpdate = true;
 				});
 
-				doc
-					.save()
-					.then(doc.save.bind(doc))
-					.then(function() {
-						done();
+				doc.save({
+					"dbcache": Math.random() + ""
+				}).then(function() {
+					return doc.save({
+						"dbcache": Math.random() + ""
 					});
+
+				}).then(function() {
+					done();
+				});
 			});
 
 			it(
 				"заявка обрела новый docId; " +
 				"docId появился до записи заявки; " +
-				"выполнено событие before-insert",
+				"выполнено событие before-update",
 				function() {
 					assert.ok(!doc.getChanged().length);
 					assert.ok(!doc.hasChangedFProperty());
@@ -575,9 +615,13 @@ describe("DocDataModel", function() {
 			fields;
 
 		before(function(done) {
+			this.timeout(6000);
+
 			doc = mkDoc();
 
-			doc.save().then(function() {
+			doc.save({
+				"dbcache": Math.random() + ""
+			}).then(function() {
 				doc2 = fom.create("DocDataModel");
 
 				doc2.set("docId", doc.get("docId"));
@@ -590,7 +634,9 @@ describe("DocDataModel", function() {
 				});
 
 				return doc2.load({
-					fields: fields
+					"fields": fields,
+					"dbworker": " ",
+					"dbcache": Math.random() + ""
 				});
 			}).then(function() {
 				done();
@@ -648,6 +694,8 @@ describe("DocDataModel", function() {
 			stand.doc.addMov(fom.create("MovDataModel"));
 
 			stand.doc.save({
+				"dbcache": Math.random() + "",
+
 				"callback": function(err) {
 
 					if (err) {
@@ -656,11 +704,16 @@ describe("DocDataModel", function() {
 					}
 
 					db.dbquery({
+						"dbworker": " ",
+
+						"dbcache": Math.random() + "",
+
 						"query": [
 							"SELECT pid FROM Property WHERE ExtID = '" + stand.doc.get("DocID") + "' ",
 							"SELECT MMID FROM Movement WHERE Doc = '" + stand.doc.get("DocID") + "' ",
 							"SELECT Agent, Manager FROM DOCS WHERE DocID = '" + stand.doc.get("DocID") + "' "
 						].join("; "),
+
 						"callback": function(dbres) {
 							if (dbres[0].recs.length != 9) {
 								done(new Error("props.length != 9"));
@@ -702,7 +755,12 @@ describe("DocDataModel", function() {
 			stand.doc.set("DocID", doc);
 
 			stand.doc.load({
+				"dbworker": " ",
+
+				"dbcache": Math.random() + "",
+
 				"taskModel": fom._getModule("MovDataModel"),
+
 				"callback": function(err) {
 					// Fi6ру47661, 28505, Анатолий +73519036679
 
@@ -763,6 +821,8 @@ describe("DocDataModel", function() {
 			stand.doc.set("Manage", 888);
 
 			stand.doc.save({
+				"dbcache": Math.random() + "",
+
 				"callback": function(err) {
 
 					if (err) {
@@ -771,6 +831,10 @@ describe("DocDataModel", function() {
 					}
 
 					db.dbquery({
+						"dbworker": " ",
+
+						"dbcache": Math.random() + "",
+
 						"query": [
 							"SELECT DocType, Company, DocID FROM DOCS WHERE DocID = '" + stand.doc.get("DocID") + "' ",
 
@@ -784,6 +848,7 @@ describe("DocDataModel", function() {
 
 							"SELECT MMID, MMFlag, Doc FROM Movement WHERE Doc = '" + stand.doc.get("DocID") + "' "
 						].join(";"),
+
 						"callback": function(dbres) {
 
 							var doc = dbres[0].recs[0];

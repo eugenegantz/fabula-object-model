@@ -92,6 +92,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 				db.dbquery({
 					"dbworker": " ",
+					"dbcache": "m-firm-ins-" + Math.random().toString().replace("0.", ""),
 					"query": "INSERT INTO _firms (" + fields.join(",") + ") VALUES (" + values.join(",") + ")",
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -124,6 +125,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 				db.dbquery({
 					"dbworker": " ",
+					"dbcache": "m-firm-ins-id-" + Math.random().toString().replace("0.", ""),
 					"query": "SELECT firmId FROM _firms WHERE " + cond.join(" AND "),
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -170,6 +172,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 				db.dbquery({
 					"dbworker": " ",
+					"dbcache":"m-firm-upd-" + Math.random().toString().replace("0.", ""),
 					"query": "UPDATE _firms SET " + values.join(", ") + " WHERE firmId = " + self.get("firmId"),
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -186,6 +189,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 		 * Инициализировать контрагента из БД
 		 * @param {Object} arg
 		 * @param {Function=} arg.callback
+		 * @param {String=} arg.dbworker
 		 * @return {Promise}
 		 * */
 		"load": function(arg) {
@@ -225,6 +229,8 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 			return new Promise(function(resolve, reject) {
 				db.dbquery({
+					"dbcache": "m-firm-load-" + Math.random().toString().replace("0.", ""),
+					"dbworker": arg.dbworker,
 					"query": query,
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -363,59 +369,61 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 			self.trigger("before-insert");
 
-			return self.exists()
-				.then(function(isEx) {
-					if (isEx)
-						return Promise.reject("FirmDataModel.insert(): firm already exists");
+			return self.exists().then(function(isEx) {
+				if (isEx)
+					return Promise.reject("FirmDataModel.insert(): firm already exists");
 
-					return Promise.resolve();
-				})
-				.then(self._promiseInsertUsr.bind(self))
-				.then(self._promiseGetInsertedId.bind(self))
-				.then(function() {
-					return new Promise(function(resolve, reject) {
-						var query = self.getUpsertOrDelFPropsQueryStrByDBRes([], {
-							"pid": null,
-							"extClass": "FIRMS",
-							"extId": self.get("firmId", null, !1)
-						});
+			}).then(function() {
+				return self._promiseInsertUsr();
 
-						if (!query)
-							return resolve();
+			}).then(function() {
+				return self._promiseGetInsertedId();
 
-						self.getDBInstance().dbquery({
-							"dbworker": " ",
-							"query": query,
-							"callback": function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									return reject(err);
-
-								resolve();
-							}
-						});
+			}).then(function() {
+				return new Promise(function(resolve, reject) {
+					var query = self.getUpsertOrDelFPropsQueryStrByDBRes([], {
+						"pid": null,
+						"extClass": "FIRMS",
+						"extId": self.get("firmId", null, !1)
 					});
-				})
-				.then(function() {
-					return Promise.all(
-						self.getBranch().map(function(firm) {
-							firm.set("parent_id", self.get("FirmId"));
 
-							return firm.save();
-						})
-					);
-				})
-				.then(function() {
-					self.clearChanged();
+					if (!query)
+						return resolve();
 
-					self.trigger("after-insert");
+					self.getDBInstance().dbquery({
+						"dbworker": " ",
+						"dbcache":"m-firm-ins-prop-" + Math.random().toString().replace("0.", ""),
+						"query": query,
+						"callback": function(dbres, err) {
+							if (err = dbUtils.fetchErrStrFromRes(dbres))
+								return reject(err);
 
-					callback(self, null);
-				})
-				.catch(function(err) {
-					callback(self, err);
-
-					return Promise.reject(err);
+							resolve();
+						}
+					});
 				});
+
+			}).then(function() {
+				return Promise.all(
+					self.getBranch().map(function(firm) {
+						firm.set("parent_id", self.get("FirmId"));
+
+						return firm.save();
+					})
+				);
+
+			}).then(function() {
+				self.clearChanged();
+
+				self.trigger("after-insert");
+
+				callback(self, null);
+
+			}).catch(function(err) {
+				callback(self, err);
+
+				return Promise.reject(err);
+			});
 		},
 
 
@@ -434,77 +442,79 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 			self.trigger("before-update");
 
-			return self.exists()
-				.then(function(isEx) {
-					if (!isEx)
-						return Promise.reject("FirmDataModel.update(): firm do not exists");
+			return self.exists().then(function(isEx) {
+				if (!isEx)
+					return Promise.reject("FirmDataModel.update(): firm do not exists");
 
-					return Promise.resolve();
-				})
-				.then(self._promiseUpdateUsr.bind(self))
-				.then(function() {
-					return new Promise(function(resolve, reject) {
-						db.dbquery({
-							"query": ""
-							+ " SELECT uid, [value], property, extClass, extId"
-							+ " FROM Property"
-							+ " WHERE"
-							+   " extClass = 'FIRMS'"
-							+   " AND extId = '" + self.get('firmId') + "'",
-							"callback": function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									return reject(err);
+			}).then(function() {
+				return self._promiseUpdateUsr()
 
-								resolve(dbres);
-							}
-						});
+			}).then(function() {
+				return new Promise(function(resolve, reject) {
+					db.dbquery({
+						"dbcache":"m-firm-upd-sel-" + Math.random().toString().replace("0.", ""),
+						"dbworker": " ",
+						"query": ""
+						+ " SELECT uid, [value], property, extClass, extId"
+						+ " FROM Property"
+						+ " WHERE"
+						+   " extClass = 'FIRMS'"
+						+   " AND extId = '" + self.get('firmId') + "'",
+						"callback": function(dbres, err) {
+							if (err = dbUtils.fetchErrStrFromRes(dbres))
+								return reject(err);
 
-					})
-				})
-				.then(function(dbres) {
-					return new Promise(function(resolve, reject) {
-						var query = self.getUpsertOrDelFPropsQueryStrByDBRes(dbres.recs, {
-							"pid": null,
-							"extClass": "FIRMS",
-							"extId": self.get("firmId", null, !1)
-						});
-
-						if (!query)
-							return resolve();
-
-						self.getDBInstance().dbquery({
-							"dbworker": " ",
-							"query": query,
-							"callback": function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									return reject(err);
-
-								resolve();
-							}
-						});
+							resolve(dbres);
+						}
 					});
-				})
-				.then(function() {
-					return Promise.all(
-						self.getBranch().map(function(firm) {
-							firm.set("parent_id", self.get("FirmId"));
 
-							return firm.save();
-						})
-					);
-				})
-				.then(function() {
-					self.clearChanged();
-
-					self.trigger("after-update");
-
-					callback(self, null);
-				})
-				.catch(function(err) {
-					callback(self, err);
-
-					return Promise.reject(err);
 				});
+
+			}).then(function(dbres) {
+				return new Promise(function(resolve, reject) {
+					var query = self.getUpsertOrDelFPropsQueryStrByDBRes(dbres.recs, {
+						"pid": null,
+						"extClass": "FIRMS",
+						"extId": self.get("firmId", null, !1)
+					});
+
+					if (!query)
+						return resolve();
+
+					self.getDBInstance().dbquery({
+						"dbcache":"m-firm-upd-prop" + Math.random().toString().replace("0.", ""),
+						"dbworker": " ",
+						"query": query,
+						"callback": function(dbres, err) {
+							if (err = dbUtils.fetchErrStrFromRes(dbres))
+								return reject(err);
+
+							resolve();
+						}
+					});
+				});
+
+			}).then(function() {
+				return Promise.all(
+					self.getBranch().map(function(firm) {
+						firm.set("parent_id", self.get("FirmId"));
+
+						return firm.save();
+					})
+				);
+
+			}).then(function() {
+				self.clearChanged();
+
+				self.trigger("after-update");
+
+				callback(self, null);
+
+			}).catch(function(err) {
+				callback(self, err);
+
+				return Promise.reject(err);
+			});
 		},
 
 
@@ -528,9 +538,14 @@ FirmDataModel.prototype = utils.createProtoChain(
 					return reject("FirmDataModel.rm(): !usrId");
 
 				db.dbquery({
-					"query": "" +
-					"DELETE FROM Property WHERE extClass = 'FIRMS' AND extId = '" + id + "';" +
-					"DELETE FROM _firms WHERE firmId = " + id,
+					"dbworker": " ",
+
+					"dbcache":"m-firm-rm-" + Math.random().toString().replace("0.", ""),
+
+					"query": ""
+					+ "DELETE FROM Property WHERE extClass = 'FIRMS' AND extId = '" + id+ "" + "'"
+					+ "; DELETE FROM _firms WHERE firmId = " + id,
+
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
 							return reject(err);
@@ -567,6 +582,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					return reject("FirmDataModel.exists(): firmId is empty");
 
 				db.dbquery({
+					"dbcache":"m-firm-exs-" + Math.random().toString().replace("0.", ""),
 					"query": ""
 					+ " SELECT email"
 					+ " FROM _firms AS firms"

@@ -1,0 +1,14 @@
+module.exports = {
+
+	"dbconfigs": [
+		{
+			"faburl": "http://192.168.3.98:9000/",
+			"dburl": "http://192.168.3.98:9000/db?",
+			"dbsrc": "main",
+			"dbname": "well",
+			"dbworker": "*",
+			"dblogdir": "d:/EG/s-print/logs/db/"
+		}
+	]
+
+};

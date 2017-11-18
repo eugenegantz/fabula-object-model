@@ -11,19 +11,22 @@ describe("MovDataModel", function() {
 		timestamp = 1420056000000,
 		date = new Date(timestamp),
 
-		sid = (Math.random() + '').slice(-10);
+		sid = (Math.random() + "").slice(-10);
 
 
 	function clearDB(mov, cb) {
 		db.dbquery({
+			"dbcache": Math.random() + "",
+
+			"dbworker": " ",
+
 			"query": ""
 				+ "DELETE FROM talk WHERE mm IN (SELECT mmid FROM Movement WHERE gsSpec = '" + sid +  "')"
-				+ ";"
 
-				+ "DELETE FROM Property WHERE property = '" + sid + "'"
-				+ ";"
+				+ "; DELETE FROM Property WHERE property = '" + sid + "'"
 
-				+ "DELETE FROM Movement WHERE gsSpec = '" + sid + "'",
+				+ "; DELETE FROM Movement WHERE gsSpec = '" + sid + "'",
+
 			callback: function() {
 				cb();
 			}
@@ -585,18 +588,21 @@ describe("MovDataModel", function() {
 				mov.addMov(mkMov());
 				mov.addMov(mkMov());
 
-				mov.save().then(
-					mov.rm.bind(mov)
-				).then(function() {
+				mov.save().then(() => {
+					return mov.rm({ "dbcache": Math.random() + "" });
+				}).then(function() {
 					db.dbquery({
+						"dbworker": " ",
+
+						"dbcache": Math.random() + "",
+
 						"query": ""
 						+ "SELECT mmid FROM Movement WHERE gsSpec = '" + sid + "'"
-						+ ";"
+						+ "; SELECT mm FROM talk WHERE mm = " + mov.get("mmid", null, false),
 
-						+ "SELECT mm FROM talk WHERE mm = " + mov.get("mmid", null, false),
 						"callback": function(dbres, err) {
 							if (err = dbUtils.fetchErrStrFromRes(dbres))
-								throw new Error(err);
+								return done(err);
 
 							pMovRecs = dbres[0].recs;
 							pMovTalkRecs = dbres[1].recs;
@@ -611,7 +617,6 @@ describe("MovDataModel", function() {
 				assert.equal(pMovRecs.length, 0);
 				assert.equal(pMovTalkRecs.length, 0);
 			});
-
 		});
 
 
@@ -674,7 +679,6 @@ describe("MovDataModel", function() {
 					});
 				});
 			});
-
 		});
 
 		describe('Проверка уникальности', function() {
@@ -720,9 +724,6 @@ describe("MovDataModel", function() {
 			it('', function() {
 				assert.equal(movsDBRecs.length, 10);
 			});
-
 		});
-
 	});
-
 });

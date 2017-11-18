@@ -13,13 +13,17 @@ describe("GandsDataModel", function() {
 
 		it("gands.data.length > 0", function(done) {
 			gm.load({
-				callback: function() {
+				callback: function(err) {
+					if (err)
+						return done(err);
+
 					if (!gm.data.length) {
 						throw new Error("!gands.data.length");
 					}
 					if (!Object.keys(gm._indexData).length) {
 						throw new Error("!gands._indexData.length");
 					}
+
 					done();
 				}
 			})

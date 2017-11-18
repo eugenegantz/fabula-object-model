@@ -9,7 +9,7 @@ describe("FirmDataModel", function() {
 		timestamp = 1420056000000,
 		date = new Date(timestamp),
 
-		sid = (Math.random() + '').slice(-10);
+		sid = (Math.random() + "").slice(-10);
 
 	function reset(cb) {
 
@@ -37,27 +37,27 @@ describe("FirmDataModel", function() {
 	});
 
 	describe(".insert()", function() {
-
+		// TODO
 	});
 
 	describe(".update()", function() {
-
+		// TODO
 	});
 
 	describe(".save()", function() {
-
+		// TODO
 	});
 
 	describe(".load()", function() {
-
+		// TODO
 	});
 
 	describe(".exists()", function() {
-
+		// TODO
 	});
 
 	describe(".rm()", function() {
-
+		// TODO
 	});
 
 });
