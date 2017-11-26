@@ -3,7 +3,7 @@
 // ------------------------------------------------------
 // Номенклатура
 
-var DefaultDataModel = require("./DefaultDataModel");
+var IFabModule = require("./IFabModule.js");
 var IEvents = require("./InterfaceEvents");
 var ObjectA = require("./ObjectA");
 var _utils = require("./../utils/utils");
@@ -25,11 +25,14 @@ var getContextDB = function(){
  * @constructor
  * */
 var GandsDataModel = function(){
+	IFabModule.call(this);
+
 	this.init();
 };
 
-GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvents,{
-	"init" : function(){
+GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule.prototype, {
+
+	"init" : function() {
 
 		this.dbModel = null;
 
@@ -46,6 +49,7 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 		this._indexData = {}; // after init => Object
 
 	},
+
 
 	"instances" : [],
 
@@ -98,7 +102,7 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 		/*#if browser,node*/
 		// Номеклатура
 		db.dbquery({
-			"dbcache": Math.random().toString().replace("0.", ""),
+			"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-gs.load-0" }),
 			"query": "SELECT pid, extID, property, value FROM Property WHERE ExtID IN(SELECT [value] FROM Property WHERE extClass = 'config' AND property = 'fom-config-entry-gsid')",
 			"callback": function(dbres, err){
 				if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -148,7 +152,7 @@ GandsDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(IEvent
 
 				if (db){
 					db.dbquery({
-						"dbcache": Math.random().toString().replace("0.", ""),
+						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-gs.load-1" }),
 						"query" : dbq.join("; "),
 						"callback" : function(res, err){
 							if (err = dbUtils.fetchErrStrFromRes(res))

@@ -362,6 +362,8 @@ describe("MovDataModel", function() {
 
 					mov.insert().then(function() {
 						db.dbquery({
+							"dbworker": " ",
+
 							"query": ""
 							// гл. задача
 							+ "SELECT mmid"
@@ -400,6 +402,7 @@ describe("MovDataModel", function() {
 							+ " WHERE"
 							+ "     txt LIKE '%" + mov.get("mmflag", null, false) + "%'"
 							+ "     AND mm = " + mov.get("mmid", null, false),
+
 							"callback": function(dbres, err) {
 								if (err = dbUtils.fetchErrStrFromRes(dbres))
 									throw new Error(err);
@@ -450,7 +453,7 @@ describe("MovDataModel", function() {
 					mov.addProperty(null);
 					mov.addProperty({ value: "" });
 
-					mov.save().then(function() {
+					mov.save({ "dbworker": " " }).then(function() {
 						mov.set("mmflag", "4");
 						mov.set("sum", "100");
 
@@ -468,10 +471,12 @@ describe("MovDataModel", function() {
 							})
 						});
 
-						return mov.save();
+						return mov.save({ "dbworker": " " });
 
 					}).then(function() {
 						db.dbquery({
+							"dbworker": " ",
+
 							"query": ""
 							// гл. задача
 							+ "SELECT mmid"
@@ -589,7 +594,7 @@ describe("MovDataModel", function() {
 				mov.addMov(mkMov());
 
 				mov.save().then(() => {
-					return mov.rm({ "dbcache": Math.random() + "" });
+					return mov.rm();
 				}).then(function() {
 					db.dbquery({
 						"dbworker": " ",

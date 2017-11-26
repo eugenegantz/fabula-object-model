@@ -1,7 +1,8 @@
 "use strict";
 
-var utils = require("./../utils/utils"),
-	dbUtils = require("./../utils/dbUtils.js"),
+var dbUtils = require("./../utils/dbUtils.js"),
+	utils = require("./../utils/utils.js"),
+	IFabModule = require("./IFabModule.js"),
 	voidFn = function() {};
 
 // Для совместимости
@@ -15,12 +16,14 @@ var getContextDB = function() {
 	return DBModel.prototype.getInstance();
 };
 
+
 var TalksDataModel = function() {
+	IFabModule.call(this);
+
 	this.instances.push(this);
 };
 
-
-TalksDataModel.prototype = {
+TalksDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
 
 	"instances": [],
 
@@ -28,6 +31,19 @@ TalksDataModel.prototype = {
 	"STR_LIMIT": 250,
 
 
+	/**
+	 * Записать сообщение на форум к задаче
+	 *
+	 * @param {Object} arg
+	 * @param {String=} arg.MMFlag - код фазы
+	 * @param {String=999} arg.agent - идентификатор агента от имени которого отправить запись
+	 * @param {String=} arg.message - текст сообщение
+	 * @param {Number} arg.MMID - идентификатор задачи
+	 * @param {String | Object=} arg.dbcache
+	 * @param {Function=} arg.callback
+	 *
+	 * @return {Promise}
+	 * */
 	"postTalk": function(arg) {
 		arg = arg || {};
 
@@ -90,6 +106,7 @@ TalksDataModel.prototype = {
 			db.dbquery({
 				"dbworker": " ",
 				"query": query,
+				"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-talk.post" }),
 				"callback": function(dbres, err) {
 					if (err = dbUtils.fetchErrStrFromRes(dbres))
 						return reject(err);
@@ -111,6 +128,6 @@ TalksDataModel.prototype = {
 		return this.instances[0] || new TalksDataModel();
 	}
 
-};
+});
 
 module.exports = TalksDataModel;

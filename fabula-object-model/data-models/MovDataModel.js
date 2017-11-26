@@ -37,8 +37,6 @@ function MovDataModel() {
 	this._mMovClsHistory();
 
 	this.state = this.STATE_MOV_INITIAL;
-
-	this.iFabModuleSetDefDBCache("*m-mov");
 }
 
 MovDataModel.prototype = _utils.createProtoChain(
@@ -126,9 +124,12 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
-		 * Удалить запись и подчинен. ей записи
+		 * Удалить запись и подчинен. ей записи из БД
+		 *
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
+		 *
 		 * @return {Promise}
 		 * */
 		"rm": function(arg) {
@@ -146,14 +147,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 				// Если модель не инициализирована - инициализировать и получить подчиненные
 				return self.load({
 					"dbworker": " ",
-					"dbcache": self.iFabModuleGetDBCache(arg) + "-rm"
+					"dbcache": arg.dbcache
 				});
 
 			}).then(function() {
 				var promises = [
 					new Promise(function(resolve, reject) {
 						db.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg) + "-rm",
+							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.rm-d" }),
 							"dbworker": " ",
 							"query": ""
 							+ "DELETE FROM Movement WHERE MMID = " + mmid
@@ -187,7 +188,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 						if (!mov || !mov.get("mmid", null, !1))
 							return prev;
 
-						prev.push(mov.rm());
+						prev.push(
+							mov.rm({
+								"dbcache": arg.dbcache
+							})
+						);
 
 						return prev;
 					},
@@ -243,8 +248,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
+		 * Инициализировать запись из БД
+		 *
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @param {Array=} arg.fields
+		 * @param {String | Object=} arg.dbcache
+		 * @param {String=} arg.dbworker
+		 *
 		 * @return {Promise}
 		 * */
 		"load": function(arg) {
@@ -313,7 +324,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 					+   " pid = " + mmid;
 
 				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg) + "-load",
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.load" }),
 					"dbworker": arg.dbworker,
 					"query": query,
 					"callback": function(dbres, err) {
@@ -390,8 +401,21 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"_insertMov": function() {
+
+		/**
+		 * Записать в таблицу
+		 *
+		 * @private
+		 *
+		 * @param {Object=} arg
+		 * @param {String | Object=} arg.dbcache
+		 *
+		 * @return {Promise}
+		 * */
+		"_insertMov": function(arg) {
 			var self = this;
+
+			arg = arg || {};
 
 			return new Promise(function(resolve, reject) {
 				var dbawws = self.getDBInstance(),
@@ -419,6 +443,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				dbawws.dbquery({
 					"dbworker": " ",
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.ins-0" }),
 					"query": "INSERT INTO Movement (" + fields.join(",") + ") VALUES (" + values.join(",") + ")",
 					"callback": function(dbres) {
 						var err = dbUtils.fetchErrStrFromRes(dbres);
@@ -433,8 +458,18 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"_getInsertedMMId": function() {
+		/**
+		 * Получить записанный mmId из БД
+		 *
+		 * @param {Object=} arg
+		 * @param {String | Object=} arg.dbcache
+		 *
+		 * @return {Promise}
+		 * */
+		"_getInsertedMMId": function(arg) {
 			var self = this;
+
+			arg = arg || {};
 
 			return new Promise(function(resolve, reject) {
 				var dbawws = self.getDBInstance(),
@@ -463,6 +498,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				dbawws.dbquery({
 					"dbworker": " ",
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.ins-id" }),
 					"query": "SELECT mmid FROM Movement WHERE " + cond.join(" AND ") + " ORDER BY mmid DESC",
 					"callback": function(dbres) {
 						var err = dbUtils.fetchErrStrFromRes(dbres);
@@ -477,8 +513,18 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"_insertProps": function() {
+		/**
+		 * Записать свойства в БД
+		 *
+		 * @param {Object=} arg
+		 * @param {String | Object=} arg.dbcache
+		 *
+		 * @return {Promise}
+		 * */
+		"_insertProps": function(arg) {
 			var self = this;
+
+			arg = arg || {};
 
 			return new Promise(function(resolve, reject) {
 				var db = self.getDBInstance(),
@@ -497,6 +543,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				db.dbquery({
 					"dbworker": " ",
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.ins-p" }),
 					"query": query,
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -510,8 +557,12 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
+		 * Новая запись в ДБ
+		 *
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
+		 *
 		 * @return {Promise}
 		 * */
 		"insert": function(arg) {
@@ -541,63 +592,65 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			// -----------------------------------------------------------------
 
-			return this._insertMov(arg)
-				.then(function() {
-					if (self.get("mmid", null, false))
-						return;
+			return this._insertMov(arg).then(function() {
+				if (self.get("mmid", null, false))
+					return;
 
-					return self._getInsertedMMId().then(function(mmid) {
-						self.set("mmid", mmid, null, !1);
-						console.log("MOV-AWAITED-MMID: " + mmid);
-					});
-				})
-				.then(self._insertProps.bind(self))
-				.then(function() {
-					var promises = self.getMov().map(function(mov) {
-						mov.set("MMPID", self.get("MMID", null, false));
-
-						return mov.save();
-					});
-
-					promises.push(
-						new Promise(function(resolve, reject) {
-							var docDataObj = self.get("DocDataObject"),
-								talksInstance = TalksDataModel.prototype.getInstance();
-
-							talksInstance.postTalk({
-								"MMID": self.get("MMID", null, !1),
-								"MMFlag": self.get("MMFlag", null, !1),
-								"agent": !docDataObj ? "999" : (docDataObj.get("agent", null, !1) || 999),
-								"callback": function(err) {
-									if (err)
-										return reject(err);
-
-									resolve();
-								}
-							});
-						})
-					);
-
-					return Promise.all(promises);
-
-				})
-				.then(function() {
-					self._mMovClsHistory();
-
-					callback(null, self);
-
-					self.trigger("after-insert");
-
-				})
-				.catch(function(err) {
-					callback(err, self);
-
-					return Promise.reject(err);
+				return self._getInsertedMMId(arg).then(function(mmid) {
+					self.set("mmid", mmid, null, !1);
+					console.log("MOV-AWAITED-MMID: " + mmid);
 				});
+
+			}).then(function() {
+				return self._insertProps(arg);
+
+			}).then(function() {
+				var promises = self.getMov().map(function(mov) {
+					mov.set("MMPID", self.get("MMID", null, false));
+
+					return mov.save({
+						"dbcache": arg.dbcache
+					});
+				});
+
+				promises.push(
+					new Promise(function(resolve, reject) {
+						var docDataObj = self.get("DocDataObject"),
+							talksInstance = TalksDataModel.prototype.getInstance();
+
+						talksInstance.postTalk({
+							"MMID": self.get("MMID", null, !1),
+							"MMFlag": self.get("MMFlag", null, !1),
+							"agent": !docDataObj ? "999" : (docDataObj.get("agent", null, !1) || 999),
+							"dbcache": arg.dbcache,
+							"callback": function(err) {
+								if (err)
+									return reject(err);
+
+								resolve();
+							}
+						});
+					})
+				);
+
+				return Promise.all(promises);
+
+			}).then(function() {
+				self._mMovClsHistory();
+
+				callback(null, self);
+
+				self.trigger("after-insert");
+
+			}).catch(function(err) {
+				callback(err, self);
+
+				return Promise.reject(err);
+			});
 		},
 
 
-		_getSaveOpt(arg) {
+		_getSaveOpt: function(arg) {
 			function get2(obj) {
 				return ['insert', 'update', 'delete'].reduce(function(obj, key) {
 					if (!(key in obj))
@@ -622,9 +675,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
+		 * Обновить запись в БД
+		 *
 		 * @param {Object=} arg
 		 * @param {Boolean=} arg.saveParent - Применить изменения в родительской задаче // НЕ РАБОТАЕТ
 		 * @param {Function=} arg.callback(err) - callback
+		 * @param {String | Object=} arg.dbcache
+		 * @param {String=} arg.dbworker
+		 *
 		 * @return {Promise}
 		 * */
 		"update": function(arg) {
@@ -647,7 +705,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg) + "-upd-init",
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.upd-s" }),
+
+					"dbworker": arg.dbworker,
 
 					"query": ""
 					// Получение записи движения ТиУ
@@ -675,11 +735,10 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			}).then(function(dbres) {
 				var values,
-					dbq = [],
-					changedFields = self.getChanged(),
-					disabledFields = new ObjectA({ "mmid": 1 });
-
-				var movFieldsDecl               = self.__movDataModelDefaultFields,
+					dbq                         = [],
+					changedFields               = self.getChanged(),
+					disabledFields              = new ObjectA({ "mmid": 1 }),
+					movFieldsDecl               = self.__movDataModelDefaultFields,
 					dbCMovsRecs                 = dbres[0].recs,
 					dbPropsRecs                 = dbres[1].recs,
 					dbMovRec                    = void 0,
@@ -766,7 +825,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				var promises = [
 					new Promise(function(resolve, reject) {
 						dbawws.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg) + "-upd",
+							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.upd-0" }),
 							"dbworker": " ",
 							"query": dbq.join("; "),
 							"callback": function(dbres, err) {
@@ -791,7 +850,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 						mov.set("mmId", row.MMID);
 
-						promises.push(mov.rm());
+						promises.push(
+							mov.rm({
+								"dbcache": arg.dbcache
+							})
+						);
 					});
 				}
 
@@ -818,7 +881,12 @@ MovDataModel.prototype = _utils.createProtoChain(
 					if (mov.get("MMPID", null, !1) != selfMMID)
 						mov.set("MMPID", selfMMID, null, !1);
 
-					promises.push(mov.save({ "useNotification": false }));
+					promises.push(
+						mov.save({
+							"dbcache": arg.dbcache,
+							"useNotification": false
+						})
+					);
 				});
 
 				// -----------------------------------------------------------------
@@ -868,6 +936,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		/**
+		 * Спросить историю
+		 * */
 		"_mMovClsHistory": function() {
 			this.clearChanged();
 			this.clearFPropertyHistory();
@@ -978,7 +1049,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 			} else {
 				promise = new Promise(function(resolve, reject) {
 					dbawws.dbquery({
-						"dbcache": self.iFabModuleGetDBCache(arg) + "-save",
+						"dbworker": arg.dbworker,
+						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.save" }),
 						"query": "SELECT mmid FROM Movement WHERE mmid = " + mmid,
 						"callback": function(dbres, err) {
 							if (err = dbUtils.fetchErrStrFromRes(dbres))

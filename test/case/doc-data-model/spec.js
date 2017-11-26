@@ -155,7 +155,7 @@ describe("DocDataModel", function() {
 			}).then(function(docId) {
 				doc.set("docId", docId);
 
-				return doc.insert({ "dbcache": Math.random() + "" });
+				return doc.insert();
 
 			}).then(function() {
 				return new Promise(function(resolve, reject) {
@@ -239,7 +239,7 @@ describe("DocDataModel", function() {
 				}).then(function(docId) {
 					doc.set("docId", docId);
 
-					return doc.insert({ "dbcache": Math.random() + "" });
+					return doc.insert();
 
 				}).then(function() {
 					doc.set({
@@ -254,7 +254,7 @@ describe("DocDataModel", function() {
 						});
 					});
 
-					return doc.update({ "dbcache": Math.random() + "" });
+					return doc.update();
 
 				}).then(function() {
 					return new Promise(function(resolve, reject) {
@@ -339,13 +339,10 @@ describe("DocDataModel", function() {
 				}).then(function(docId) {
 					doc.set("docId", docId);
 
-					return doc.insert({ "dbcache": Math.random() + "" });
+					return doc.insert();
 
 				}).then(function() {
-					return doc.load({
-						"dbcache": Math.random() + "",
-						"dbworker": " ",
-					});
+					return doc.load({ "dbworker": " " });
 
 				}).then(function() {
 					doc.set({
@@ -362,7 +359,7 @@ describe("DocDataModel", function() {
 						});
 					});
 
-					return doc.update({ "dbcache": Math.random() + "" });
+					return doc.update();
 
 				}).then(function() {
 					return new Promise(function(resolve, reject) {
@@ -449,7 +446,7 @@ describe("DocDataModel", function() {
 				}).then(function(docId) {
 					doc.set("docId", docId);
 
-					return doc.insert({ "dbcache": Math.random() + "" });
+					return doc.insert();
 
 				}).then(function() {
 					// Событие ОБЯЗАНО выстрелить
@@ -464,7 +461,7 @@ describe("DocDataModel", function() {
 						});
 					});
 
-					return doc.update({ "dbcache": Math.random() + "" });
+					return doc.update();
 
 				}).then(function() {
 					done();
@@ -494,12 +491,10 @@ describe("DocDataModel", function() {
 
 				doc = mkDoc();
 
-				doc.save({
-					"dbcache": Math.random() + "",
-				}).then(function() {
+				doc.save().then(function() {
 					doc.delMov(doc.getMov()[0]);
 
-					return doc.save({ "dbcache": Math.random() + "" });
+					return doc.save();
 
 				}).then(function() {
 					db.dbquery({
@@ -549,9 +544,7 @@ describe("DocDataModel", function() {
 					nextDocId = doc.get("docId");
 				});
 
-				doc.save({
-					"dbcache": Math.random() + ""
-				}).then(function() {
+				doc.save().then(function() {
 					done();
 				}).catch(done);
 			});
@@ -582,12 +575,8 @@ describe("DocDataModel", function() {
 					eventDocBeforeUpdate = true;
 				});
 
-				doc.save({
-					"dbcache": Math.random() + ""
-				}).then(function() {
-					return doc.save({
-						"dbcache": Math.random() + ""
-					});
+				doc.save().then(function() {
+					return doc.save();
 
 				}).then(function() {
 					done();
@@ -619,9 +608,7 @@ describe("DocDataModel", function() {
 
 			doc = mkDoc();
 
-			doc.save({
-				"dbcache": Math.random() + ""
-			}).then(function() {
+			doc.save().then(function() {
 				doc2 = fom.create("DocDataModel");
 
 				doc2.set("docId", doc.get("docId"));
@@ -635,8 +622,7 @@ describe("DocDataModel", function() {
 
 				return doc2.load({
 					"fields": fields,
-					"dbworker": " ",
-					"dbcache": Math.random() + ""
+					"dbworker": " "
 				});
 			}).then(function() {
 				done();
@@ -694,8 +680,6 @@ describe("DocDataModel", function() {
 			stand.doc.addMov(fom.create("MovDataModel"));
 
 			stand.doc.save({
-				"dbcache": Math.random() + "",
-
 				"callback": function(err) {
 
 					if (err) {
@@ -756,8 +740,6 @@ describe("DocDataModel", function() {
 
 			stand.doc.load({
 				"dbworker": " ",
-
-				"dbcache": Math.random() + "",
 
 				"taskModel": fom._getModule("MovDataModel"),
 
@@ -821,8 +803,6 @@ describe("DocDataModel", function() {
 			stand.doc.set("Manage", 888);
 
 			stand.doc.save({
-				"dbcache": Math.random() + "",
-
 				"callback": function(err) {
 
 					if (err) {
