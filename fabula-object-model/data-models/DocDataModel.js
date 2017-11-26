@@ -34,8 +34,6 @@ var DocDataModel = function() {
 	this._mDocClsHistory();
 
 	this.state = this.STATE_DOC_INITIAL;
-
-	this.iFabModuleSetDefDBCache("*m-doc");
 };
 
 DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
@@ -169,7 +167,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					return Promise.resolve();
 
 				return self.load({
-					"dbcache": self.iFabModuleGetDBCache(arg) + "-rm",
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.rm0" }),
 					"dbworker": " "
 				});
 
@@ -177,7 +175,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var promises = [
 					new Promise(function(resolve, reject) {
 						db.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg) + "-rm",
+							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.rm1" }),
 
 							"dbworker": " ",
 
@@ -264,7 +262,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				return new Promise(function(resolve, reject) {
 					dbawws.dbquery({
-						"dbcache": self.iFabModuleGetDBCache(arg) + "-save",
+						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save" }),
 
 						"dbworker": " ",
 
@@ -375,7 +373,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg) + "-ins",
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.ins0" }),
 					"dbworker": " ",
 					"query": dbq.join("; "),
 					"callback": function(dbres, err) {
@@ -390,7 +388,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var promises = [
 					new Promise(function(resolve, reject) {
 						dbawws.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg) + "-get-id",
+							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.ins1" }),
 
 							"dbworker": " ",
 
@@ -435,7 +433,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
-		_getSaveOpt(arg) {
+		_getSaveOpt: function(arg) {
 			function get2(obj) {
 				return ['insert', 'update', 'delete'].reduce(function(obj, key) {
 					if (!(key in obj))
@@ -481,7 +479,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(ownArg) + "-upd-init",
+					"dbcache": self.iFabModuleGetDBCache(ownArg.dbcache, { "m": "m-doc.upd0" }),
 
 					"query": ""
 					+ "SELECT"
@@ -598,7 +596,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					promises.push(
 						new Promise(function(resolve, reject) {
 							dbawws.dbquery({
-								"dbcache": self.iFabModuleGetDBCache(ownArg) + "-upd",
+								"dbcache": self.iFabModuleGetDBCache(ownArg.dbcache, { "m": "m-doc.upd1" }),
 								"dbworker": " ",
 								"query": dbq.join("; "),
 								"callback": function(dbres, err) {
@@ -762,7 +760,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg) + "-load",
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.load" }),
 
 					"dbworker": arg.dbworker,
 
@@ -947,7 +945,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				}
 
 				dbawws.dbquery({
-					"dbcache": "new-doc-id-" + Math.random().toString().replace("0.", ""),
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.n-doc-id" }),
 
 					"dbworker": " ",
 

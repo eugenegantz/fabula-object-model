@@ -1,5 +1,8 @@
 "use strict";
 
+var voidFn = function() {};
+
+
 /**
  * Для совместимости
  * @ignore
@@ -53,15 +56,16 @@ AgentsDataModel.prototype = {
 	 * Инициализация данных из БД
 	 * */
 	"load": function(arg) {
-		if (typeof arg == "undefined") arg = Object.create(null);
+		arg = arg || {};
 
-		var callback = typeof arg.callback == "function" ? arg.callback : function() {},
+		var callback = arg.callback || voidFn,
 			db = getContextDB.call(this),
 			self = this;
 
 		if (!db) return;
 
 		db.dbquery({
+			"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-ag.load" }),
 			"query": "SELECT AgentID, FIO, NameShort, NameFull, User FROM Agents",
 			"callback": function(res) {
 				self.data = res.recs;

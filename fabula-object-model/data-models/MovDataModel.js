@@ -37,8 +37,6 @@ function MovDataModel() {
 	this._mMovClsHistory();
 
 	this.state = this.STATE_MOV_INITIAL;
-
-	this.iFabModuleSetDefDBCache("*m-mov");
 }
 
 MovDataModel.prototype = _utils.createProtoChain(
@@ -146,14 +144,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 				// Если модель не инициализирована - инициализировать и получить подчиненные
 				return self.load({
 					"dbworker": " ",
-					"dbcache": self.iFabModuleGetDBCache(arg) + "-rm"
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.rm0" })
 				});
 
 			}).then(function() {
 				var promises = [
 					new Promise(function(resolve, reject) {
 						db.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg) + "-rm",
+							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.rm1" }),
 							"dbworker": " ",
 							"query": ""
 							+ "DELETE FROM Movement WHERE MMID = " + mmid
@@ -313,7 +311,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 					+   " pid = " + mmid;
 
 				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg) + "-load",
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.load" }),
 					"dbworker": arg.dbworker,
 					"query": query,
 					"callback": function(dbres, err) {
@@ -597,7 +595,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		_getSaveOpt(arg) {
+		_getSaveOpt: function(arg) {
 			function get2(obj) {
 				return ['insert', 'update', 'delete'].reduce(function(obj, key) {
 					if (!(key in obj))
@@ -647,7 +645,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg) + "-upd-init",
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.upd0" }),
 
 					"query": ""
 					// Получение записи движения ТиУ
@@ -766,7 +764,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				var promises = [
 					new Promise(function(resolve, reject) {
 						dbawws.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg) + "-upd",
+							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.upd1" }),
 							"dbworker": " ",
 							"query": dbq.join("; "),
 							"callback": function(dbres, err) {
@@ -978,7 +976,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 			} else {
 				promise = new Promise(function(resolve, reject) {
 					dbawws.dbquery({
-						"dbcache": self.iFabModuleGetDBCache(arg) + "-save",
+						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.save" }),
 						"query": "SELECT mmid FROM Movement WHERE mmid = " + mmid,
 						"callback": function(dbres, err) {
 							if (err = dbUtils.fetchErrStrFromRes(dbres))

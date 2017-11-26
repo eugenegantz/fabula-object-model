@@ -6,21 +6,22 @@ module.exports = IFabModule;
 
 module.exports.prototype = {
 
-	DB_CACHE_RAND: Math.random().toString().replace("0.", ""),
+	iFabModuleGetDBCache: function() {
+		var dbcache = Array.prototype.slice.call(arguments, 0);
 
+		dbcache = dbcache.reduce(function(obj, dbc, idx) {
+			if (typeof dbc == "string")
+				obj[idx] = dbc;
 
-	iFabModuleGetDBCache(arg) {
-		arg = arg || {};
+			else if (typeof dbc == "object")
+				Object.assign(obj, dbc);
 
-		if (arg.dbcache == this.DB_CACHE_RAND)
-			return this.iFabModuleDefDBCacheStr + Math.random().toString().replace("0.", "");
+			return obj;
+		}, {
+			r: Math.random().toString().replace("0.", "").slice(-4)
+		});
 
-		return arg.dbcache || this.iFabModuleDefDBCacheStr;
-	},
-
-
-	iFabModuleSetDefDBCache(str) {
-		this.iFabModuleDefDBCacheStr = str;
+		return JSON.stringify(dbcache);
 	},
 
 

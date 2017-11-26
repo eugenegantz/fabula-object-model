@@ -71,7 +71,9 @@ FirmDataModel.prototype = utils.createProtoChain(
 		}),
 
 
-		"_promiseInsertUsr": function() {
+		"_promiseInsertUsr": function(arg) {
+			arg = arg || {};
+
 			var self = this;
 
 			return new Promise(function(resolve, reject) {
@@ -92,7 +94,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 				db.dbquery({
 					"dbworker": " ",
-					"dbcache": "m-firm-ins-" + Math.random().toString().replace("0.", ""),
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins" }),
 					"query": "INSERT INTO _firms (" + fields.join(",") + ") VALUES (" + values.join(",") + ")",
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -105,7 +107,9 @@ FirmDataModel.prototype = utils.createProtoChain(
 		},
 
 
-		"_promiseGetInsertedId": function() {
+		"_promiseGetInsertedId": function(arg) {
+			arg = arg || {};
+
 			var self = this;
 
 			return new Promise(function(resolve, reject) {
@@ -125,7 +129,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 				db.dbquery({
 					"dbworker": " ",
-					"dbcache": "m-firm-ins-id-" + Math.random().toString().replace("0.", ""),
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins-id" }),
 					"query": "SELECT firmId FROM _firms WHERE " + cond.join(" AND "),
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -145,7 +149,9 @@ FirmDataModel.prototype = utils.createProtoChain(
 		},
 
 
-		"_promiseUpdateUsr": function() {
+		"_promiseUpdateUsr": function(arg) {
+			arg = arg || {};
+
 			var self = this;
 
 			return new Promise(function(resolve, reject) {
@@ -172,7 +178,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 				db.dbquery({
 					"dbworker": " ",
-					"dbcache":"m-firm-upd-" + Math.random().toString().replace("0.", ""),
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.upd" }),
 					"query": "UPDATE _firms SET " + values.join(", ") + " WHERE firmId = " + self.get("firmId"),
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -229,7 +235,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 			return new Promise(function(resolve, reject) {
 				db.dbquery({
-					"dbcache": "m-firm-load-" + Math.random().toString().replace("0.", ""),
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.load" }),
 					"dbworker": arg.dbworker,
 					"query": query,
 					"callback": function(dbres, err) {
@@ -392,7 +398,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 					self.getDBInstance().dbquery({
 						"dbworker": " ",
-						"dbcache":"m-firm-ins-prop-" + Math.random().toString().replace("0.", ""),
+						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins-prop" }),
 						"query": query,
 						"callback": function(dbres, err) {
 							if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -452,7 +458,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 			}).then(function() {
 				return new Promise(function(resolve, reject) {
 					db.dbquery({
-						"dbcache":"m-firm-upd-sel-" + Math.random().toString().replace("0.", ""),
+						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.upd0" }),
 						"dbworker": " ",
 						"query": ""
 						+ " SELECT uid, [value], property, extClass, extId"
@@ -482,7 +488,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 						return resolve();
 
 					self.getDBInstance().dbquery({
-						"dbcache":"m-firm-upd-prop" + Math.random().toString().replace("0.", ""),
+						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.upd1" }),
 						"dbworker": " ",
 						"query": query,
 						"callback": function(dbres, err) {
@@ -540,7 +546,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 				db.dbquery({
 					"dbworker": " ",
 
-					"dbcache":"m-firm-rm-" + Math.random().toString().replace("0.", ""),
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.rm" }),
 
 					"query": ""
 					+ "DELETE FROM Property WHERE extClass = 'FIRMS' AND extId = '" + id+ "" + "'"
@@ -582,7 +588,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					return reject("FirmDataModel.exists(): firmId is empty");
 
 				db.dbquery({
-					"dbcache":"m-firm-exs-" + Math.random().toString().replace("0.", ""),
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.exs" }),
 					"query": ""
 					+ " SELECT email"
 					+ " FROM _firms AS firms"
