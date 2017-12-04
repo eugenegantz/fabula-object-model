@@ -71,6 +71,13 @@ FirmDataModel.prototype = utils.createProtoChain(
 		}),
 
 
+		/**
+		 * Записать в таблицу _firms
+		 * @private
+		 * @param arg
+		 * @param {String | Object=} arg.dbcache
+		 * @return {Promise}
+		 * */
 		"_promiseInsertUsr": function(arg) {
 			arg = arg || {};
 
@@ -107,6 +114,13 @@ FirmDataModel.prototype = utils.createProtoChain(
 		},
 
 
+		/**
+		 * Вернуть id новой записи
+		 * @private
+		 * @param {Object} arg
+		 * @param {String | Object=} arg.dbcache
+		 * @return {Promise}
+		 * */
 		"_promiseGetInsertedId": function(arg) {
 			arg = arg || {};
 
@@ -149,6 +163,13 @@ FirmDataModel.prototype = utils.createProtoChain(
 		},
 
 
+		/**
+		 * Обновить запись в таблице "_firms"
+		 * @private
+		 * @param {Object} arg
+		 * @param {String | Object=} arg.dbcache
+		 * @return {Promise}
+		 * */
 		"_promiseUpdateUsr": function(arg) {
 			arg = arg || {};
 
@@ -196,6 +217,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 		 * @param {Object} arg
 		 * @param {Function=} arg.callback
 		 * @param {String=} arg.dbworker
+		 * @param {String | Object=} arg.dbcache
 		 * @return {Promise}
 		 * */
 		"load": function(arg) {
@@ -362,9 +384,10 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 
 		/**
-		 * Записать нового контрагента в таблицу Firms
+		 * Записать нового контрагента в таблицу "_firms"
 		 * @param {Object} arg
 		 * @param {Function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
 		 * @return {Promise}
 		 * */
 		"insert": function(arg) {
@@ -434,9 +457,10 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 
 		/**
-		 * Обновить контрагента в таблице Firms
+		 * Обновить контрагента в таблице "_firms"
 		 * @param {Object} arg
 		 * @param {Function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
 		 * @return {Promise}
 		 * */
 		"update": function(arg) {
@@ -528,6 +552,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 		 * Удалить контрагента из БД
 		 * @param {Object} arg
 		 * @param {Function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
 		 * @return {Promise}
 		 * */
 		"rm": function(arg) {
@@ -575,6 +600,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 		 * Проверить существование контрагента в БД
 		 * @param {Object=} arg
 		 * @param {function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
 		 * @return {Promise}
 		 * */
 		"exists": function(arg) {

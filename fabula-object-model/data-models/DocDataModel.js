@@ -149,7 +149,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		/**
 		 * Удалить заявку и все подчиненные ей записи из БД
+		 *
+		 * @param {Object} arg
 		 * @param {Function=} arg.callback
+		 * @param {String | Object} arg.dbcache
+		 *
+		 * @return {Promise}
 		 * */
 		"rm": function(arg) {
 			arg = arg || {};
@@ -167,7 +172,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					return Promise.resolve();
 
 				return self.load({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.rm0" }),
+					"dbcache": arg.dbcache,
 					"dbworker": " "
 				});
 
@@ -175,7 +180,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var promises = [
 					new Promise(function(resolve, reject) {
 						db.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.rm1" }),
+							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.rm-d" }),
 
 							"dbworker": " ",
 
@@ -233,8 +238,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		/**
 		 * Сохранить (Добавить/обновить)
+		 *
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
+		 *
 		 * @return {Promise}
 		 * */
 		"save": function(arg) {
@@ -319,8 +327,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		/**
+		 * Новая запись в БД
+		 *
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
+		 *
 		 * @return {Promise}
 		 * */
 		"insert": function(arg) {
@@ -373,7 +385,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.ins0" }),
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.ins-0" }),
 					"dbworker": " ",
 					"query": dbq.join("; "),
 					"callback": function(dbres, err) {
@@ -388,7 +400,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var promises = [
 					new Promise(function(resolve, reject) {
 						dbawws.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.ins1" }),
+							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.ins-id" }),
 
 							"dbworker": " ",
 
@@ -458,11 +470,16 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		/**
+		 * Обновить запись в БД
+		 *
 		 * @param {Object=} ownArg - аргументы для сохр. заявки
 		 * @param {Function=} ownArg.callback
 		 * @param {Object=} parentArg - аргументы сохранения родительской заявки, если такая есть
 		 * @param {Object=} childrenArg - аргумент сохр. подчиненной заявки, если такие есть
 		 * @param {Object=} movArg - аргументы сохранения подчиненных задач // см. MovDataModel
+		 * @param {String | Object=} ownArg.dbcache
+		 * @param {String=} ownArg.dbworker
+		 *
 		 * @return {Promise}
 		 * */
 		"update": function(ownArg, parentArg, childrenArg, movArg) {
@@ -479,7 +496,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(ownArg.dbcache, { "m": "m-doc.upd0" }),
+					"dbcache": self.iFabModuleGetDBCache(ownArg.dbcache, { "m": "m-doc.upd-s" }),
+
+					"dbworker": ownArg.dbworker,
 
 					"query": ""
 					+ "SELECT"
@@ -596,7 +615,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					promises.push(
 						new Promise(function(resolve, reject) {
 							dbawws.dbquery({
-								"dbcache": self.iFabModuleGetDBCache(ownArg.dbcache, { "m": "m-doc.upd1" }),
+								"dbcache": self.iFabModuleGetDBCache(ownArg.dbcache, { "m": "m-doc.upd-0" }),
 								"dbworker": " ",
 								"query": dbq.join("; "),
 								"callback": function(dbres, err) {
@@ -708,9 +727,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		/**
-		 * Инициализировать заявку
+		 * Инициализировать заявку из БД
+		 *
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @param {String} arg.dbworker
+		 * @param {String | Object=} arg.dbcache
+		 *
 		 * @return {Promise}
 		 * */
 		"load": function(arg) {
@@ -867,8 +890,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		/**
-		 * @return {Promise}
+		 * Разложить docId на составляющие
+		 *
 		 * @param {String} docId
+		 *
+		 * @return {Object}
 		 * */
 		"parseDocID": function(docId) {
 			var gands = this.getGandsInstance();
@@ -901,10 +927,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		/**
 		 * Получить новый код номенклатуры
-		 * @return {Promise}
+		 *
 		 * @param {String} arg.companyID
 		 * @param {String=} arg.docType
 		 * @param {Function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
+		 *
+		 * @return {Promise}
 		 * */
 		"getNewDocID": function(arg) {
 			if (typeof arg != "object") {
@@ -1041,6 +1070,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		/**
 		 * Посчитать суммы полей sum, sum2 подчиненных задач
+		 *
 		 * @return {Object}
 		 * */
 		getSumOfMovs: function() {
@@ -1055,6 +1085,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		/**
 		 * Присвоить sum1, sum2 как суммы полей sum, sum2 подчиненных задач
+		 *
 		 * @return {DocDataModel}
 		 * */
 		calcAndApplySumOfMovs: function() {
@@ -1064,6 +1095,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * Сбросить историю
+		 * */
 		"_mDocClsHistory": function() {
 			this.clearChanged();
 			this.clearFPropertyHistory();
