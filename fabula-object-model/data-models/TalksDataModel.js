@@ -31,6 +31,19 @@ TalksDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
 	"STR_LIMIT": 250,
 
 
+	/**
+	 * Записать сообщение на форум к задаче
+	 *
+	 * @param {Object} arg
+	 * @param {String=} arg.MMFlag - код фазы
+	 * @param {String=999} arg.agent - идентификатор агента от имени которого отправить запись
+	 * @param {String=} arg.message - текст сообщение
+	 * @param {Number} arg.MMID - идентификатор задачи
+	 * @param {String | Object=} arg.dbcache
+	 * @param {Function=} arg.callback
+	 *
+	 * @return {Promise}
+	 * */
 	"postTalk": function(arg) {
 		arg = arg || {};
 

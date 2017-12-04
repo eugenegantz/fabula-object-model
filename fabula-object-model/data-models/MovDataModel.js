@@ -124,9 +124,12 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
-		 * Удалить запись и подчинен. ей записи
+		 * Удалить запись и подчинен. ей записи из БД
+		 *
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
+		 *
 		 * @return {Promise}
 		 * */
 		"rm": function(arg) {
@@ -241,8 +244,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
+		 * Инициализировать запись из БД
+		 *
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @param {Array=} arg.fields
+		 * @param {String | Object=} arg.dbcache
+		 * @param {String=} arg.dbworker
+		 *
 		 * @return {Promise}
 		 * */
 		"load": function(arg) {
@@ -388,6 +397,17 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+
+		/**
+		 * Записать в таблицу
+		 *
+		 * @private
+		 *
+		 * @param {Object=} arg
+		 * @param {String | Object=} arg.dbcache
+		 *
+		 * @return {Promise}
+		 * */
 		"_insertMov": function(arg) {
 			var self = this;
 
@@ -434,6 +454,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		/**
+		 * Получить записанный mmId из БД
+		 *
+		 * @param {Object=} arg
+		 * @param {String | Object=} arg.dbcache
+		 *
+		 * @return {Promise}
+		 * */
 		"_getInsertedMMId": function(arg) {
 			var self = this;
 
@@ -481,6 +509,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		/**
+		 * Записать свойства в БД
+		 *
+		 * @param {Object=} arg
+		 * @param {String | Object=} arg.dbcache
+		 *
+		 * @return {Promise}
+		 * */
 		"_insertProps": function(arg) {
 			var self = this;
 
@@ -517,8 +553,12 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
+		 * Новая запись в ДБ
+		 *
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
+		 * @param {String | Object=} arg.dbcache
+		 *
 		 * @return {Promise}
 		 * */
 		"insert": function(arg) {
@@ -629,9 +669,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
+		 * Обновить запись в БД
+		 *
 		 * @param {Object=} arg
 		 * @param {Boolean=} arg.saveParent - Применить изменения в родительской задаче // НЕ РАБОТАЕТ
 		 * @param {Function=} arg.callback(err) - callback
+		 * @param {String | Object=} arg.dbcache
+		 * @param {String=} arg.dbworker
+		 *
 		 * @return {Promise}
 		 * */
 		"update": function(arg) {
@@ -876,6 +921,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		/**
+		 * Спросить историю
+		 * */
 		"_mMovClsHistory": function() {
 			this.clearChanged();
 			this.clearFPropertyHistory();
