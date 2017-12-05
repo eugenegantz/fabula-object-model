@@ -188,7 +188,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 						if (!mov || !mov.get("mmid", null, !1))
 							return prev;
 
-						prev.push(mov.rm());
+						prev.push(
+							mov.rm({
+								"dbcache": arg.dbcache
+							})
+						);
 
 						return prev;
 					},
@@ -604,7 +608,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 				var promises = self.getMov().map(function(mov) {
 					mov.set("MMPID", self.get("MMID", null, false));
 
-					return mov.save();
+					return mov.save({
+						"dbcache": arg.dbcache
+					});
 				});
 
 				promises.push(
@@ -844,7 +850,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 						mov.set("mmId", row.MMID);
 
-						promises.push(mov.rm());
+						promises.push(
+							mov.rm({
+								"dbcache": arg.dbcache
+							})
+						);
 					});
 				}
 
@@ -871,7 +881,12 @@ MovDataModel.prototype = _utils.createProtoChain(
 					if (mov.get("MMPID", null, !1) != selfMMID)
 						mov.set("MMPID", selfMMID, null, !1);
 
-					promises.push(mov.save({ "useNotification": false }));
+					promises.push(
+						mov.save({
+							"dbcache": arg.dbcache,
+							"useNotification": false
+						})
+					);
 				});
 
 				// -----------------------------------------------------------------

@@ -218,7 +218,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					if (!mov.get("mmId", null, !1))
 						return;
 
-					promises.push(mov.rm());
+					promises.push(
+						mov.rm({
+							"dbcache": arg.dbcache
+						})
+					);
 				});
 
 				return Promise.all(promises);
@@ -424,7 +428,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						if (mov.get("doc1") != docId)
 							mov.set("doc", docId);
 
-						return mov.save();
+						return mov.save({
+							"dbcache": arg.dbcache
+						});
 					})
 				);
 
@@ -483,8 +489,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @return {Promise}
 		 * */
 		"update": function(ownArg, parentArg, childrenArg, movArg) {
-			ownArg = ownArg || {};
-			movArg = movArg || {};
+			ownArg = Object.assign({}, ownArg);
+			movArg = Object.assign({ "dbcache": ownArg.dbcache }, movArg);
 
 			var self            = this,
 				callback        = ownArg.callback || emptyFn,
@@ -641,7 +647,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 						mov.set("mmId", row.MMID);
 
-						promises.push(mov.rm());
+						promises.push(
+							mov.rm({
+								"dbcache": ownArg.dbcache
+							})
+						);
 					});
 				}
 
@@ -732,6 +742,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
 		 * @param {String} arg.dbworker
+		 * @param {Object=} arg.movArg
 		 * @param {String | Object=} arg.dbcache
 		 *
 		 * @return {Promise}
@@ -740,7 +751,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			arg = arg || {};
 
 			var self        = this,
-				movArg      = arg.movArg,
+				movArg      = Object.assign({ "dbcache": arg.dbcache }, arg.movArg),
 				dbawws      = self.getDBInstance(),
 				callback    = arg.callback || emptyFn,
 				docId       = self.get("docId", null, !1),
