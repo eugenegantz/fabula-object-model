@@ -1,6 +1,8 @@
 "use strict";
 
-var voidFn = function() {};
+var voidFn      = function() {},
+	utils       = require("./../utils/utils.js"),
+	IFabModule  = require("./IFabModule.js");
 
 
 /**
@@ -8,12 +10,12 @@ var voidFn = function() {};
  * @ignore
  * */
 var getContextDB = function() {
-	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
-	var DBModel = FabulaObjectModel.prototype._getModule("DBModel");
+	var FabulaObjectModel = require("./../_FabulaObjectModel.js"),
+		DBModel = FabulaObjectModel.prototype._getModule("DBModel");
 
-	if (this._fabulaInstance) {
+	if (this._fabulaInstance)
 		return this._fabulaInstance.getDBInstance();
-	}
+
 	return DBModel.prototype.getInstance();
 };
 
@@ -23,17 +25,17 @@ var getContextDB = function() {
  * @constructor
  * */
 var AgentsDataModel = function() {
+	IFabModule.call(this);
+
 	this.init();
 };
 
-AgentsDataModel.prototype = {
+AgentsDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
+
 	"init": function() {
 		this.dbModel = null;
-
 		this.data = [];
-
 		this.instances.push(this);
-
 		this.state = 0;
 	},
 
@@ -70,7 +72,7 @@ AgentsDataModel.prototype = {
 			"callback": function(res) {
 				self.data = res.recs;
 				self.state = 1;
-				callback(self.data);
+				callback(null, self, self.data);
 			}
 		});
 	},
@@ -82,6 +84,7 @@ AgentsDataModel.prototype = {
 	"get": function() {
 		return this.data;
 	}
-};
+
+});
 
 module.exports = AgentsDataModel;
