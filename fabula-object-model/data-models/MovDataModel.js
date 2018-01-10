@@ -506,6 +506,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 						if (err)
 							return reject(err);
 
+						if (!dbres.recs[0])
+							return reject("MovDataModel._getInsertedMMId(): could not get a new MMId");
+
 						resolve(dbres.recs[0].mmid);
 					}
 				});
