@@ -401,7 +401,6 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-
 		/**
 		 * Записать в таблицу
 		 *
@@ -410,48 +409,33 @@ MovDataModel.prototype = _utils.createProtoChain(
 		 * @param {Object=} arg
 		 * @param {String | Object=} arg.dbcache
 		 *
-		 * @return {Promise}
+		 * @return {Promise} - Promise.Resolve(mmId)
 		 * */
-		"_insertMov": function(arg) {
+		"_reqInsertMov": function(arg) {
 			var self = this;
 
 			arg = arg || {};
 
 			return new Promise(function(resolve, reject) {
 				var dbawws = self.getDBInstance(),
-					movFieldsDecl = self.__movDataModelDefaultFields,
-					values = [],
-					fields = [];
-
-				movFieldsDecl.get("gsdate").value = "NOW()";
-
-				movFieldsDecl.getKeys().forEach(function(key) {
-					var val,
-						fldDecl = movFieldsDecl.get(key);
-
-					// если поле пустое (кроме чисел) - пропустить
-					if (
-						_utils.isEmpty(val = self.get(key, null, !1))
-						&& _utils.isEmpty(val = fldDecl.value)
-					) {
-						return;
-					}
-
-					values.push(dbUtils.mkVal(val, fldDecl));
-					fields.push(dbUtils.mkFld(key));
-				});
+					query = ""
+						       + self._mkQueryInsertMov()
+						+ "; " + self._mkQueryGetInsertedMovMMId();
 
 				dbawws.dbquery({
 					"dbworker": " ",
 					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.ins-0" }),
-					"query": "INSERT INTO Movement (" + fields.join(",") + ") VALUES (" + values.join(",") + ")",
+					"query": query,
 					"callback": function(dbres) {
 						var err = dbUtils.fetchErrStrFromRes(dbres);
 
 						if (err)
 							return reject(err);
 
-						resolve();
+						if (!dbres[1].recs[0])
+							return reject("MovDataModel._reqInsertMov(): could not get a new MMId");
+
+						resolve(dbres[1].recs[0].mmid);
 					}
 				});
 			});
@@ -459,60 +443,69 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
-		 * Получить записанный mmId из БД
+		 * Вернуть текст запроса на запись в таблицу Movement
 		 *
-		 * @param {Object=} arg
-		 * @param {String | Object=} arg.dbcache
-		 *
-		 * @return {Promise}
+		 * @return {String}
 		 * */
-		"_getInsertedMMId": function(arg) {
-			var self = this;
+		"_mkQueryInsertMov": function() {
+			var self = this,
+				movFieldsDecl = this.__movDataModelDefaultFields,
+				values = [],
+				fields = [];
 
-			arg = arg || {};
+			movFieldsDecl.get("gsdate").value = "NOW()";
 
-			return new Promise(function(resolve, reject) {
-				var dbawws = self.getDBInstance(),
-					cond = [],
-					movFieldsDecl = self.__movDataModelDefaultFields;
+			movFieldsDecl.getKeys().forEach(function(key) {
+				var val,
+					fldDecl = movFieldsDecl.get(key);
 
-				movFieldsDecl.getKeys().forEach(function(key) {
-					var fldDecl = movFieldsDecl.get(key),
-						val = self.get(key, null, !1) || fldDecl.value || null;
+				// если поле пустое (кроме чисел) - пропустить
+				if (
+					_utils.isEmpty(val = self.get(key, null, !1))
+					&& _utils.isEmpty(val = fldDecl.value)
+				) {
+					return;
+				}
 
-					if (!val)
-						return;
-
-					// БД отрезает дробную часть - прямое сравнение не работает
-					// сравнить результаты округления
-					if (dbUtils.numberTypes[fldDecl.type]) {
-						return cond.push(
-							"-INT(-" + dbUtils.mkFld(key) + ")"
-							+ " = "
-							+ dbUtils.mkVal(Math.ceil(val), fldDecl)
-						);
-					}
-
-					cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl));
-				});
-
-				dbawws.dbquery({
-					"dbworker": " ",
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.ins-id" }),
-					"query": "SELECT mmid FROM Movement WHERE " + cond.join(" AND ") + " ORDER BY mmid DESC",
-					"callback": function(dbres) {
-						var err = dbUtils.fetchErrStrFromRes(dbres);
-
-						if (err)
-							return reject(err);
-
-						if (!dbres.recs[0])
-							return reject("MovDataModel._getInsertedMMId(): could not get a new MMId");
-
-						resolve(dbres.recs[0].mmid);
-					}
-				});
+				values.push(dbUtils.mkVal(val, fldDecl));
+				fields.push(dbUtils.mkFld(key));
 			});
+
+			return "INSERT INTO Movement (" + fields.join(",") + ") VALUES (" + values.join(",") + ")";
+		},
+
+
+		/**
+		 * Вернуть текст запроса на полученого только что записанного MMID
+		 *
+		 * @return {String}
+		 * */
+		"_mkQueryGetInsertedMovMMId": function() {
+			var self = this,
+				cond = [],
+				movFieldsDecl = this.__movDataModelDefaultFields;
+
+			movFieldsDecl.getKeys().forEach(function(key) {
+				var fldDecl = movFieldsDecl.get(key),
+					val = self.get(key, null, !1) || fldDecl.value || null;
+
+				if (!val)
+					return;
+
+				// БД отрезает дробную часть - прямое сравнение не работает
+				// сравнить результаты округления
+				if (dbUtils.numberTypes[fldDecl.type]) {
+					return cond.push(
+						"-INT(-" + dbUtils.mkFld(key) + ")"
+						+ " = "
+						+ dbUtils.mkVal(Math.ceil(val), fldDecl)
+					);
+				}
+
+				cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl));
+			});
+
+			return "SELECT mmid FROM Movement WHERE " + cond.join(" AND ");
 		},
 
 
@@ -579,8 +572,6 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			self.trigger("before-insert");
 
-			console.log("MOV-INSERT(" + (self.get("mmid", null, !1) || "AWAIT") + ")");
-
 			// -----------------------------------------------------------------
 			// Если MAttr[n] не занято, записать в него случайное число
 			// для повышения уникальности записи
@@ -595,16 +586,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			// -----------------------------------------------------------------
 
-			return this._insertMov(arg).then(function() {
-				if (self.get("mmid", null, false))
-					return;
+			return this._reqInsertMov(arg).then(function(mmid) {
+				self.set("mmid", mmid, null, !1);
 
-				return self._getInsertedMMId(arg).then(function(mmid) {
-					self.set("mmid", mmid, null, !1);
-					console.log("MOV-AWAITED-MMID: " + mmid);
-				});
-
-			}).then(function() {
 				return self._insertProps(arg);
 
 			}).then(function() {
@@ -701,8 +685,6 @@ MovDataModel.prototype = _utils.createProtoChain(
 			// ------------------------------------------------------------------------------
 
 			self.trigger("before-update");
-
-			console.log("MOV-UPDATE(" + self.get("mmid", null, !1) + ")");
 
 			// ------------------------------------------------------------------------------
 
