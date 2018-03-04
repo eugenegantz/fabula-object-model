@@ -82,11 +82,20 @@ FabulaObjModel.setModule("CalcPrintPostprocFolding", require("./data-models/calc
 FabulaObjModel.setModule("CalcPrintPostprocLaminating", require("./data-models/calc/CalcPrintPostprocLaminating"));
 FabulaObjModel.setModule("CalcUtils", require("./data-models/calc/CalcUtils"));
 
-FabulaObjModel.setModule("printUtils", require("./utils/printUtils"));
-
 FabulaObjModel.setModule("utils", require("./utils/utils"));
-
-FabulaObjModel.setModule("dbUtils", require("./utils/dbUtils"));
+FabulaObjModel.setModule("utils.db", require("./utils/db"));
+FabulaObjModel.setModule("utils.array", require("./utils/array"));
+FabulaObjModel.setModule("utils.object", require("./utils/object"));
+FabulaObjModel.setModule("utils.env", require("./utils/env"));
+FabulaObjModel.setModule("utils.fabMarkup", require("./utils/fabMarkup"));
+FabulaObjModel.setModule("utils.fn", require("./utils/fn"));
+FabulaObjModel.setModule("utils.logic", require("./utils/logic"));
+FabulaObjModel.setModule("utils.parse", require("./utils/parse"));
+FabulaObjModel.setModule("utils.print", require("./utils/print"));
+FabulaObjModel.setModule("utils.string", require("./utils/string"));
+FabulaObjModel.setModule("utils.url", require("./utils/url"));
+FabulaObjModel.setModule("dbUtils", require("./utils/db")); // историческое название
+FabulaObjModel.setModule("printUtils", require("./utils/print")); // историческое название
 
 FabulaObjModel.setModule("ObjectA", require("./data-models/ObjectA"));
 FabulaObjModel.setModule("ObjectB", require("./data-models/ObjectB"));

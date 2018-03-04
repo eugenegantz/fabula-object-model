@@ -7,7 +7,7 @@ var DefaultDataModel    = require("./DefaultDataModel"),
 	IFabModule          = require("./IFabModule.js"),
 	ObjectA             = require("./ObjectA.js"),
 	emptyFn             = function() {},
-	dbUtils             = require("./../utils/dbUtils.js"),
+	dbUtils             = require("../utils/db.js"),
 	_utils              = require("./../utils/utils");
 
 // TODO пересмотреть алиасы

@@ -1,5 +1,5 @@
 var cConst = require("./CalcConsts");
-var pUtils = require("./../../utils/printUtils");
+var pUtils = require("../../utils/print");
 var gands = require("./../GandsDataModel").prototype.getInstance();
 var _utils = require("./../../utils/utils");
 

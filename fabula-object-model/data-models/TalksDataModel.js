@@ -1,6 +1,6 @@
 "use strict";
 
-var dbUtils = require("./../utils/dbUtils.js"),
+var dbUtils = require("../utils/db.js"),
 	utils = require("./../utils/utils.js"),
 	IFabModule = require("./IFabModule.js"),
 	voidFn = function() {};

@@ -3,7 +3,7 @@
 var InterfaceEvents = require("./InterfaceEvents"),
 	DefaultDataModel = require("./DefaultDataModel"),
 	ObjectA = require("./ObjectA"),
-	dbUtils = require("./../utils/dbUtils.js"),
+	dbUtils = require("../utils/db.js"),
 	utils = require("./../utils/utils.js");
 
 var propUtils = {

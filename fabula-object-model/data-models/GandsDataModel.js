@@ -7,7 +7,7 @@ var IFabModule = require("./IFabModule.js");
 var IEvents = require("./InterfaceEvents");
 var ObjectA = require("./ObjectA");
 var _utils = require("./../utils/utils");
-var dbUtils = require("./../utils/dbUtils");
+var dbUtils = require("../utils/db");
 
 // Для совместимости
 var getContextDB = function(){
