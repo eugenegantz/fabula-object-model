@@ -1,7 +1,7 @@
 "use strict";
 
 var _utils                  = require("./../utils/utils"),
-	dbUtils                 = require("./../utils/dbUtils.js"),
+	dbUtils                 = require("../utils/db.js"),
 	emptyFn                 = function() {},
 	DefaultDataModel        = require("./DefaultDataModel"),
 	IMovCollection          = require("./IMovCollection.js"),

@@ -1,4 +1,4 @@
-var printUtils = require("./../../utils/printUtils");
+var printUtils = require("../../utils/print");
 var cConst = require("./CalcConsts");
 var dpc = require("./DefaultPrintCalc").prototype.getInstance();
 var cUtils = require("./CalcUtils");

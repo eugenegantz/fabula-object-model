@@ -5,7 +5,7 @@ describe("MovDataModel", function() {
 		db,
 		mov,
 
-		dbUtils = require("./../../../fabula-object-model/utils/dbUtils.js"),
+		dbUtils = require("../../../fabula-object-model/utils/db.js"),
 
 		// 2015/01/01 - 1 янв. 2015
 		timestamp = 1420056000000,

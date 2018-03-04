@@ -5,7 +5,7 @@ var DefaultDataModel    = require("./DefaultDataModel"),
 	IFabModule          = require("./IFabModule.js"),
 	ObjectA             = require("./ObjectA.js"),
 	emptyFn             = function() {},
-	dbUtils             = require("./../utils/dbUtils.js"),
+	dbUtils             = require("../utils/db.js"),
 	utils               = require("./../utils/utils");
 
 var FirmDataModel = function() {
