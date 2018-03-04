@@ -1,6 +1,8 @@
 "use strict";
 
-var utils = require("./utils.js");
+var utils = {
+	"logic": require("./logic.js")
+};
 
 module.exports = {
 
@@ -35,7 +37,7 @@ module.exports = {
 		var type = fldDecl.type,
 			len = fldDecl.length;
 
-		if (utils.isEmpty(val))
+		if (utils.logic.isEmpty(val))
 			return "NULL";
 
 		if (this.stringTypes[type])

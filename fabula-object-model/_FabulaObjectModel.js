@@ -83,6 +83,7 @@ FabulaObjModel.setModule("CalcPrintPostprocLaminating", require("./data-models/c
 FabulaObjModel.setModule("CalcUtils", require("./data-models/calc/CalcUtils"));
 
 FabulaObjModel.setModule("utils", require("./utils/utils"));
+FabulaObjModel.setModule("utils.common", require("./utils/common"));
 FabulaObjModel.setModule("utils.db", require("./utils/db"));
 FabulaObjModel.setModule("utils.array", require("./utils/array"));
 FabulaObjModel.setModule("utils.object", require("./utils/object"));

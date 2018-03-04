@@ -1,5 +1,10 @@
 "use strict";
 
+var utils = {
+	"string": require("./string.js")
+};
+
+
 module.exports = {
 
 	/**
@@ -58,7 +63,7 @@ module.exports = {
 
 			} else if (typeof value == "string") {
 
-				value = this.msplit(delimiters, value);
+				value = utils.string.msplit(delimiters, value);
 
 			} else if (!isNaN(value)) {
 
@@ -78,7 +83,7 @@ module.exports = {
 					trim !== null
 					&& typeof val == "string"
 				) {
-					val = this.trim(val, trim);
+					val = utils.string.trim(val, trim);
 				}
 
 				// Если пустая ячейка

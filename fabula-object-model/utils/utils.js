@@ -1,269 +1,273 @@
-var _utils          = Object.create(null),
-    commonUtils     = require("./common.js"),
-    dbUtils         = require("./db.js"),
-    b64Utils        = require("./base64.js"),
-    envUtils        = require("./env.js"),
-    logicUtils      = require("./logic.js"),
-    stringUtils     = require("./string.js"),
-    fnUtils         = require("./fn"),
-    objectUtils     = require("./object.js"),
-    arrayUtils      = require("./array.js"),
-    parseUtils      = require("./parse.js"),
-    fabMarkupUtils  = require("./fabMarkup.js"),
-    urlUtils        = require("./url.js");
+"use strict";
+
+var utils = {
+	"common"        : require("./common.js"),
+	"db"            : require("./db.js"),
+	"b64"           : require("./base64.js"),
+	"env"           : require("./env.js"),
+	"logic"         : require("./logic.js"),
+	"string"        : require("./string.js"),
+	"fn"            : require("./fn"),
+	"object"        : require("./object.js"),
+	"array"         : require("./array.js"),
+	"parse"         : require("./parse.js"),
+	"fabMarkup"     : require("./fabMarkup.js"),
+	"url"           : require("./url.js")
+};
 
 
-/**
- * @deprecated - использовать dbUtils.secureStr
- * */
-_utils.DBSecureStr = fnUtils.deprecate(dbUtils.secureStr, {
-	"dep": "_utils.DBSecureStr",
-	"sub": "utils.db.secureStr"
-});
+module.exports = {
+
+	/**
+	 * @deprecated - использовать dbUtils.secureStr
+	 * */
+	"DBSecureStr": utils.fn.deprecate(utils.db.secureStr.bind(utils.db), {
+		"dep": "_utils.DBSecureStr",
+		"sub": "utils.db.secureStr"
+	}),
 
 
-/**
- * Служебный метод. Используется в процессе записи даты в поля.
- * Необходим для безопасной записи полей DateTime
- *
- * @deprecated
- *
- * @param {Date, String} date - дата для записи
- * @param {*=false} strict - Выбрасывать ошибки?
- * @return String В формате YYYY.MM.DD HH:mm:ss
- * */
-_utils.DBSecureDate = fnUtils.deprecate(dbUtils.secureDate, {
-	"dep": "_utils.DBSecureDate",
-	"sub": "utils.db.secureDate"
-});
+	/**
+	 * Служебный метод. Используется в процессе записи даты в поля.
+	 * Необходим для безопасной записи полей DateTime
+	 *
+	 * @deprecated
+	 *
+	 * @param {Date, String} date - дата для записи
+	 * @param {*=false} strict - Выбрасывать ошибки?
+	 * @return String В формате YYYY.MM.DD HH:mm:ss
+	 * */
+	"DBSecureDate": utils.fn.deprecate(utils.db.secureDate.bind(utils.db), {
+		"dep": "_utils.DBSecureDate",
+		"sub": "utils.db.secureDate"
+	}),
 
 
-/**
- * @deprecated
- *
- * @param {Array} d Delimiters"
- * @param {String} s - String
- *
- * @return Array
- * */
-_utils.msplit = fnUtils.deprecate(stringUtils.msplit, {
-	"dep": "_utils.msplit",
-	"sub": "utils.string.msplit"
-});
+	/**
+	 * @deprecated
+	 *
+	 * @param {Array} d Delimiters"
+	 * @param {String} s - String
+	 *
+	 * @return Array
+	 * */
+	"msplit": utils.fn.deprecate(utils.string.msplit.bind(utils.string), {
+		"dep": "_utils.msplit",
+		"sub": "utils.string.msplit"
+	}),
 
 
-/**
- * @deprecated
- *
- * @param {Array} d Delimiters
- * @param {String} s - String
- *
- * @return Array
- * */
-_utils.split = fnUtils.deprecate(stringUtils.split, {
-	"dep": "_utils.split",
-	"sub": "utils.string.split"
-});
+	/**
+	 * @deprecated
+	 *
+	 * @param {Array} d Delimiters
+	 * @param {String} s - String
+	 *
+	 * @return Array
+	 * */
+	"split": utils.fn.deprecate(utils.string.split.bind(utils.string), {
+		"dep": "_utils.split",
+		"sub": "utils.string.split"
+	}),
 
 
-/**
- * @deprecated
- *
- * @param {String} str - String
- * @param {String, Array} ch - Characters
- * @param {Number} di - 0 - left, 1 = right, -1 = both
- * */
-_utils.trim = fnUtils.deprecate(stringUtils.trim, {
-	"dep": "_utils.trim",
-	"sub": "utils.string.trim"
-});
+	/**
+	 * @deprecated
+	 *
+	 * @param {String} str - String
+	 * @param {String, Array} ch - Characters
+	 * @param {Number} di - 0 - left, 1 = right, -1 = both
+	 * */
+	"trim": utils.fn.deprecate(utils.string.trim.bind(utils.string), {
+		"dep": "_utils.trim",
+		"sub": "utils.string.trim"
+	}),
 
 
-/**
- * @deprecated
- *
- * @param {String} str - String
- * @param {String, Array} _chars - Characters
- * */
-_utils.ltrim = fnUtils.deprecate(stringUtils.ltrim, {
-	"dep": "_utils.ltrim",
-	"sub": "utils.string.ltrim"
-});
+	/**
+	 * @deprecated
+	 *
+	 * @param {String} str - String
+	 * @param {String, Array} _chars - Characters
+	 * */
+	"ltrim": utils.fn.deprecate(utils.string.ltrim.bind(utils.string), {
+		"dep": "_utils.ltrim",
+		"sub": "utils.string.ltrim"
+	}),
 
 
-/**
- * @deprecated
- * @param {String} str - String
- * @param {String, Array} _chars - Characters
- * */
-_utils.rtrim = fnUtils.deprecate(stringUtils.rtrim, {
-	"dep": "_utils.rtrim",
-	"sub": "utils.string.rtrim"
-});
+	/**
+	 * @deprecated
+	 * @param {String} str - String
+	 * @param {String, Array} _chars - Characters
+	 * */
+	"rtrim": utils.fn.deprecate(utils.string.rtrim.bind(utils.string), {
+		"dep": "_utils.rtrim",
+		"sub": "utils.string.rtrim"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.arrayRemove = fnUtils.deprecate(arrayUtils.remove, {
-	"dep": "_utils.arrayRemove",
-	"sub": "utils.array.remove"
-});
+	/**
+	 * @deprecated
+	 * */
+	"arrayRemove": utils.fn.deprecate(utils.array.remove.bind(utils.array), {
+		"dep": "_utils.arrayRemove",
+		"sub": "utils.array.remove"
+	}),
 
 
-/**
- * @deprecated
- *
- * @param {Array} arr - Массив
- * @param {Number} n
- *
- * @return {Array}
- * */
-_utils.arrayRest = fnUtils.deprecate(arrayUtils.rest, {
-	"dep": "_utils.arrayRest",
-	"sub": "utils.array.rest"
-});
+	/**
+	 * @deprecated
+	 *
+	 * @param {Array} arr - Массив
+	 * @param {Number} n
+	 *
+	 * @return {Array}
+	 * */
+	"arrayRest": utils.fn.deprecate(utils.array.rest.bind(utils.array), {
+		"dep": "_utils.arrayRest",
+		"sub": "utils.array.rest"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.objectHasOwnProperty = fnUtils.deprecate(objectUtils.hasOwnProperty, {
-	"dep": "_utils.objectHasOwnProperty",
-	"sub": "utils.object.hasOwnProperty"
-});
+	/**
+	 * @deprecated
+	 * */
+	"objectHasOwnProperty": utils.fn.deprecate(utils.object.hasOwnProperty.bind(utils.object), {
+		"dep": "_utils.objectHasOwnProperty",
+		"sub": "utils.object.hasOwnProperty"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.objectKeysToLowerCase = fnUtils.deprecate(objectUtils.keysToLowerCase, {
-	"dep": "_utils.objectKeysToLowerCase",
-	"sub": "utils.object.keysToLowerCase"
-});
+	/**
+	 * @deprecated
+	 * */
+	"objectKeysToLowerCase": utils.fn.deprecate(utils.object.keysToLowerCase.bind(utils.object), {
+		"dep": "_utils.objectKeysToLowerCase",
+		"sub": "utils.object.keysToLowerCase"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.objectKeysToUpperCase = fnUtils.deprecate(objectUtils.keysToUpperCase, {
-	"dep": "_utils.objectKeysToUpperCase",
-	"sub": "utils.object.keysToUpperCase"
-});
+	/**
+	 * @deprecated
+	 * */
+	"objectKeysToUpperCase": utils.fn.deprecate(utils.object.keysToUpperCase.bind(utils.object), {
+		"dep": "_utils.objectKeysToUpperCase",
+		"sub": "utils.object.keysToUpperCase"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.URLHashParse = fnUtils.deprecate(urlUtils.getHashParams, {
-	"dep": "_utils.URLHashParse",
-	"sub": "utils.url.getHashParams"
-});
+	/**
+	 * @deprecated
+	 * */
+	"URLHashParse": utils.fn.deprecate(utils.url.getHashParams.bind(utils.url), {
+		"dep": "_utils.URLHashParse",
+		"sub": "utils.url.getHashParams"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.URLHashSet = fnUtils.deprecate(urlUtils.setHashParams, {
-	"dep": "_utils.URLHashSet",
-	"sub": "utils.url.setHashParams"
-});
+	/**
+	 * @deprecated
+	 * */
+	"URLHashSet": utils.fn.deprecate(utils.url.setHashParams.bind(utils.url), {
+		"dep": "_utils.URLHashSet",
+		"sub": "utils.url.setHashParams"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.URLQueryParse = fnUtils.deprecate(urlUtils.getQueryParams, {
-	"dep": "_utils.URLQueryParse",
-	"sub": "utils.url.getQueryParams"
-});
+	/**
+	 * @deprecated
+	 * */
+	"URLQueryParse": utils.fn.deprecate(utils.url.getQueryParams.bind(utils.url), {
+		"dep": "_utils.URLQueryParse",
+		"sub": "utils.url.getQueryParams"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.URLQuerySet = fnUtils.deprecate(urlUtils.setQueryParams, {
-	"dep": "_utils.URLQuerySet",
-	"sub": "utils.url.setQueryParams"
-});
+	/**
+	 * @deprecated
+	 * */
+	"URLQuerySet": utils.fn.deprecate(utils.url.setQueryParams.bind(utils.url), {
+		"dep": "_utils.URLQuerySet",
+		"sub": "utils.url.setQueryParams"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.awwsBase64 = b64Utils;
+	/**
+	 * @deprecated
+	 * */
+	"awwsBase64": utils.b64,
 
 
-/**
- * @deprecated
- * */
-_utils.detectEnvironment = fnUtils.deprecate(envUtils.getExecEnv, {
-	"dep": "_utils.detectEnvironment",
-	"sub": "utils.env.getExecEnv"
-});
+	/**
+	 * @deprecated
+	 * */
+	"detectEnvironment": utils.fn.deprecate(utils.env.getExecEnv.bind(utils.env), {
+		"dep": "_utils.detectEnvironment",
+		"sub": "utils.env.getExecEnv"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.isBrowser = fnUtils.deprecate(envUtils.isBrowserEnv, {
-	"dep": "_utils.isBrowser",
-	"sub": "utils.env.isBrowserEnv"
-});
+	/**
+	 * @deprecated
+	 * */
+	"isBrowser": utils.fn.deprecate(utils.env.isBrowserEnv.bind(utils.env), {
+		"dep": "_utils.isBrowser",
+		"sub": "utils.env.isBrowserEnv"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.parseArg = fnUtils.deprecate(parseUtils.parseArg, {
-	"dep": "_utils.parseArg",
-	"sub": "parseUtils.parseArg"
-});
+	/**
+	 * @deprecated
+	 * */
+	"parseArg": utils.fn.deprecate(utils.parse.parseArg.bind(utils.parse), {
+		"dep": "_utils.parseArg",
+		"sub": "parseUtils.parseArg"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.rmGsTags = fnUtils.deprecate(fabMarkupUtils.rmGsTags, {
-	"dep": "_utils.rmGsTags",
-	"sub": "utils.fabMarkup.rmGsTags"
-});
+	/**
+	 * @deprecated
+	 * */
+	"rmGsTags": utils.fn.deprecate(utils.fabMarkup.rmGsTags.bind(utils.fabMarkup), {
+		"dep": "_utils.rmGsTags",
+		"sub": "utils.fabMarkup.rmGsTags"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.isEmpty = fnUtils.deprecate(logicUtils.isEmpty, {
-	"dep": "_utils.isEmpty",
-	"sub": "utils.logic.isEmpty"
-});
+	/**
+	 * @deprecated
+	 * */
+	"isEmpty": utils.fn.deprecate(utils.logic.isEmpty.bind(utils.logic), {
+		"dep": "_utils.isEmpty",
+		"sub": "utils.logic.isEmpty"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.toBool = fnUtils.deprecate(logicUtils.toBool, {
-	"dep": "_utils.toBool",
-	"sub": "utils.logic.toBool"
-});
+	/**
+	 * @deprecated
+	 * */
+	"toBool": utils.fn.deprecate(utils.logic.toBool.bind(utils.logic), {
+		"dep": "_utils.toBool",
+		"sub": "utils.logic.toBool"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.createProtoChain = fnUtils.deprecate(objectUtils.createPrototype, {
-	"dep": "_utils.createProtoChain",
-	"sub": "utils.object.createPrototype"
-});
+	/**
+	 * @deprecated
+	 * */
+	"createProtoChain": utils.fn.deprecate(utils.object.createPrototype.bind(utils.object), {
+		"dep": "_utils.createProtoChain",
+		"sub": "utils.object.createPrototype"
+	}),
 
 
-/**
- * @deprecated
- * */
-_utils.getType = fnUtils.deprecate(commonUtils.getType, {
-	"dep": "_utils.getType",
-	"sub": "utils.common.getType"
-});
+	/**
+	 * @deprecated
+	 * */
+	"getType": utils.fn.deprecate(utils.common.getType.bind(utils.common), {
+		"dep": "_utils.getType",
+		"sub": "utils.common.getType"
+	})
 
-
-module.exports = _utils;
+};
