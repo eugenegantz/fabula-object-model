@@ -1007,8 +1007,74 @@ MovDataModel.prototype = _utils.createProtoChain(
 		 * Получить экземпляр родительской задачи
 		 * @return {MovDataModel}
 		 * */
-		getParentMovInstance: function() {
+		"getParentMovInstance": function() {
 			return this._getParentMovInstance();
+		},
+
+
+		"_stdMergeWalker": function(prevMov, nextMov) {
+			return prevMov.merge(nextMov, {
+				"cmp": this._stdMergeCmpFn
+			});
+		},
+
+
+		"_stdMergeCmpFn": function(prevMov, nextMov) {
+			return prevMov.get("mmId") == nextMov.get("mmId");
+		},
+
+
+		/**
+		 * Объеденить с другой с записью
+		 *
+		 * @param {MovDataModel} mov
+		 * @param {Object} opt
+		 *
+		 * @return {MovDataModel}
+		 * */
+		"merge": function(mov, opt) {
+			if (!mov)
+				return;
+
+			opt = opt || {};
+
+			this.mergeFProps(mov.getFPropertyA());
+
+			mov.getKeys().forEach(function(k) {
+				this.set(k, mov.get(k));
+			});
+
+			var prevMovs    = this.getMov().slice(0),
+			    nextMovs    = mov.getMov(),
+			    walker      = opt.walker || this._stdMergeWalker,
+			    cmpFn       = opt.cmp || this._stdMergeCmpFn;
+
+			nextMovs.forEach(function(next) {
+				var mov;
+
+				prevMovs.some(function(prev, idx) {
+					if (cmpFn.call(this, prev, next)) {
+						mov = walker.call(this, prevMovs.splice(idx, 1)[0], next);
+
+						return true;
+					}
+				});
+
+				mov && this.addMov(mov);
+			}, this);
+
+			return this;
+		},
+
+
+		"mergeByGSId": function(mov, opt) {
+			opt = opt || {};
+
+			opt.cmp = function(prev, next) {
+				return prev.get("gs") == next.get("gs");
+			};
+
+			return this.merge(mov, opt);
 		},
 
 

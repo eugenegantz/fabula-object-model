@@ -373,6 +373,39 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * Объеденить свойства
+		 *
+		 * @param {Array} nextProps
+		 * */
+		"mergeFProps": function(nextProps) {
+			var changed = [],
+			    prevProps = this.getFPropertyA().slice(0);
+
+			nextProps.forEach(function(nextProp) {
+				if (!nextProp || typeof nextProp != "object")
+					return;
+
+				if (!(nextProp instanceof ObjectA))
+					nextProp = ObjectA.create(nextProp);
+
+				// Найдено совпадение - обновить запись
+				var _match = prevProps.some(function(prevProp, idx) {
+					if (prevProp.get("property").toLowerCase() == nextProp.get("property").toLowerCase())
+						return changed.push(ObjectA.assign(prevProps.splice(idx, 1)[0], nextProp));
+				});
+
+				// Совпадений не найдено - новая запись
+				if (!_match)
+					changed.push(nextProp);
+			});
+
+			prevProps.push.apply(prevProps, changed);
+
+			this.setFProperty(prevProps);
+		},
+
+
 		"getUpsertOrDelFPropsQueryStrByDBRes": function(dbPropsRecs, insProperty) {
 			var self                    = this,
 				dbq                     = [],
