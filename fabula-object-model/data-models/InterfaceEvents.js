@@ -132,10 +132,7 @@ EventsInterface.prototype = {
 
 
 	/**
-	 * Создать объект события
-	 * @return {IEvent | CustomEvent}
-	 * @param {String} name
-	 * @param {Object=} param
+	 * @private
 	 * */
 	"_createEvent": function(name, param){
 		var event;
@@ -157,6 +154,19 @@ EventsInterface.prototype = {
 		}
 
 		return event;
+	},
+
+
+	/**
+	 * Создать объект события
+	 *
+	 * @param {String} name
+	 * @param {Object=} param
+	 *
+	 * @return {IEvent | CustomEvent}
+	 * */
+	"createEvent": function(name, param) {
+		return this._createEvent(name, param);
 	},
 
 

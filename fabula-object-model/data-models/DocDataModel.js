@@ -123,7 +123,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			"add-fab-mov": [
 				function(self, e) {
-					e.mov.set("doc", this.get("docId"))
+					e.mov.set("doc", this.get("docId"));
+					e.mov.setDocInstance(this);
 				}
 			]
 
@@ -446,6 +447,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			}).catch(function(err) {
 				callback(err, self);
 
+				self.trigger("insert-error");
+
 				return Promise.reject(err);
 			});
 		},
@@ -698,6 +701,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			}).catch(function(err) {
 				callback(err, self);
 
+				self.trigger("update-error");
+
 				return Promise.reject(err);
 			});
 		},
@@ -897,6 +902,42 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				return Promise.reject(err);
 			});
+		},
+
+
+		"_mDocStdMergeFieldFn": function(prev, next) {
+			return next;
+		},
+
+
+		/**
+		 * Объеденить с другой с записью
+		 *
+		 * @param {MovDataModel} doc
+		 * @param {Object} opt
+		 *
+		 * @return {MovDataModel}
+		 * */
+		"merge": function(doc, opt) {
+			if (!doc)
+				return;
+
+			opt         = opt || {};
+			opt.mov     = opt.mov || {};
+			opt.fields  = opt.fields || {};
+
+			var fldFn   = opt.fields.walker || this._mDocStdMergeFieldFn;
+
+			this.mergeFProps(doc.getFPropertyA(), opt.props);
+
+			doc.getKeys().forEach(function(k) {
+				this.set(
+					k,
+					fldFn(this.get(k), doc.get(k), k)
+				);
+			}, this);
+
+			return this.mergeMovs(doc.getMov(), opt);
 		},
 
 

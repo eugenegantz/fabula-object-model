@@ -87,22 +87,22 @@ MovDataModel.prototype = _utils.createProtoChain(
 					var e           = arguments[1],
 						parentDoc   = this.get("ParentDoc", null, !1),
 						prevDocId   = this.get("Doc"),
-						docId       = e.value;
+						nextDocId   = e.value;
 
 					this.getMov().forEach(function(mov) {
 						if (prevDocId == mov.get("doc1", null, !1))
-							mov.set("doc1", docId);
+							mov.set("doc1", nextDocId);
 
 						if (prevDocId == mov.get("doc"))
-							mov.set("doc", docId);
+							mov.set("doc", nextDocId);
 					});
 
 					// Если у заявки присутствует "doc", то "doc1" приравнивается "doc"
 					// Если у заявки отсутствует "doc", то "doc1" приравнивается "parentDoc"
 
-					!docId
+					!nextDocId
 						? this.set("doc1", parentDoc)
-						: this.set("doc1", docId);
+						: this.set("doc1", nextDocId);
 
 					this.updateFProperty(null, { "extId": this.get("doc1", null, !1) });
 				}
@@ -632,6 +632,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 			}).catch(function(err) {
 				callback(err, self);
 
+				self.trigger("insert-error");
+
 				return Promise.reject(err);
 			});
 		},
@@ -916,6 +918,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 			}).catch(function(err) {
 				callback(err, self);
 
+				self.trigger("update-error");
+
 				return Promise.reject(err);
 			});
 		},
@@ -993,6 +997,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		"setDocInstance": function(doc) {
+			this._mMovDocInstance = doc;
+		},
+
+
+		"getDocInstance": function() {
+			return this._mMovDocInstance;
+		},
+
+
 		"_setParentMovInstance": function(mov) {
 			this._mMovParentMovInstance = mov;
 		},
@@ -1007,8 +1021,56 @@ MovDataModel.prototype = _utils.createProtoChain(
 		 * Получить экземпляр родительской задачи
 		 * @return {MovDataModel}
 		 * */
-		getParentMovInstance: function() {
+		"getParentMovInstance": function() {
 			return this._getParentMovInstance();
+		},
+
+
+		"_mMovStdMergeFieldFn": function(prev, next) {
+			return next;
+		},
+
+
+		/**
+		 * Объеденить с другой с записью
+		 *
+		 * @param {MovDataModel} mov
+		 * @param {Object} opt
+		 *
+		 * @return {MovDataModel}
+		 * */
+		"merge": function(mov, opt) {
+			if (!mov)
+				return;
+
+			opt         = opt || {};
+			opt.mov     = opt.mov || {};
+			opt.fields  = opt.fields || {};
+
+			var fldFn   = opt.fields.walker || this._mMovStdMergeFieldFn;
+
+			this.mergeFProps(mov.getFPropertyA(), opt.props);
+
+			mov.getKeys().forEach(function(k) {
+				this.set(
+					k,
+					fldFn(this.get(k), mov.get(k), k)
+				);
+			}, this);
+
+			return this.mergeMovs(mov.getMov(), opt);
+		},
+
+
+		"mergeByGSId": function(mov, opt) {
+			opt     = opt || {};
+			opt.mov = opt.mov || {};
+
+			opt.mov.cmp = function(prev, next) {
+				return prev.get("gs") == next.get("gs");
+			};
+
+			return this.merge(mov, opt);
 		},
 
 
