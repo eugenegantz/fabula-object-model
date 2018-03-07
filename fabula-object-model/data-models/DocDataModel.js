@@ -900,6 +900,42 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		"_mDocStdMergeFieldFn": function(prev, next) {
+			return next;
+		},
+
+
+		/**
+		 * Объеденить с другой с записью
+		 *
+		 * @param {MovDataModel} doc
+		 * @param {Object} opt
+		 *
+		 * @return {MovDataModel}
+		 * */
+		"merge": function(doc, opt) {
+			if (!doc)
+				return;
+
+			opt         = opt || {};
+			opt.mov     = opt.mov || {};
+			opt.fields  = opt.fields || {};
+
+			var fldFn   = opt.fields.walker || this._mDocStdMergeFieldFn;
+
+			this.mergeFProps(doc.getFPropertyA(), opt.props);
+
+			doc.getKeys().forEach(function(k) {
+				this.set(
+					k,
+					fldFn(this.get(k), doc.get(k))
+				);
+			}, this);
+
+			return this.mergeMovs(doc.getMov(), opt);
+		},
+
+
 		/**
 		 * Разложить docId на составляющие
 		 *

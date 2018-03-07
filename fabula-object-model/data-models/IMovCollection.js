@@ -163,6 +163,58 @@ IMovCollection.prototype = {
 		this.getMov(arg).forEach(this.delMov.bind(this));
 
 		return this;
+	},
+
+
+	"_iMovCollectionStdMergeWalker": function(prevMov, nextMov, opt) {
+		return !prevMov
+			? nextMov
+			: prevMov.merge(nextMov, opt);
+	},
+
+
+	"_iMovCollectionStdMergeCmpFn": function(prevMov, nextMov) {
+		return prevMov.get("mmId") == nextMov.get("mmId");
+	},
+
+
+	/**
+	 * @param {Array} nextMovs
+	 * @param {Object} opt
+	 * */
+	"mergeMovs": function(nextMovs, opt) {
+		opt         = opt || {};
+		opt.mov     = opt.mov || {};
+		opt.fields  = opt.fields || {};
+
+		var diff        = [],
+		    prevMovs    = this.getMov(),
+		    movFn       = opt.mov.walker || this._iMovCollectionStdMergeWalker,
+		    cmpFn       = opt.mov.cmp || this._iMovCollectionStdMergeCmpFn;
+
+		nextMovs.forEach(function(next) {
+			var mov;
+
+			// Найдено совпадение - обновить
+			var _match = prevMovs.some(function(prev, idx) {
+				var mov;
+
+				if (!cmpFn.call(this, prev, next))
+					return false;
+
+				(mov = movFn.call(this, prev, next, opt)) && diff.push(mov);
+
+				return prevMovs.splice(idx, 1);
+			}, this);
+
+			// Совпадений не найдено - новая запись
+			if (!_match)
+				(mov = movFn.call(this, void 0, next)) && this.addMov(mov);
+		}, this);
+
+		prevMovs.push.apply(prevMovs, diff);
+
+		return this;
 	}
 
 };

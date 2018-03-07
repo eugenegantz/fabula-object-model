@@ -6,3 +6,4 @@ docs
 *.rar
 package-lock.json
 node_modules/
+*.ignore.*

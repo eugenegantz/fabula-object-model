@@ -35,13 +35,13 @@ ObjectA.create = function(obj) {
 
 
 ObjectA.assign = function() {
-	var args = Array.prototype.slice.call(arguments, 1);
+	var args = Array.prototype.slice.call(arguments, 0);
 
 	return args.reduce(function(prev, curr) {
 		Object.assign(prev._props, curr._props);
 
 		return prev;
-	}, arguments[0]);
+	});
 };
 
 

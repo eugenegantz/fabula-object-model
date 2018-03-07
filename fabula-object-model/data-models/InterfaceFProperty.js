@@ -373,16 +373,35 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		"_iFPropsStdMergePropFn": function(prev, next) {
+			return !prev
+				? next
+				: ObjectA.assign(prev, next);
+		},
+
+
+		"_iFPropsStdMergeCmpPropFn": function(prev, next) {
+			return prev.get("property").toLowerCase() == next.get("property").toLowerCase();
+		},
+
+
 		/**
 		 * Объеденить свойства
 		 *
 		 * @param {Array} nextProps
+		 * @param {Object} opt
 		 * */
-		"mergeFProps": function(nextProps) {
-			var changed = [],
-			    prevProps = this.getFPropertyA().slice(0);
+		"mergeFProps": function(nextProps, opt) {
+			opt = opt || {};
+
+			var diff        = [],
+			    prevProps   = this.getFPropertyA(),
+			    walkFn      = opt.walker || this._iFPropsStdMergePropFn,
+			    cmpFn       = opt.cmp || this._iFPropsStdMergeCmpPropFn;
 
 			nextProps.forEach(function(nextProp) {
+				var prop;
+
 				if (!nextProp || typeof nextProp != "object")
 					return;
 
@@ -391,18 +410,23 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				// Найдено совпадение - обновить запись
 				var _match = prevProps.some(function(prevProp, idx) {
-					if (prevProp.get("property").toLowerCase() == nextProp.get("property").toLowerCase())
-						return changed.push(ObjectA.assign(prevProps.splice(idx, 1)[0], nextProp));
+					var prop;
+
+					if (!cmpFn.call(this, prevProp, nextProp))
+						return false;
+
+					(prop = walkFn.call(this, prevProp, nextProp)) && diff.push(prop);
+
+					// Исключить запись из следующих циклов
+					return prevProps.splice(idx, 1);
 				});
 
 				// Совпадений не найдено - новая запись
 				if (!_match)
-					changed.push(nextProp);
+					(prop = walkFn.call(this, void 0, nextProp)) && diff.push(prop);
 			});
 
-			prevProps.push.apply(prevProps, changed);
-
-			this.setFProperty(prevProps);
+			prevProps.push.apply(prevProps, diff);
 		},
 
 

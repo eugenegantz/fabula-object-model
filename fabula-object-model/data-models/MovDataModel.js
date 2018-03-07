@@ -1012,15 +1012,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"_stdMergeWalker": function(prevMov, nextMov) {
-			return prevMov.merge(nextMov, {
-				"cmp": this._stdMergeCmpFn
-			});
-		},
-
-
-		"_stdMergeCmpFn": function(prevMov, nextMov) {
-			return prevMov.get("mmId") == nextMov.get("mmId");
+		"_mMovStdMergeFieldFn": function(prev, next) {
+			return next;
 		},
 
 
@@ -1036,41 +1029,30 @@ MovDataModel.prototype = _utils.createProtoChain(
 			if (!mov)
 				return;
 
-			opt = opt || {};
+			opt         = opt || {};
+			opt.mov     = opt.mov || {};
+			opt.fields  = opt.fields || {};
 
-			this.mergeFProps(mov.getFPropertyA());
+			var fldFn   = opt.fields.walker || this._mMovStdMergeFieldFn;
+
+			this.mergeFProps(mov.getFPropertyA(), opt.props);
 
 			mov.getKeys().forEach(function(k) {
-				this.set(k, mov.get(k));
-			});
-
-			var prevMovs    = this.getMov().slice(0),
-			    nextMovs    = mov.getMov(),
-			    walker      = opt.walker || this._stdMergeWalker,
-			    cmpFn       = opt.cmp || this._stdMergeCmpFn;
-
-			nextMovs.forEach(function(next) {
-				var mov;
-
-				prevMovs.some(function(prev, idx) {
-					if (cmpFn.call(this, prev, next)) {
-						mov = walker.call(this, prevMovs.splice(idx, 1)[0], next);
-
-						return true;
-					}
-				});
-
-				mov && this.addMov(mov);
+				this.set(
+					k,
+					fldFn(this.get(k), mov.get(k))
+				);
 			}, this);
 
-			return this;
+			return this.mergeMovs(mov.getMov(), opt);
 		},
 
 
 		"mergeByGSId": function(mov, opt) {
-			opt = opt || {};
+			opt     = opt || {};
+			opt.mov = opt.mov || {};
 
-			opt.cmp = function(prev, next) {
+			opt.mov.cmp = function(prev, next) {
 				return prev.get("gs") == next.get("gs");
 			};
 
