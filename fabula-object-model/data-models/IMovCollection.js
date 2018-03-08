@@ -187,10 +187,11 @@ IMovCollection.prototype = {
 		opt.mov     = opt.mov || {};
 		opt.fields  = opt.fields || {};
 
-		var diff        = [],
-		    prevMovs    = this.getMov(),
-		    movFn       = opt.mov.walker || this._iMovCollectionStdMergeWalker,
-		    cmpFn       = opt.mov.cmp || this._iMovCollectionStdMergeCmpFn;
+		var diff            = [],
+		    prevMovs        = this.getMov(),
+		    beforeEach      = opt.beforeEach,
+		    movFn           = opt.mov.walker || this._iMovCollectionStdMergeWalker,
+		    cmpFn           = opt.mov.cmp || this._iMovCollectionStdMergeCmpFn;
 
 		nextMovs.forEach(function(next) {
 			var mov;
@@ -198,6 +199,8 @@ IMovCollection.prototype = {
 			// Найдено совпадение - обновить
 			var _match = prevMovs.some(function(prev, idx) {
 				var mov;
+
+				beforeEach && beforeEach.call(this, prev, next, opt);
 
 				if (!cmpFn.call(this, prev, next))
 					return false;

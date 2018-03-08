@@ -394,10 +394,11 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"mergeFProps": function(nextProps, opt) {
 			opt = opt || {};
 
-			var diff        = [],
-			    prevProps   = this.getFPropertyA(),
-			    walkFn      = opt.walker || this._iFPropsStdMergePropFn,
-			    cmpFn       = opt.cmp || this._iFPropsStdMergeCmpPropFn;
+			var diff            = [],
+			    prevProps       = this.getFPropertyA(),
+			    beforeEachFn    = opt.beforeEach,
+			    walkFn          = opt.walker || this._iFPropsStdMergePropFn,
+			    cmpFn           = opt.cmp || this._iFPropsStdMergeCmpPropFn;
 
 			nextProps.forEach(function(nextProp) {
 				var prop;
@@ -411,6 +412,8 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				// Найдено совпадение - обновить запись
 				var _match = prevProps.some(function(prevProp, idx) {
 					var prop;
+
+					beforeEachFn && beforeEachFn.call(this, prevProp, nextProp);
 
 					if (!cmpFn.call(this, prevProp, nextProp))
 						return false;
