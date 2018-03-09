@@ -123,7 +123,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			"add-fab-mov": [
 				function(self, e) {
-					e.mov.set("doc", this.get("docId"))
+					e.mov.set("doc", this.get("docId"));
+					e.mov.setDocInstance(this);
 				}
 			]
 

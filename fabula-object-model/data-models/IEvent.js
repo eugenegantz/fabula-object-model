@@ -2,7 +2,7 @@
 
 // TODO IEvent
 
-var IEvent = function(type){
+var IEvent = function(type) {
 	if (typeof type != "string")
 		throw new Error("1st argument suppose to be String");
 

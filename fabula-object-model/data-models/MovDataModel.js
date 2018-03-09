@@ -993,6 +993,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		"setDocInstance": function(doc) {
+			this._mMovDocInstance = doc;
+		},
+
+
+		"getDocInstance": function() {
+			return this._mMovDocInstance;
+		},
+
+
 		"_setParentMovInstance": function(mov) {
 			this._mMovParentMovInstance = mov;
 		},
