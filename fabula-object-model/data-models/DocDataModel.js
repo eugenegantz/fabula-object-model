@@ -447,6 +447,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			}).catch(function(err) {
 				callback(err, self);
 
+				self.trigger("insert-error");
+
 				return Promise.reject(err);
 			});
 		},
@@ -699,6 +701,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			}).catch(function(err) {
 				callback(err, self);
 
+				self.trigger("update-error");
+
 				return Promise.reject(err);
 			});
 		},
@@ -929,7 +933,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			doc.getKeys().forEach(function(k) {
 				this.set(
 					k,
-					fldFn(this.get(k), doc.get(k))
+					fldFn(this.get(k), doc.get(k), k)
 				);
 			}, this);
 

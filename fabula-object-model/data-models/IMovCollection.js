@@ -189,7 +189,7 @@ IMovCollection.prototype = {
 
 		var diff            = [],
 		    prevMovs        = this.getMov(),
-		    beforeEach      = opt.beforeEach,
+		    beforeEachMov   = opt.mov.beforeEach,
 		    movFn           = opt.mov.walker || this._iMovCollectionStdMergeWalker,
 		    cmpFn           = opt.mov.cmp || this._iMovCollectionStdMergeCmpFn;
 
@@ -200,7 +200,7 @@ IMovCollection.prototype = {
 			var _match = prevMovs.some(function(prev, idx) {
 				var mov;
 
-				beforeEach && beforeEach.call(this, prev, next, opt);
+				beforeEachMov && beforeEachMov.call(this, prev, next, opt);
 
 				if (!cmpFn.call(this, prev, next))
 					return false;

@@ -87,22 +87,22 @@ MovDataModel.prototype = _utils.createProtoChain(
 					var e           = arguments[1],
 						parentDoc   = this.get("ParentDoc", null, !1),
 						prevDocId   = this.get("Doc"),
-						docId       = e.value;
+						nextDocId   = e.value;
 
 					this.getMov().forEach(function(mov) {
 						if (prevDocId == mov.get("doc1", null, !1))
-							mov.set("doc1", docId);
+							mov.set("doc1", nextDocId);
 
 						if (prevDocId == mov.get("doc"))
-							mov.set("doc", docId);
+							mov.set("doc", nextDocId);
 					});
 
 					// Если у заявки присутствует "doc", то "doc1" приравнивается "doc"
 					// Если у заявки отсутствует "doc", то "doc1" приравнивается "parentDoc"
 
-					!docId
+					!nextDocId
 						? this.set("doc1", parentDoc)
-						: this.set("doc1", docId);
+						: this.set("doc1", nextDocId);
 
 					this.updateFProperty(null, { "extId": this.get("doc1", null, !1) });
 				}
@@ -632,6 +632,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 			}).catch(function(err) {
 				callback(err, self);
 
+				self.trigger("insert-error");
+
 				return Promise.reject(err);
 			});
 		},
@@ -916,6 +918,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 			}).catch(function(err) {
 				callback(err, self);
 
+				self.trigger("update-error");
+
 				return Promise.reject(err);
 			});
 		},
@@ -1050,7 +1054,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 			mov.getKeys().forEach(function(k) {
 				this.set(
 					k,
-					fldFn(this.get(k), mov.get(k))
+					fldFn(this.get(k), mov.get(k), k)
 				);
 			}, this);
 
