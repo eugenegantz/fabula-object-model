@@ -1,6 +1,7 @@
 "use strict";
 
 var DefaultDataModel    = require("./DefaultDataModel"),
+	movDBTScm           = require("./db-tables-schemes/movement.js"),
 	InterfaceFProperty  = require("./InterfaceFProperty"),
 	IMovCollection      = require("./IMovCollection.js"),
 	TalksDataModel      = require("./TalksDataModel"),
@@ -939,46 +940,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"__movDataModelDefaultFields": new ObjectA({
-			"MMID":         { "type": "integer" },
-			"MMPID":        { "type": "integer" },
-			"IsDraft":      { "type": "integer" },
-			"Tick":         { "type": "integer" },
-			"Doc":          { "type": "string" },
-			"Doc1":         { "type": "string" },
-			"ParentDoc":    { "type": "string" },
-			"MMFlag":       { "type": "string" },
-			"InOut":        { "type": "integer" },
-			"GSDate":       { "type": "date" },
-			"GSDate2":      { "type": "date" },
-			"Mark":         { "type": "boolean" },
-			"CodeOp":       { "type": "string" },
-			"CodeDc":       { "type": "string" },
-			"ExtCode":      { "type": "string" },
-			"Storage":      { "type": "string" },
-			"GS":           { "type": "string" },
-			"GSSpec":       { "type": "string", "length": 120 },
-			"GSExt":        { "type": "integer" },
-			"Consigment":   { "type": "integer" },
-			"Amount":       { "type": "float" },
-			"Rest":         { "type": "float" },
-			"RestSum":      { "type": "float" },
-			"Price":        { "type": "float" },
-			"PrimeCost":    { "type": "float" },
-			"Sum":          { "type": "float" },
-			"Sum2":         { "type": "float" },
-			"MAttr1":       { "type": "string" },
-			"MAttr2":       { "type": "string" },
-			"MAttr3":       { "type": "string" },
-			"MAttr4":       { "type": "string" },
-			"FirmProduct":  { "type": "integer" },
-			"Remark":       { "type": "string" },
-			"NameAVR":      { "type": "string" },
-			"Agent2":       { "type": "string" },
-			"Manager2":     { "type": "string" },
-			"Performer":    { "type": "string" },
-			"Stock":        { "type": "boolean" }
-		}),
+		"__movDataModelDefaultFields": movDBTScm,
 
 
 		"_isRecursiveMov": function() {
