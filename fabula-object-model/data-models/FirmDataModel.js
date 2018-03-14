@@ -410,10 +410,12 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 			}).then(function() {
 				return new Promise(function(resolve, reject) {
+					var firmId = self.get("firmId", null, !1);
+
 					var query = self.getUpsertOrDelFPropsQueryStrByDBRes([], {
-						"pid": null,
+						"pid": firmId,
 						"extClass": "FIRMS",
-						"extId": self.get("firmId", null, !1)
+						"extId": firmId
 					});
 
 					if (!query)
@@ -502,10 +504,12 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 			}).then(function(dbres) {
 				return new Promise(function(resolve, reject) {
+					var firmId = self.get("firmId", null, !1);
+
 					var query = self.getUpsertOrDelFPropsQueryStrByDBRes(dbres.recs, {
-						"pid": null,
+						"pid": firmId,
 						"extClass": "FIRMS",
-						"extId": self.get("firmId", null, !1)
+						"extId": firmId
 					});
 
 					if (!query)
