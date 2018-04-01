@@ -152,31 +152,20 @@ DefaultPrintCalc.prototype.calc = function(arg) {
 	if (typeof arg.GSID != "string" || !arg.GSID)
 		throw new Error("arg.GSID suppose to be not empty String");
 
-	var tmp,
-		gsRow,
-		argGSID = arg.GSID,
-		gands = GandsDataModel.prototype.getInstance(),
-		methodsMap = {
-			"таблица": this.calcByApprox,
-			"фиксированная цена": this.calcByPriceFields
-		},
-		methods = [
-			"таблица",
-			"фиксированная цена",
-			"наценка от работы",
-			"наценка от материала",
-			"наценка от расходов"
-		],
-		ret = {
-			"price": 0,
-			"sum": 0
-		};
+	var methodsMap = {
+		"таблица": this.calcByApprox,
+		"фиксированная цена": this.calcByPriceFields
+	};
 
-	if (!(gsRow = gands.dataReferences.get(argGSID)))
-		throw new Error("Record with code \"" + argGSID + "\" was not found");
+	var methods = [
+		"таблица",
+		"фиксированная цена"
+	];
 
-	if ((tmp = gands.getProperty(gsRow, "способ наценки")[0]))
-		methods = tmp.value.split(/[;,]\s*/ig);
+	var ret = {
+		"price": 0,
+		"sum": 0
+	};
 
 	methods.some(method => {
 		method = method.toLowerCase();
