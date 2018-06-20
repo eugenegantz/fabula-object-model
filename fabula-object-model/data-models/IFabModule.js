@@ -1,5 +1,11 @@
 "use strict";
 
+var _utils = {
+	db: {
+		awws: require('eg-db-awws/src/db-awws-utils.js')
+	}
+};
+
 var IFabModule = function() {};
 
 module.exports = IFabModule;
@@ -18,10 +24,11 @@ module.exports.prototype = {
 
 			return obj;
 		}, {
-			r: Math.random().toString().replace("0.", "").slice(-4)
+			r: Math.random().toString().replace("0.", "").slice(-4),
+			"*": 1
 		});
 
-		return JSON.stringify(dbcache);
+		return _utils.db.awws.dbCacheToString(dbcache);
 	},
 
 
