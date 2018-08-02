@@ -66,36 +66,49 @@ MovDataModel.prototype = _utils.createProtoChain(
 				}
 			],
 
-			"afterset:parentdoc": [
+			"set:parentdoc": [
 				function() {
-					var e = arguments[1],
-						nextParentDocId     = e.value,
-						prevParentDocId     = this.get("parentDoc"),
-						prevDocId           = this.get("doc"),
-						prevDocId1          = this.get("doc1");
+					var e                   = arguments[1],
+					    nextParentDocId     = e.value,
+					    prevParentDocId     = this.get("parentDoc"),
+					    prevDocId           = this.get("doc"),
+					    prevDocId1          = this.get("doc1");
 
-					if (!nextParentDocId && prevDocId1 == prevParentDocId)
-						this.set("doc1", prevDocId, null, !1);
+					if (!nextParentDocId)
+						return this.set("doc1", prevDocId);
 
-					else if (nextParentDocId && !prevDocId1)
-						this.set("doc1", nextParentDocId, null, !1);
+					if (prevParentDocId == prevDocId1)
+						this.set("doc1", nextParentDocId);
+				}
+			],
+
+			"set:doc1": [
+				function() {
+					var e           = arguments[1],
+					    doc1        = e.value;
+
+					this.updateFProperty(null, { "extId": doc1 });
 				}
 			],
 
 			"set:doc": [
 				function() {
 					var e           = arguments[1],
-						parentDoc   = this.get("ParentDoc", null, !1),
-						prevDocId   = this.get("Doc"),
-						nextDocId   = e.value;
+					    arg         = e.argument || {},
+					    recursive   = "recursive" in arg ? arg : true,
+					    parentDoc   = this.get("ParentDoc", null, !1),
+					    prevDocId   = this.get("Doc"),
+					    nextDocId   = e.value;
 
-					this.getMov().forEach(function(mov) {
-						if (prevDocId == mov.get("doc1", null, !1))
-							mov.set("doc1", nextDocId);
+					if (recursive) {
+						this.getMov().forEach(function(mov) {
+							if (prevDocId == mov.get("doc1", null, !1))
+								mov.set("doc1", nextDocId);
 
-						if (prevDocId == mov.get("doc"))
-							mov.set("doc", nextDocId);
-					});
+							if (prevDocId == mov.get("doc"))
+								mov.set("doc", nextDocId);
+						});
+					}
 
 					// Если у заявки присутствует "doc", то "doc1" приравнивается "doc"
 					// Если у заявки отсутствует "doc", то "doc1" приравнивается "parentDoc"
@@ -103,8 +116,6 @@ MovDataModel.prototype = _utils.createProtoChain(
 					!nextDocId
 						? this.set("doc1", parentDoc)
 						: this.set("doc1", nextDocId);
-
-					this.updateFProperty(null, { "extId": this.get("doc1", null, !1) });
 				}
 			],
 
@@ -295,7 +306,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				}
 
 				fields = fields.map(function(fld) {
-					fld = (fld + '').toLowerCase();
+					fld = (fld + "").toLowerCase();
 
 					if (/[()]/g.test(fld))
 						return fld;
@@ -565,7 +576,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 			arg = arg || {};
 
 			var self = this,
-				mAttrRnd = (Math.random() * Math.pow(10, 16) + '').slice(0, 16),
+				mAttrRnd = (Math.random() * Math.pow(10, 16) + "").slice(0, 16),
 				callback = arg.callback || emptyFn;
 
 			// -----------------------------------------------------------------
@@ -641,7 +652,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 		_getSaveOpt: function(arg) {
 			function get2(obj) {
-				return ['insert', 'update', 'delete'].reduce(function(obj, key) {
+				return ["insert", "update", "delete"].reduce(function(obj, key) {
 					if (!(key in obj))
 						obj[key] = true;
 
@@ -649,7 +660,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				}, obj || {});
 			}
 
-			var ret = ['props', 'movs', 'fields', 'talk'].reduce(function(obj, key) {
+			var ret = ["props", "movs", "fields", "talk"].reduce(function(obj, key) {
 				obj[key] = get2(obj[key]);
 
 				return obj;

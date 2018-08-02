@@ -72,7 +72,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					self.set("docType", parsed.docType, null, !1);
 					self.set("company", parsed.company, null, !1);
-					self.movSet("doc", e.value);
+
+					this._updateMovDoc(e.value, this.get('docId'));
 				}
 			],
 
@@ -87,8 +88,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					var p = this.parseDocID(docId);
 
-					self.set("docId", e.value + p.year + p.prefix + p.code, null, !1);
-					self.movSet("doc", self.get("docId", null, !1));
+					self.set("docId", e.value + p.year + p.prefix + p.code);
 				}
 			],
 
@@ -116,8 +116,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					if (!prefix)
 						return;
 
-					self.set("docId", p.company + p.year + prefix + p.code, null, !1);
-					self.movSet("doc", self.get("docId"));
+					self.set("docId", p.company + p.year + prefix + p.code);
 				}
 			],
 
@@ -145,6 +144,31 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			});
 
 			return this;
+		},
+
+
+		/**
+		 * @param {String} nextDocId
+		 * @param {String=} prevDocId
+		 *
+		 * @return
+		 * */
+		"_updateMovDoc": function(nextDocId, prevDocId) {
+			prevDocId = prevDocId || this.get('docId', null, !1);
+
+			this.getNestedMovs().forEach(function(mov) {
+				if (!mov || typeof mov != "object")
+					return;
+
+				var doc         = mov.get("doc"),
+				    parentDoc   = mov.get("parentDoc");
+
+				if (doc == prevDocId)
+					mov.set('doc', nextDocId, { recursive: false });
+
+				if (parentDoc == prevDocId)
+					mov.set('parentDoc', nextDocId)
+			});
 		},
 
 
