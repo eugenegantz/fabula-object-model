@@ -971,6 +971,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 			"GSSpec":       { "type": "string", "length": 120 },
 			"GSExt":        { "type": "integer" },
 			"Consigment":   { "type": "integer" },
+			"K2":           { "type": "integer" },
 			"Amount":       { "type": "float" },
 			"Rest":         { "type": "float" },
 			"RestSum":      { "type": "float" },
