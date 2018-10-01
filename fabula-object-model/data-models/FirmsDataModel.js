@@ -42,23 +42,7 @@ FirmsDataModel.prototype = {
 	},
 
 
-	"sql": ""
-	+ " SELECT"
-	+       " FirmID,"
-	+       " ID,"
-	+       " NDS,"
-	+       " Parent_ID,"
-	+       " Name,"
-	+       " FullName,"
-	+       " UrName,"
-	+       " City_ID,"
-	+       " UrAddress,"
-	+       " Tel,"
-	+       " INN,"
-	+       " OKPO,"
-	+       " KPP,"
-	+       " isAgency"
-	+ " FROM _firms"
+	"sql": "SELECT * FROM _firms"
 
 	+ ";"
 	+ " SELECT"
