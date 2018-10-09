@@ -608,6 +608,8 @@ FirmDataModel.prototype = utils.createProtoChain(
 		 * @return {Promise}
 		 * */
 		"exists": function(arg) {
+			arg = arg || {};
+
 			var self = this,
 				callback = arg.callback || emptyFn,
 				id = self.get("firmId"),
