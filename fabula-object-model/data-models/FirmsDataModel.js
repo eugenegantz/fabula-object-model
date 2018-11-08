@@ -14,8 +14,9 @@ var getContextDB = function() {
 	return DBModel.prototype.getInstance();
 };
 
-var voidFn = function() {},
-	ObjectA = require("./ObjectA.js");
+var dbUtils = require("./../utils/dbUtils"),
+	ObjectA = require("./ObjectA.js"),
+	voidFn = function() {};
 
 var FirmsDataModel = function() {
 	this.init();
@@ -112,21 +113,7 @@ FirmsDataModel.prototype = {
 				return reject("FirmsDataModel().loadFirm(): arg.firmId is not specified");
 
 			var query = ""
-				+ " SELECT"
-				+   "  FirmID"
-				+   ", ID"
-				+   ", NDS"
-				+   ", Parent_ID"
-				+   ", Name"
-				+   ", FullName"
-				+   ", UrName"
-				+   ", City_ID"
-				+   ", UrAddress"
-				+   ", Tel"
-				+   ", INN"
-				+   ", OKPO"
-				+   ", KPP"
-				+   ", isAgency"
+				+ " SELECT *"
 				+ " FROM _firms"
 				+ " WHERE"
 				+   " firmId = " + arg.firmId
@@ -143,7 +130,10 @@ FirmsDataModel.prototype = {
 
 			db.dbquery({
 				"query": query,
-				"callback": function(dbres) {
+				"callback": function(dbres, err) {
+					if (err = dbUtils.fetchErrStrFromRes(dbres))
+						return reject(err);
+
 					resolve(dbres);
 				}
 			});
