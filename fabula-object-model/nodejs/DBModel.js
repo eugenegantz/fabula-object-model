@@ -12,7 +12,8 @@ var modDBAwwS = require("eg-db-awws");
  * @param {String} arg.dbname
  * @param {String} arg.dbsrc
  * */
-var DBModel = function(arg){
+var DBModel = function(arg) {
+	var self = this;
 
 	if (  !modDBAwwS.prototype.instances.length  ){
 		if (typeof arg != "object") {
@@ -21,16 +22,26 @@ var DBModel = function(arg){
 
 		var tmp = ["dburl", "dbname", "dbname"];
 
-		for(let c=0; c<tmp.length; c++){
+		for(var c = 0; c < tmp.length; c++){
 			if (!arg[tmp[c]]){
 				throw new Error("!arg." + tmp[c]);
 			}
 		}
 
-		this.dbAwwS					= modDBAwwS.prototype.getInstance(arg);
-		this.dbAwwS.dburl			= arg.dburl;
-		this.dbAwwS.dbname		= arg.dbname; // well.2015
-		this.dbAwwS.dbsrc			= arg.dbsrc; // main, common, stat
+		this.dbAwwS = modDBAwwS.prototype.getInstance(arg);
+
+		[
+			"dburl",
+			"dbname",
+			"dbsrc",
+			"loginhash",
+			"loginurl",
+			"loginorigin",
+			"login",
+			"login2"
+		].forEach(function(key) {
+			self[key] = arg[key];
+		});
 
 	} else {
 		this.dbAwwS					= modDBAwwS.prototype.getInstance();
