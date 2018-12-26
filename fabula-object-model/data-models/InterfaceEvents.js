@@ -41,7 +41,7 @@ EventsInterface.prototype = {
 				&& !(e instanceof CustomEvent)
 				&& !(e instanceof Event)
 			){
-				e = this._createEvent(eventName);
+				e = this._createEvent(eventName, e);
 			}
 
 			var events = this._iEventsListeners[eventName];
@@ -146,7 +146,7 @@ EventsInterface.prototype = {
 
 		}
 
-		if (typeof param == "object"){
+		if (param && typeof param == "object"){
 			for(var prop in param){
 				if (  !Object.prototype.hasOwnProperty.call(param, prop)  ) continue;
 				event[prop] = param[prop];
