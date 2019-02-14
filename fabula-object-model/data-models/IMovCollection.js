@@ -8,6 +8,30 @@ function IMovCollection() {
 
 IMovCollection.prototype = {
 
+	"triggerNestedMovs": function(eventName, e) {
+		this.getNestedMovs().forEach(function(mov) {
+			mov.trigger(eventName, e);
+		});
+	},
+
+
+	/**
+	 * Примеить свойство ко всем задачам внутри заявки
+	 * */
+	"movSet": function() {
+		var args = arguments;
+
+		this.getMov().forEach(function(mov) {
+			if (!mov || typeof mov != "object")
+				return;
+
+			mov.set.apply(mov, args);
+		});
+
+		return this;
+	},
+
+
 	/**
 	 * @deprecated
 	 * */

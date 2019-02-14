@@ -7,6 +7,7 @@ var _utils                  = require("./../utils/utils"),
 	IMovCollection          = require("./IMovCollection.js"),
 	InterfaceFProperty      = require("./InterfaceFProperty"),
 	IFabModule              = require("./IFabModule.js"),
+	IEvent                  = require("./IEvent"),
 	ObjectA                 = require("./ObjectA.js"),
 	MovDataModel            = require("./MovDataModel");
 
@@ -128,23 +129,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			]
 
 		}),
-
-
-		/**
-		 * Примеить свойство ко всем задачам внутри заявки
-		 * */
-		"movSet": function() {
-			var args = arguments;
-
-			this.getMov().forEach(function(mov) {
-				if (!mov || typeof mov != "object")
-					return;
-
-				mov.set.apply(mov, args);
-			});
-
-			return this;
-		},
 
 
 		/**
@@ -379,6 +363,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			self.trigger("before-insert");
 
+			(function() {
+				var e = new IEvent("before-doc-insert");
+
+				e.doc = self;
+
+				self.triggerNestedMovs("before-doc-insert", e);
+			})();
+
 			docFieldsDecl.getKeys().forEach(function(key) {
 				if (disabledFields.get(key))
 					return;
@@ -468,10 +460,26 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				self.trigger("after-insert");
 
+				(function() {
+					var e = new IEvent("after-doc-insert");
+
+					e.doc = self;
+
+					self.triggerNestedMovs("after-doc-insert", e);
+				})();
+
 			}).catch(function(err) {
 				callback(err, self);
 
 				self.trigger("insert-error");
+
+				(function() {
+					var e = new IEvent("doc-insert-error");
+
+					e.doc = self;
+
+					self.triggerNestedMovs("doc-insert-error", e);
+				})();
 
 				return Promise.reject(err);
 			});
@@ -526,6 +534,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			ownArg.saveOpt = self._getSaveOpt(ownArg.saveOpt);
 
 			self.trigger("before-update");
+
+			(function() {
+				var e = new IEvent("before-doc-update");
+
+				e.doc = self;
+
+				self.triggerNestedMovs("before-doc-update", e);
+			})();
 
 			return new Promise(function(resolve, reject) {
 				dbawws.dbquery({
@@ -722,10 +738,26 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				self.trigger("after-update");
 
+				(function() {
+					var e = new IEvent("after-doc-update");
+
+					e.doc = self;
+
+					self.triggerNestedMovs("after-doc-update", e);
+				})();
+
 			}).catch(function(err) {
 				callback(err, self);
 
 				self.trigger("update-error");
+
+				(function() {
+					var e = new IEvent("doc-update-error");
+
+					e.doc = self;
+
+					self.triggerNestedMovs("doc-update-error", e);
+				})();
 
 				return Promise.reject(err);
 			});
