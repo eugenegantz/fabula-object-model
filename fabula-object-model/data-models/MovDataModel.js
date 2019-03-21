@@ -545,7 +545,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				query += self.getUpsertOrDelFPropsQueryStrByDBRes([], {
 					"pid": self.get("mmid", null, !1),
 					"extClass": "DOCS",
-					"extId": self.get("Doc", null, !1)
+					"extId": self.get("Doc1", null, !1)
 				});
 
 				db.dbquery({
@@ -783,7 +783,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 						[].concat(self.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
 							"pid": self.get("MMID", null, false),
 							"extClass": "DOCS",
-							"extId": self.get("Doc", null, false)
+							"extId": self.get("Doc1", null, false)
 						}) || [])
 					);
 				}
