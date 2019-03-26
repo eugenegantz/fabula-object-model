@@ -103,7 +103,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 				db.dbquery({
 					"dbworker": " ",
 					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins" }),
-					"query": "INSERT INTO _firms (" + fields.join(",") + ") VALUES (" + values.join(",") + ")",
+					"query": "INSERT INTO firms (" + fields.join(",") + ") VALUES (" + values.join(",") + ")",
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
 							return reject(err);
@@ -145,7 +145,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 				db.dbquery({
 					"dbworker": " ",
 					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins-id" }),
-					"query": "SELECT firmId FROM _firms WHERE " + cond.join(" AND "),
+					"query": "SELECT firmId FROM firms WHERE " + cond.join(" AND "),
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
 							return reject(err);
@@ -201,7 +201,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 				db.dbquery({
 					"dbworker": " ",
 					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.upd" }),
-					"query": "UPDATE _firms SET " + values.join(", ") + " WHERE firmId = " + self.get("firmId"),
+					"query": "UPDATE firms SET " + values.join(", ") + " WHERE firmId = " + self.get("firmId"),
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
 							return reject(err);
@@ -235,7 +235,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 			var _query = ""
 				+ " SELECT _fld_"
-				+ " FROM _firms AS t_firms"
+				+ " FROM firms AS t_firms"
 				+ " WHERE " + cond.join(" OR ");
 
 			var query = ""
@@ -580,7 +580,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 					"query": ""
 					+ "DELETE FROM Property WHERE extClass = 'FIRMS' AND extId = '" + id+ "" + "'"
-					+ "; DELETE FROM _firms WHERE firmId = " + id,
+					+ "; DELETE FROM firms WHERE firmId = " + id,
 
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -624,7 +624,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.exs" }),
 					"query": ""
 					+ " SELECT email"
-					+ " FROM _firms AS firms"
+					+ " FROM firms"
 					+ " WHERE"
 					+   " firmId = " + id,
 					"callback": function(dbres, err) {

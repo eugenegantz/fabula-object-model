@@ -43,7 +43,7 @@ FirmsDataModel.prototype = {
 	},
 
 
-	"sql": "SELECT * FROM _firms"
+	"sql": "SELECT * FROM firms"
 
 	+ ";"
 	+ " SELECT"
@@ -114,7 +114,7 @@ FirmsDataModel.prototype = {
 
 			var query = ""
 				+ " SELECT *"
-				+ " FROM _firms"
+				+ " FROM firms"
 				+ " WHERE"
 				+   " firmId = " + arg.firmId
 
