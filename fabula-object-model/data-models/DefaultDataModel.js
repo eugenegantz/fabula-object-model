@@ -75,14 +75,22 @@ DefaultDataModel.prototype = utils.createProtoChain(
 
 			key = (key + "").toLowerCase();
 
-			if (typeof useEvent == "undefined" || useEvent) {
+			if (useEvent == void 0)
 				useEvent = true;
 
-				var eventBeforeFld = this._createEvent("set:" + key, { "value": value, "argument": arg }),
-					eventAfterFld = this._createEvent("afterset:" + key, { "value": value, "argument": arg }),
-					eventAfter = this._createEvent("afterset", { "value": value, "argument": arg }),
-					eventBefore = this._createEvent("beforeset", { "value": value, "argument": arg });
+			var eventProps = {
+				"key"           : key,              // ключ свойства
+				"prevValue"     : this.get(key),    // предыдущее значение
+				"value"         : value,            // устанавливаемое значение
+				"argument"      : arg               // переданные аргументы
+			};
 
+			var eventBeforeFld      = this._createEvent("set:" + key, eventProps),
+			    eventAfterFld       = this._createEvent("afterset:" + key, eventProps),
+			    eventAfter          = this._createEvent("afterset", eventProps),
+			    eventBefore         = this._createEvent("beforeset", eventProps);
+
+			if (useEvent) {
 				this.trigger(eventBefore.type, eventBefore);
 				this.trigger(eventBeforeFld.type, eventBeforeFld);
 			}
