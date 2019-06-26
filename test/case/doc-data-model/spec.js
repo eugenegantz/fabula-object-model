@@ -1,4 +1,4 @@
-describe("DocDataModel", function() {
+describe.only("DocDataModel", function() {
 	var fom,
 		stand,
 		db,
@@ -598,7 +598,7 @@ describe("DocDataModel", function() {
 	});
 
 
-	describe(".load()", function() {
+	describe.only(".load()", function() {
 		var doc,
 			doc2,
 			fields;
@@ -624,6 +624,7 @@ describe("DocDataModel", function() {
 					"fields": fields,
 					"dbworker": " "
 				});
+
 			}).then(function() {
 				done();
 			}).catch(done);

@@ -12,6 +12,6 @@
 		"eg-promise-cascade": "https://github.com/eugenegantz/promise.cascade.git"
 	},
 	"devDependencies": {
-		"mocha": "^4.0.1"
+		"mocha": "^6.0.0"
 	}
 }

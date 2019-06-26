@@ -805,23 +805,19 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @param {String} arg.dbworker
 		 * @param {Object=} arg.movArg
 		 * @param {String | Object=} arg.dbcache
+		 * @param {function=} arg.loadAlgorithm
 		 *
 		 * @return {Promise}
 		 * */
-		"load": function(arg) {
-			arg = arg || {};
+		"load": function (arg) {
+			arg = Object.assign({}, arg);
 
-			var self        = this,
-				movArg      = Object.assign({ "dbcache": arg.dbcache }, arg.movArg),
-				dbawws      = self.getDBInstance(),
-				callback    = arg.callback || emptyFn,
-				docId       = self.get("docId", null, !1),
-				useSubMovs  = !!arg.useSubMovs, // TODO переименовать arg.useSubMovs
-				docFieldsDecl = self.__docDataModelsDefaultFields,
-				fields      = arg.fields;
+			var self                = this,
+			    loadAlg             = arg.loadAlgorithm || "batch",
+			    docFieldsDecl       = self.__docDataModelsDefaultFields,
+			    fields              = arg.fields;
 
-			if (!docId)
-				return Promise.reject("DocDataModel.load(): docId field is not assigned");
+			delete arg.loadAlgorithm;
 
 			if (!fields || !fields.length) {
 				fields = [
@@ -841,7 +837,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				];
 			}
 
-			fields = fields.reduce(function(prev, fld) {
+			arg.fields = fields.reduce(function(prev, fld) {
 				if (!docFieldsDecl.get(fld))
 					return prev;
 
@@ -853,13 +849,156 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				return prev;
 			}, []);
 
-			return new Promise(function(resolve, reject) {
-				dbawws.dbquery({
+			if ("batch" == loadAlg)
+				return this._loadBatch(arg);
+
+			return this._loadRecursively(arg);
+		},
+
+
+		"_loadBatch": function(arg) {
+			arg = arg || {};
+
+			var self                = this,
+			    dbawws              = self.getDBInstance(),
+			    callback            = arg.callback || emptyFn,
+			    docId               = self.get("docId", null, !1),
+			    fields              = arg.fields;
+
+			return Promise.resolve().then(function() {
+				if (!docId)
+					return Promise.reject("DocDataModel.load(): docId field is not assigned");
+
+				var query = ""
+					+ " SELECT " + fields.join(",")
+					+ " FROM DOCS"
+					+ " WHERE"
+					+   " docId = '" + docId + "'"
+
+					+ "; SELECT *"
+					+ " FROM Movement"
+					+ " WHERE"
+					+   " doc1 = '" + docId + "'"
+
+					+ "; SELECT"
+					+   "  uid"
+					+   ", extClass"
+					+   ", extID"
+					+   ", property"
+					+   ", value"
+					+ " FROM Property"
+					+ " WHERE"
+					+   "     extClass = 'DOCS'"
+					+   " AND extId = '" + docId + "'";
+
+				return dbawws.query({
 					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.load" }),
 
 					"dbworker": arg.dbworker,
 
-					"query": ""
+					"query": query
+				});
+
+			}).then(function(dbRes) {
+				var movPropsByMMId          = {},
+				    movsById                = {},
+				    movsParentAwaitByPId    = {},
+				    docRow                  = dbRes.recs[0],
+				    movsRecs                = dbRes.recs,
+				    propsRecs               = dbRes.recs;
+
+				if (!docRow.length)
+					return Promise.reject("DocDataModel.load(): specified doc record have not found in DOCS table");
+
+				self.getKeys().forEach(function(k) {
+					self.set(k, void 0, null, !1);
+				});
+
+				self.delMov({});
+
+				self.deleteFProperty();
+
+				self.set(docRow);
+
+				propsRecs.forEach(function(mRow) {
+					if (!mRow.pid)
+						return self.addProperty(mRow);
+
+					if (!movPropsByMMId[mRow.pid])
+						movPropsByMMId[mRow.pid] = [];
+
+					movPropsByMMId[mRow.pid].push(mRow);
+				});
+
+				movsRecs.forEach(function(row) {
+					var mov = new MovDataModel();
+
+					mov.set(row);
+
+					var parent,
+					    id          = mov.get("mmId"),
+					    pid         = mov.get('mmPId');
+
+					mov.addProperty(movPropsByMMId[id] || []);
+
+					movsById[id] = mov;
+
+					if (pid) {
+						parent = movsById[pid];
+
+						if (parent) {
+							parent.addMov(mov);
+
+						} else {
+							if (!movsParentAwaitByPId[pid])
+								movsParentAwaitByPId[pid] = [];
+
+							movsParentAwaitByPId[pid].push(mov);
+						}
+					}
+
+					if (movsParentAwaitByPId[id]) {
+						mov.addMov(movsParentAwaitByPId[id]);
+
+						delete movsParentAwaitByPId[id];
+					}
+
+					self.addMov(mov);
+				});
+
+				self._mDocClsHistory();
+
+				self.state = self.STATE_DOC_READY;
+
+				callback(null, self);
+
+			}).catch(function(err) {
+				callback(err, self);
+
+				return Promise.reject(err);
+			});
+		},
+
+
+		/**
+		 * @deprecated
+		 * */
+		"_loadRecursively": function(arg) {
+			arg = arg || {};
+
+			var self                = this,
+				movArg              = Object.assign({ "dbcache": arg.dbcache }, arg.movArg),
+				dbawws              = self.getDBInstance(),
+				callback            = arg.callback || emptyFn,
+				docId               = self.get("docId", null, !1),
+				useSubMovs          = !!arg.useSubMovs, // TODO переименовать arg.useSubMovs
+				fields              = arg.fields;
+
+			return Promise.resolve().then(function() {
+				if (!docId)
+					return Promise.reject("DocDataModel.load(): docId field is not assigned");
+
+				var query = ""
 					+ " SELECT " + fields.join(",")
 					+ " FROM DOCS"
 					+ " WHERE"
@@ -881,14 +1020,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					+ " WHERE"
 					+   "     pid = 0"
 					+   " AND ExtClass = 'DOCS'"
-					+   " AND ExtID = '" + docId + "'",
+					+   " AND ExtID = '" + docId + "'";
 
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
+				return dbawws.query({
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.load" }),
 
-						resolve(dbres);
-					}
+					"dbworker": arg.dbworker,
+
+					"query": query
 				});
 
 			}).then(function(dbres) {

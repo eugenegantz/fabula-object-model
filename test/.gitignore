@@ -1,3 +1,4 @@
 db-config-awws.js
+*.ignore.*
 *.bat
 *.sh
