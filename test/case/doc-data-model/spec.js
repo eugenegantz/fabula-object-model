@@ -1,4 +1,4 @@
-describe.only("DocDataModel", function() {
+describe("DocDataModel", function() {
 	var fom,
 		stand,
 		db,
@@ -598,17 +598,17 @@ describe.only("DocDataModel", function() {
 	});
 
 
-	describe.only(".load()", function() {
+	describe(".load()", function() {
 		var doc,
 			doc2,
 			fields;
 
-		before(function(done) {
+		before(function() {
 			this.timeout(6000);
 
 			doc = mkDoc();
 
-			doc.save().then(function() {
+			return doc.save().then(function() {
 				doc2 = fom.create("DocDataModel");
 
 				doc2.set("docId", doc.get("docId"));
@@ -624,10 +624,7 @@ describe.only("DocDataModel", function() {
 					"fields": fields,
 					"dbworker": " "
 				});
-
-			}).then(function() {
-				done();
-			}).catch(done);
+			});
 		});
 
 		it(

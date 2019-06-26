@@ -903,11 +903,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var movPropsByMMId          = {},
 				    movsById                = {},
 				    movsParentAwaitByPId    = {},
-				    docRow                  = dbRes.recs[0],
-				    movsRecs                = dbRes.recs,
-				    propsRecs               = dbRes.recs;
+				    docRow                  = dbRes[0].recs[0],
+				    movsRecs                = dbRes[1].recs,
+				    propsRecs               = dbRes[2].recs;
 
-				if (!docRow.length)
+				if (!docRow)
 					return Promise.reject("DocDataModel.load(): specified doc record have not found in DOCS table");
 
 				self.getKeys().forEach(function(k) {

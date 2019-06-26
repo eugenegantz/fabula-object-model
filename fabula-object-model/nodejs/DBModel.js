@@ -86,6 +86,8 @@ DBModel.prototype.dbquery = DBModel.prototype.query;
 
 
 DBModel.prototype._dbQueryPromise = function(arg) {
+	var _this = this;
+
 	if (!arg.query)
 		return Promise.reject("!dbquery");
 
@@ -96,7 +98,9 @@ DBModel.prototype._dbQueryPromise = function(arg) {
 					return reject(err);
 
 				resolve(dbRes);
-			}
+			};
+
+			_this.dbAwwS.getDBData(arg);
 		})
 	);
 };
