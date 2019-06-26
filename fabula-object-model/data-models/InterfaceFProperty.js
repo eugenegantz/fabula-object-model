@@ -62,6 +62,105 @@ var InterfaceFProperty = function() {
 };
 
 
+/**
+ * @param arg.nextProps
+ * @param arg.prevProps
+ *
+ * @return {String}
+ * */
+InterfaceFProperty.createUpsertDeleteQueryString = function(arg) {
+	function _filter(arr) {
+		return arr.reduce(function(arr, mRow) {
+			if (!mRow)
+				return arr;
+
+			if (!(mRow instanceof ObjectA))
+				mRow = new ObjectA(mRow);
+
+			if (!(mRow.get("property") && mRow.get("value")))
+				return arr;
+
+			arr.push(mRow);
+
+			return arr;
+		}, []);
+	}
+
+	arg = arg || {};
+
+	var prevProps               = [].concat(arg.prevProps || []);
+	var nextProps               = [].concat(arg.nextProps || []);
+
+	prevProps                   = _filter(prevProps);
+	nextProps                   = _filter(nextProps);
+
+	var tableScheme             = this.getTableScheme();
+	var queries                 = [];
+	var nextPropsByUId          = {};
+	var prevPropsByUId          = {};
+	var deletedPropsUId         = [];
+
+	// ---------------------------------
+	// Ссылки на свойства задачи
+	// ---------------------------------
+	nextProps.forEach(function(row) {
+		nextPropsByUId[row.get("uid")] = row;
+	});
+
+	// ---------------------------------
+	// Создание ссылок на свойства в базе.
+	// Создание списка удаленных, добавленных и обновленных свойств
+	// ---------------------------------
+	prevProps.forEach(function(row) {
+		var sets        = [];
+		var uid         = row.get("uid");
+		var nextRow     = nextPropsByUId[uid];
+
+		prevPropsByUId[uid] = row;
+
+		if (!nextRow)
+			return deletedPropsUId.push(uid);
+
+		row.getKeys().forEach(function(key) {
+			var fieldDecl = tableScheme.get(key);
+
+			if (!fieldDecl || fieldDecl.spec)
+				return;
+
+			if (nextRow.get(key) != row.get(key))
+				sets.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(nextRow.get(key), fieldDecl));
+		});
+
+		if (!sets.length)
+			return;
+
+		queries.push(""
+			+ " UPDATE Property"
+			+ " SET " + sets.join(", ")
+			+ " WHERE"
+			+   " [uid] = " + uid
+		);
+	});
+
+	// ---------------------------------
+	// Запись новых свойств
+	// ---------------------------------
+	nextProps.forEach(function(row) {
+		if (prevPropsByUId[row.get("uid")])
+			return;
+
+		queries.push.apply(queries, [].concat(InterfaceFProperty.mkDBInsertStr(row) || []));
+	});
+
+	// ---------------------------------
+
+	if (deletedPropsUId.length)
+		queries.push("DELETE FROM Property WHERE uid IN (" + deletedPropsUId.join(",") + ")");
+
+	return queries.join("; ");
+};
+
+
 InterfaceFProperty.mkDBInsertStr = function(argProp) {
 	argProp = [].concat(argProp || []);
 
@@ -112,6 +211,16 @@ InterfaceFProperty.mkDBInsertStr = function(argProp) {
 };
 
 
+InterfaceFProperty.getTableScheme = function() {
+	return InterfaceFProperty.prototype._interfaceFPropertyFields;
+};
+
+
+InterfaceFProperty.getTableName = function() {
+	return "Property";
+};
+
+
 /**
  * @abstract
  * */
@@ -119,20 +228,28 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 	InterfaceEvents.prototype,
 	{
 
-		"_interfaceFPropertyFields": new ObjectA({
-			"uid":          { "type": "integer" },
-			"pid":          { "type": "integer" },
-			"sort":         { "type": "integer" },
-			"value":        { "type": "string", "length": 250 },
-			"valuetype":    { "type": "string" },
-			"extclass":     { "type": "string" },
-			"extid":        { "type": "string" },
-			"property":     { "type": "string" },
-			"tick":         { "type": "integer" },
-			"[table]":      { "type": "string", "spec": 1 }
-			// spec - специальное поле. Отсутсвует в таблице. Участвует в логике.
-			// [table] указывает на название таблицы свойств
-		}),
+		"_interfaceFPropertyFields": (function() {
+			var fields = new ObjectA({
+				"uid":          { "type": "integer" },
+				"pid":          { "type": "integer" },
+				"sort":         { "type": "integer" },
+				"value":        { "type": "string", "length": 250 },
+				"valuetype":    { "type": "string" },
+				"extclass":     { "type": "string" },
+				"extid":        { "type": "string" },
+				"property":     { "type": "string" },
+				"tick":         { "type": "integer" },
+				"[table]":      { "type": "string", "spec": 1 }
+				// spec - специальное поле. Отсутсвует в таблице. Участвует в логике.
+				// [table] указывает на название таблицы свойств
+			});
+
+			fields.getKeys().forEach(function(key) {
+				fields.get(key).key = key;
+			});
+
+			return fields;
+		})(),
 
 
 		"hasChangedFProperty": function() {

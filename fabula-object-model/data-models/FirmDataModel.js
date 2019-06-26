@@ -23,7 +23,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 	{
 
 		_firmsTableFldDecl: ObjectA.create({
-			"FirmID":           { "type": "integer" },
+			"FirmID":           { "type": "integer", "primary": 1 },
 			"Tick":             { "type": "integer" },
 			"ID":               { "type": "integer" },
 			"NDS":              { "type": "boolean" },

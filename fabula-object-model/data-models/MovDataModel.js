@@ -7,8 +7,115 @@ var DefaultDataModel    = require("./DefaultDataModel"),
 	IFabModule          = require("./IFabModule.js"),
 	ObjectA             = require("./ObjectA.js"),
 	emptyFn             = function() {},
+	MField              = require("./field-models/MField.js"),
 	dbUtils             = require("./../utils/dbUtils.js"),
 	_utils              = require("./../utils/utils");
+
+
+var MFieldMMPId = (function() {
+	var _protoGet = MField.prototype.get;
+
+	function MFieldMMPId() {
+		MField.apply(this, arguments);
+	}
+
+	MFieldMMPId.prototype = _utils.createProtoChain(MField.prototype, {
+
+		"get": function() {
+			var mCtx    = this.getModelCtx();
+			var movObj  = mCtx.getParentMovInstance();
+
+			if (!movObj)
+				return _protoGet.call(this);
+
+			return movObj.get("mmId", null, false);
+		},
+
+	});
+
+	return MFieldMMPId;
+})();
+
+
+var MFieldDoc = (function() {
+	var _protoGet = MField.prototype.get;
+
+	function MFieldDoc() {
+		MField.apply(this, arguments);
+	}
+
+	MFieldDoc.prototype = _utils.createProtoChain(MField.prototype, {
+
+		"get": function() {
+			var mCtx    = this.getModelCtx();
+			var docObj  = mCtx.getDocInstance();
+
+			if (!docObj)
+				return _protoGet.call(this);
+
+			return docObj.get("docId", null, false);
+		},
+
+	});
+
+	return MFieldDoc;
+})();
+
+
+var MFieldParentDoc = (function() {
+	var _protoGet = MField.prototype.get;
+
+	function MFieldParentDoc() {
+		MField.apply(this, arguments);
+	}
+
+	MFieldParentDoc.prototype = _utils.createProtoChain(MField.prototype, {
+
+		"get": function() {
+			var mCtx    = this.getModelCtx();
+			var docObj  = mCtx.getParentDocInstance();
+
+			if (!docObj)
+				return _protoGet.call(this);
+
+			return docObj.get("docId", null, false);
+		},
+
+	});
+
+	return MFieldParentDoc;
+})();
+
+
+var MFieldDoc1 = (function() {
+	var _protoGet = MField.prototype.get;
+
+	function MFieldDoc1() {
+		MField.apply(this, arguments);
+	}
+
+	MFieldDoc1.prototype = _utils.createProtoChain(MField.prototype, {
+
+		"get": function() {
+			var mCtx    = this.getModelCtx();
+			var docObj  = mCtx.getDocInstance();
+			var pDocObj = mCtx.getParentDocInstance();
+
+			if (docObj)
+				return docObj.get("docId", null, false);
+
+			if (pDocObj)
+				return pDocObj.get("docId", null, false);
+
+			return _protoGet.call(this);
+		},
+
+	});
+
+	return MFieldDoc1;
+})();
+
+
 
 // TODO пересмотреть алиасы
 /**
@@ -19,6 +126,11 @@ function MovDataModel() {
 	IFabModule.call(this);
 	IMovCollection.call(this);
 	InterfaceFProperty.call(this);
+
+	this.declField("doc", new MFieldDoc({ modelCtx: this }));
+	this.declField("doc1", new MFieldDoc1({ modelCtx: this }));
+	this.declField("parentDoc", new MFieldParentDoc({ modelCtx: this }));
+	this.declField("mmpid", new MFieldMMPId({ modelCtx: this }));
 
 	this.set({
 		"GSDate": new Date()
@@ -38,6 +150,17 @@ function MovDataModel() {
 
 	this.state = this.STATE_MOV_INITIAL;
 }
+
+
+MovDataModel.getTableName = function() {
+	return "Movement";
+};
+
+
+MovDataModel.getTableScheme = function() {
+	return MovDataModel.prototype.__movDataModelDefaultFields;
+};
+
 
 MovDataModel.prototype = _utils.createProtoChain(
 	DefaultDataModel.prototype,
@@ -61,75 +184,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			"add-fab-mov": [
 				function(self, e) {
-					e.mov.set("mmPId", this.get("mmId"));
 					e.mov._setParentMovInstance(self);
 				}
 			],
-
-			"set:parentdoc": [
-				function() {
-					var e                   = arguments[1],
-					    nextParentDocId     = e.value,
-					    prevParentDocId     = this.get("parentDoc"),
-					    prevDocId           = this.get("doc"),
-					    prevDocId1          = this.get("doc1");
-
-					if (!nextParentDocId)
-						return this.set("doc1", prevDocId);
-
-					if (prevParentDocId == prevDocId1)
-						this.set("doc1", nextParentDocId);
-				}
-			],
-
-			"set:doc1": [
-				function() {
-					var e           = arguments[1],
-					    doc1        = e.value;
-
-					this.updateFProperty(null, { "extId": doc1 });
-				}
-			],
-
-			"set:doc": [
-				function() {
-					var e           = arguments[1],
-					    arg         = e.argument || {},
-					    recursive   = "recursive" in arg ? arg : true,
-					    parentDoc   = this.get("ParentDoc", null, !1),
-					    prevDocId   = this.get("Doc"),
-					    nextDocId   = e.value;
-
-					if (recursive) {
-						this.getMov().forEach(function(mov) {
-							if (prevDocId == mov.get("doc1", null, !1))
-								mov.set("doc1", nextDocId);
-
-							if (prevDocId == mov.get("doc"))
-								mov.set("doc", nextDocId);
-						});
-					}
-
-					// Если у заявки присутствует "doc", то "doc1" приравнивается "doc"
-					// Если у заявки отсутствует "doc", то "doc1" приравнивается "parentDoc"
-
-					!nextDocId
-						? this.set("doc1", parentDoc)
-						: this.set("doc1", nextDocId);
-				}
-			],
-
-			"set:mmid": [
-				function() {
-					var e = arguments[1];
-
-					this.getMov().forEach(function(mov) {
-						mov.set("MMPID", e.value, null, false);
-					});
-
-					this.updateFProperty(null, { "pid": e.value });
-				}
-			]
 
 		}),
 
@@ -225,28 +282,35 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"serializeObject": function() {
-			var movFieldsDecl = this.__movDataModelDefaultFields,
-
-				ret = {
-					"className": "MovDataModel",
-					"fields": {},
-					"movs": [],
-					"props": JSON.parse(JSON.stringify(this.getProperty()))
-				};
+		"serializeFieldsObject": function() {
+			var fields          = {};
+			var movFieldsDecl   = this.getTableScheme();
 
 			this.getKeys().forEach(function(key) {
 				if (!movFieldsDecl.get(key))
 					return;
 
-				ret.fields[key] = this.get(key);
+				fields[key] = this.get(key);
 			}, this);
 
-			ret.movs = this.getMov().map(function(mov) {
-				return mov.getJSON();
+			return fields;
+		},
+
+
+		"serializeObject": function() {
+			var obj = {
+				"className": "MovDataModel",
+			};
+
+			obj.props = JSON.parse(JSON.stringify(this.getProperty()));
+
+			obj.fields =  this.serializeFieldsObject();
+
+			obj.movs = this.getMov().map(function(mov) {
+				return mov.serializeObject();
 			});
 
-			return ret;
+			return obj;
 		},
 
 
@@ -273,50 +337,17 @@ MovDataModel.prototype = _utils.createProtoChain(
 			arg = arg || {};
 
 			var mmid,
-				self = this,
+				_this = this,
 				callback = arg.callback || emptyFn,
-				dbawws = self.getDBInstance();
+				dbawws = _this.getDBInstance();
 
 			return new Promise(function(resolve, reject) {
-				if (!(mmid = +self.get("mmid")))
+				if (!(mmid = +_this.get("mmid")))
 					return reject("!mmid");
-
-				var fields = arg.fields;
-
-				if (_utils.isEmpty(fields)) {
-					fields = [
-						"MMID",
-						"MMPID",
-						"ParentDoc",
-						"Doc",
-						"Doc1",
-						"GS",
-						"GSSpec",
-						"MMFlag",
-						"Amount",
-						"Sum",
-						"Sum2",
-						"Price",
-						"CodeOp",
-						"Performer",
-						"Manager2",
-						"Agent2",
-						"Format(GSDate,'yyyy-mm-dd Hh:Nn:Ss') as GSDate"
-					];
-				}
-
-				fields = fields.map(function(fld) {
-					fld = (fld + "").toLowerCase();
-
-					if (/[()]/g.test(fld))
-						return fld;
-
-					return "[" + fld + "]";
-				});
 
 				var query = ""
 					// Записи движения ТиУ
-					+ " SELECT " + fields.join(",")
+					+ " SELECT *, Format(GSDate,'yyyy-mm-dd Hh:Nn:Ss') AS GSDate"
 					+ " FROM Movement "
 					+ " WHERE"
 					+   "    mmid = " + mmid
@@ -335,7 +366,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 					+   " pid = " + mmid;
 
 				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.load" }),
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.load" }),
 					"dbworker": arg.dbworker,
 					"query": query,
 					"callback": function(dbres, err) {
@@ -357,10 +388,12 @@ MovDataModel.prototype = _utils.createProtoChain(
 				// ----------------
 
 				cMovsRows = cMovsRows.filter(function(row) {
-					if (row.mmid == self.get("mmid"))
+					var _row = new ObjectA(row);
+
+					if (_row.get("mmid") == _this.get("mmid"))
 						movRow = row;
 
-					return row.mmid != self.get("mmid");
+					return _row.get("mmid") != _this.get("mmid");
 				});
 
 				if (!movRow)
@@ -370,25 +403,25 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				_arg.callback = void 0;
 
-				self.getKeys().forEach(function(k) {
-					self.set(k, void 0, null, !1);
+				_this.getKeys().forEach(function(k) {
+					_this.set(k, void 0, null, !1);
 				});
 
-				self.delMov({});
+				_this.delMov({});
 
-				self.deleteFProperty();
+				_this.deleteFProperty();
 
 				// ----------------
 
-				self.set(movRow);
+				_this.set(movRow);
 
-				self.addFProperty(dbres[1].recs);
+				_this.addFProperty(dbres[1].recs);
 
-				self.addMov(cMovsRows);
+				_this.addMov(cMovsRows);
 
 				return Promise.all(
-					self.getMov().map(function(mov) {
-						mov._setParentMovInstance(self);
+					_this.getMov().map(function(mov) {
+						mov._setParentMovInstance(_this);
 
 						if (mov._isRecursiveMov())
 							return;
@@ -398,14 +431,14 @@ MovDataModel.prototype = _utils.createProtoChain(
 				);
 
 			}).then(function() {
-				self._mMovClsHistory();
+				_this._mMovClsHistory();
 
-				self.state = self.STATE_MOV_READY;
+				_this.state = _this.STATE_MOV_READY;
 
-				callback(null, self);
+				callback(null, _this);
 
 			}).catch(function(err) {
-				callback(err, self);
+				callback(err, _this);
 
 				return Promise.reject(err);
 			});
@@ -705,7 +738,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				dbawws.dbquery({
 					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.upd-s" }),
 
-					"dbworker": arg.dbworker,
+					"dbworker": " ",
 
 					"query": ""
 					// Получение записи движения ТиУ
@@ -950,47 +983,65 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"__movDataModelDefaultFields": new ObjectA({
-			"MMID":         { "type": "integer" },
-			"MMPID":        { "type": "integer" },
-			"IsDraft":      { "type": "integer" },
-			"Tick":         { "type": "integer" },
-			"Doc":          { "type": "string" },
-			"Doc1":         { "type": "string" },
-			"ParentDoc":    { "type": "string" },
-			"MMFlag":       { "type": "string" },
-			"InOut":        { "type": "integer" },
-			"GSDate":       { "type": "date" },
-			"GSDate2":      { "type": "date" },
-			"Mark":         { "type": "boolean" },
-			"CodeOp":       { "type": "string" },
-			"CodeDc":       { "type": "string" },
-			"ExtCode":      { "type": "string" },
-			"Storage":      { "type": "string" },
-			"GS":           { "type": "string" },
-			"GSSpec":       { "type": "string", "length": 120 },
-			"GSExt":        { "type": "integer" },
-			"Consigment":   { "type": "integer" },
-			"K2":           { "type": "integer" },
-			"Amount":       { "type": "float" },
-			"Rest":         { "type": "float" },
-			"RestSum":      { "type": "float" },
-			"Price":        { "type": "float" },
-			"PrimeCost":    { "type": "float" },
-			"Sum":          { "type": "float" },
-			"Sum2":         { "type": "float" },
-			"MAttr1":       { "type": "string" },
-			"MAttr2":       { "type": "string" },
-			"MAttr3":       { "type": "string" },
-			"MAttr4":       { "type": "string" },
-			"FirmProduct":  { "type": "integer" },
-			"Remark":       { "type": "string" },
-			"NameAVR":      { "type": "string" },
-			"Agent2":       { "type": "string" },
-			"Manager2":     { "type": "string" },
-			"Performer":    { "type": "string" },
-			"Stock":        { "type": "boolean" }
-		}),
+		"getTableName": function() {
+			return MovDataModel.getTableName();
+		},
+
+
+		"getTableScheme": function() {
+			return MovDataModel.getTableScheme();
+		},
+
+
+		"__movDataModelDefaultFields": (function() {
+			var fields = new ObjectA({
+				"MMID":         { "type": "integer", "primary": 1 },
+				"MMPID":        { "type": "integer" },
+				"IsDraft":      { "type": "integer" },
+				"Tick":         { "type": "integer" },
+				"Doc":          { "type": "string" },
+				"Doc1":         { "type": "string" },
+				"ParentDoc":    { "type": "string" },
+				"MMFlag":       { "type": "string" },
+				"InOut":        { "type": "integer" },
+				"GSDate":       { "type": "date" },
+				"GSDate2":      { "type": "date" },
+				"Mark":         { "type": "boolean" },
+				"CodeOp":       { "type": "string" },
+				"CodeDc":       { "type": "string" },
+				"ExtCode":      { "type": "string" },
+				"Storage":      { "type": "string" },
+				"GS":           { "type": "string" },
+				"GSSpec":       { "type": "string", "length": 120 },
+				"GSExt":        { "type": "integer" },
+				"Consigment":   { "type": "integer" },
+				"K2":           { "type": "integer" },
+				"Amount":       { "type": "float" },
+				"Rest":         { "type": "float" },
+				"RestSum":      { "type": "float" },
+				"Price":        { "type": "float" },
+				"PrimeCost":    { "type": "float" },
+				"Sum":          { "type": "float" },
+				"Sum2":         { "type": "float" },
+				"MAttr1":       { "type": "string" },
+				"MAttr2":       { "type": "string" },
+				"MAttr3":       { "type": "string" },
+				"MAttr4":       { "type": "string" },
+				"FirmProduct":  { "type": "integer" },
+				"Remark":       { "type": "string" },
+				"NameAVR":      { "type": "string" },
+				"Agent2":       { "type": "string" },
+				"Manager2":     { "type": "string" },
+				"Performer":    { "type": "string" },
+				"Stock":        { "type": "boolean" }
+			});
+
+			fields.getKeys().forEach(function(key) {
+				fields.get(key).key = key;
+			});
+
+			return fields;
+		})(),
 
 
 		"_isRecursiveMov": function() {
@@ -1015,7 +1066,43 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		"getDocInstance": function() {
-			return this._mMovDocInstance;
+			var doc;
+			var pMov = this;
+			var c = 0;
+
+			if (this._mMovDocInstance)
+				return this._mMovDocInstance;
+
+			// если установлен parentDoc - считать, что ссылка на doc не установлена намерено
+			// поиск в родительских задачах не производить
+			if (this._mMovParentDocInstance)
+				return;
+
+			// если doc не указан явно, искать объект у родителей
+			for (;;) {
+				if (!(pMov = pMov.getParentMovInstance()))
+					break;
+
+				if (doc = pMov.getDocInstance())
+					break;
+
+				// если по какой-то причине возникнет рекурсия
+				// чтобы не повесить контекст выполнения, установлен счетчик
+				if (c++ > 100)
+					break;
+			}
+
+			return doc;
+		},
+
+
+		"setParentDocInstance": function(doc) {
+			this._mMovParentDocInstance = doc;
+		},
+
+
+		"getParentDocInstance": function() {
+			return this._mMovParentDocInstance;
 		},
 
 
@@ -1026,6 +1113,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 		"_getParentMovInstance": function() {
 			return this._mMovParentMovInstance;
+		},
+
+
+		"setParentMovInstance": function(mov) {
+			return this._setParentMovInstance(mov);
 		},
 
 
@@ -1094,36 +1186,29 @@ MovDataModel.prototype = _utils.createProtoChain(
 		"save": function(arg) {
 			arg = arg || {};
 
-			var promise,
-				self = this,
-				mmid = this.get("MMID", null, !1),
-				callback = arg.callback || emptyFn,
-				dbawws = self.getDBInstance();
+			var promise     = Promise.resolve();
+			var _this       = this;
+			var mmid        = this.get("MMID", null, !1);
+			var callback    = arg.callback || emptyFn;
+			var dbawws      = _this.getDBInstance();
 
 			delete arg.callback;
 
 			if (!mmid) {
-				promise = self.insert(arg);
+				promise = _this.insert(arg);
 
 			} else {
-				promise = new Promise(function(resolve, reject) {
-					dbawws.dbquery({
-						"dbworker": arg.dbworker,
-						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.save" }),
-						"query": "SELECT mmid FROM Movement WHERE mmid = " + mmid,
-						"callback": function(dbres, err) {
-							if (err = dbUtils.fetchErrStrFromRes(dbres))
-								return reject(err);
-
-							resolve(dbres);
-						}
-					});
-
-				}).then(function(dbres) {
+				promise = (
+					dbawws.query({
+						"dbworker": " ",
+						"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.save" }),
+						"query": "SELECT mmid FROM Movement WHERE mmid = " + mmid
+					})
+				).then(function(dbres) {
 					if (!dbres.recs.length)
-						return self.insert(arg);
+						return _this.insert(arg);
 
-					return self.update(arg);
+					return _this.update(arg);
 				});
 			}
 
@@ -1141,5 +1226,26 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 	}
 );
+
+
+// Подмешивать docid в свойства
+// Чтобы был единый источник правды
+(function() {
+	var _protoGetFPropertyA = MovDataModel.prototype.getFPropertyA;
+
+	return MovDataModel.prototype.getFPropertyA = function() {
+		var _this = this;
+		var props = _protoGetFPropertyA.apply(this, arguments);
+
+		props.forEach(function(propRow) {
+			propRow.set("extClass", "DOCS");
+			propRow.set("pid", _this.get("mmId"));
+			propRow.set("extId", _this.get("doc1"));
+		});
+
+		return props;
+	}
+})();
+
 
 module.exports = MovDataModel;

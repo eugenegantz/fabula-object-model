@@ -1,34 +1,34 @@
 "use strict";
 
 describe("MovDataModel", function() {
-	var fom,
-		db,
-		mov,
+	var fom;
+	var db;
+	var mov;
 
-		dbUtils = require("./../../../fabula-object-model/utils/dbUtils.js"),
+	var dbUtils = require("./../../../fabula-object-model/utils/dbUtils.js");
 
 		// 2015/01/01 - 1 янв. 2015
-		timestamp = 1420056000000,
-		date = new Date(timestamp),
+	var timestamp = 1420056000000;
+	var date = new Date(timestamp);
 
-		sid = (Math.random() + "").slice(-10);
+	var sid = (Math.random() + "").slice(-10);
 
 
 	function clearDB(mov, cb) {
-		db.dbquery({
+		return db.query({
 			"dbcache": Math.random() + "",
 
 			"dbworker": " ",
 
 			"query": ""
-				+ "DELETE FROM talk WHERE mm IN (SELECT mmid FROM Movement WHERE gsSpec = '" + sid +  "')"
+				+ "  DELETE FROM talk WHERE mm IN (SELECT mmid FROM Movement WHERE gsSpec = '" + sid +  "')"
 
 				+ "; DELETE FROM Property WHERE property = '" + sid + "'"
 
 				+ "; DELETE FROM Movement WHERE gsSpec = '" + sid + "'",
 
 			callback: function() {
-				cb();
+				cb && cb();
 			}
 		});
 	}
@@ -313,31 +313,31 @@ describe("MovDataModel", function() {
 			describe("single", function() {
 				var dbMovs;
 
-				before(function(done) {
+				before(function() {
+					this.timeout(6000);
+
 					mov = mkMov();
 
-					mov.insert().then(function() {
-						db.dbquery({
-							"query": [
-								// гл. задача
-								"SELECT mmid" +
-								" FROM Movement" +
-								" WHERE" +
-								"   mmid = " + mov.get("mmId", null, false) +
-								"   AND mmflag = '" + mov.get("mmFlag", null, false) + "'" +
-								"   AND gs = '" + mov.get("gs", null, false) + "'" +
-								"   AND gsSpec = '" + mov.get("gsSpec") + "'"
-							].join("; "),
-							"callback": function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									throw new Error(err);
+					return Promise.resolve().then(function() {
+						return mov.insert();
 
-								dbMovs = dbres.recs;
+					}).then(function() {
+						var query = ""
+							+ "SELECT mmid"
+							+ " FROM Movement"
+							+ " WHERE"
+							+ "     mmid    = "  + mov.get("mmId", null, false)
+							+ " AND mmflag  = '" + mov.get("mmFlag", null, false) + "'"
+							+ " AND gs      = '" + mov.get("gs", null, false) + "'"
+							+ " AND gsSpec  = '" + mov.get("gsSpec") + "'";
 
-								done();
-							}
+						return db.query({
+							"query": query
 						});
-					}).catch(done);
+
+					}).then(function(dbres) {
+						dbMovs = dbres.recs;
+					});
 				});
 
 				it("Все записи успешно записались в БД", function() {
@@ -352,7 +352,9 @@ describe("MovDataModel", function() {
 					dbAllProps,
 					dbTalk;
 
-				before(function(done) {
+				before(function() {
+					this.timeout(6000);
+
 					mov = mkMov();
 					mov.addMov(mkMov());
 					mov.addMov(mkMov());
@@ -360,11 +362,11 @@ describe("MovDataModel", function() {
 					mov.addProperty(null);
 					mov.addProperty({ value: "" });
 
-					mov.insert().then(function() {
-						db.dbquery({
-							"dbworker": " ",
+					return Promise.resolve().then(function() {
+						return mov.insert();
 
-							"query": ""
+					}).then(function() {
+						var query = ""
 							// гл. задача
 							+ "SELECT mmid"
 							+ " FROM Movement"
@@ -401,22 +403,20 @@ describe("MovDataModel", function() {
 							+ " FROM talk"
 							+ " WHERE"
 							+ "     txt LIKE '%" + mov.get("mmflag", null, false) + "%'"
-							+ "     AND mm = " + mov.get("mmid", null, false),
+							+ "     AND mm = " + mov.get("mmid", null, false);
 
-							"callback": function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									throw new Error(err);
-
-								dbMovs = dbres[0].recs;
-								dbProps = dbres[1].recs;
-								dbCMovs = dbres[2].recs;
-								dbAllProps = dbres[3].recs;
-								dbTalk = dbres[4].recs;
-
-								done();
-							}
+						return db.query({
+							"dbworker": " ",
+							"query": query
 						});
-					}).catch(done);
+
+					}).then(function(dbres) {
+						dbMovs      = dbres[0].recs;
+						dbProps     = dbres[1].recs;
+						dbCMovs     = dbres[2].recs;
+						dbAllProps  = dbres[3].recs;
+						dbTalk      = dbres[4].recs;
+					});
 				});
 
 				it("Все записи успешно записались в БД", function() {
@@ -435,7 +435,7 @@ describe("MovDataModel", function() {
 
 			describe("upd: fields; upd: props; upd: cMovs", function() {
 
-				this.timeout(5000);
+				this.timeout(6000);
 
 				var cMov,
 					prop,
@@ -445,7 +445,9 @@ describe("MovDataModel", function() {
 					pTalkRecs,
 					eventBeforeUpd = 0;
 
-				before(function(done) {
+				before(function() {
+					this.timeout(6000);
+
 					mov = mkMov();
 					mov.addMov(mkMov());
 					mov.addMov(mkMov());
@@ -453,7 +455,10 @@ describe("MovDataModel", function() {
 					mov.addProperty(null);
 					mov.addProperty({ value: "" });
 
-					mov.save({ "dbworker": " " }).then(function() {
+					return Promise.resolve().then(function() {
+						return mov.save({ "dbworker": " " });
+
+					}).then(function() {
 						mov.set("mmflag", "4");
 						mov.set("sum", "100");
 
@@ -474,7 +479,7 @@ describe("MovDataModel", function() {
 						return mov.save({ "dbworker": " " });
 
 					}).then(function() {
-						db.dbquery({
+						return db.query({
 							"dbworker": " ",
 
 							"query": ""
@@ -513,19 +518,14 @@ describe("MovDataModel", function() {
 							+ " WHERE"
 							+ "     txt LIKE '%" + mov.get("mmflag", null, false) + "%'"
 							+ "     AND mm = " + mov.get("mmid", null, false),
-							callback: function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									throw new Error(err);
+						});
 
-								pMovRecs        = dbres[0].recs;
-								pMovPropsRecs   = dbres[1].recs;
-								cMovsRecs       = dbres[2].recs;
-								pTalkRecs       = dbres[3].recs;
-
-								done();
-							}
-						})
-					}).catch(done)
+					}).then(function(dbres) {
+						pMovRecs        = dbres[0].recs;
+						pMovPropsRecs   = dbres[1].recs;
+						cMovsRecs       = dbres[2].recs;
+						pTalkRecs       = dbres[3].recs;
+					});
 				});
 
 				it("Записи должны обновиться", function() {
@@ -553,10 +553,10 @@ describe("MovDataModel", function() {
 
 
 		describe(".save()", function() {
-			var beforeUpdate,
-				beforeInsert;
+			var beforeUpdate;
+			var beforeInsert;
 
-			before(function(done) {
+			before(function() {
 				mov = mkMov();
 
 				mov.on("before-insert", function() {
@@ -567,20 +567,25 @@ describe("MovDataModel", function() {
 					beforeUpdate = true;
 				});
 
-				mov
-					.save()
-					.then(mov.save.bind(mov))
-					.then(function() {
-						done();
-					})
-					.catch(done);
+				return Promise.resolve().then(function() {
+					return mov.save({
+						"dbworker": " "
+					});
+
+				}).then(function() {
+					return mov.save({
+						"dbworker": " "
+					});
+				})
 			});
 
-			it("события before-insert, before-update отработали", function() {
+			it('Событие "before-update"', function() {
 				assert.ok(beforeUpdate);
-				assert.ok(beforeInsert);
-			})
+			});
 
+			it('Событие "before-insert"', function() {
+				assert.ok(beforeInsert);
+			});
 		});
 
 
@@ -588,34 +593,40 @@ describe("MovDataModel", function() {
 			var pMovRecs,
 				pMovTalkRecs;
 
-			before(function(done) {
+			before(function() {
+				this.timeout(6000);
+
 				mov = mkMov();
 				mov.addMov(mkMov());
 				mov.addMov(mkMov());
 
-				mov.save().then(() => {
-					return mov.rm();
+				return Promise.resolve().then(function() {
+					return mov.save({
+						"dbworker": " "
+					});
+
+				}).then(() => {
+					return mov.rm({
+						"dbworker": " "
+					});
+
 				}).then(function() {
-					db.dbquery({
+					var query = ""
+						+ "  SELECT mmid FROM Movement WHERE gsSpec = '" + sid + "'"
+						+ "; SELECT mm FROM talk WHERE mm = " + mov.get("mmid", null, false);
+
+					return db.dbquery({
 						"dbworker": " ",
 
 						"dbcache": Math.random() + "",
 
-						"query": ""
-						+ "SELECT mmid FROM Movement WHERE gsSpec = '" + sid + "'"
-						+ "; SELECT mm FROM talk WHERE mm = " + mov.get("mmid", null, false),
+						"query": query
+					});
 
-						"callback": function(dbres, err) {
-							if (err = dbUtils.fetchErrStrFromRes(dbres))
-								return done(err);
-
-							pMovRecs = dbres[0].recs;
-							pMovTalkRecs = dbres[1].recs;
-
-							done();
-						}
-					})
-				}).catch(done);
+				}).then(function(dbres) {
+					pMovRecs        = dbres[0].recs;
+					pMovTalkRecs    = dbres[1].recs;
+				});
 			});
 
 			it("Все гл. и подч. задачи, записи в табл. talk должны быть удалены", function() {
@@ -628,19 +639,23 @@ describe("MovDataModel", function() {
 		describe(".load()", function() {
 			var mmid, awaitedFld;
 
-			before(function(done) {
-				this.timeout(5000);
+			before(function() {
+				this.timeout(6000);
 
 				var mov = mkMov();
 
 				awaitedFld = mov.getJSON().fields;
 
 				mov.addMov(mkMov());
-				mov.save().then(function() {
-					mmid = mov.get("mmid", null, false);
 
-					done();
-				}).catch(done);
+				return Promise.resolve().then(function() {
+					return mov.save({
+						"dbworker": " "
+					});
+
+				}).then(function() {
+					mmid = mov.get("mmid", null, false);
+				});
 			});
 
 			after(function(done) {
@@ -654,18 +669,19 @@ describe("MovDataModel", function() {
 			describe("+cMov, +props", function() {
 				var mov;
 
-				before(function(done) {
+				before(function() {
 					mov = fom.create("MovDataModel");
 					mov.set("mmid", mmid);
-					mov.load().then(function() {
-						done();
-					}).catch(done)
+
+					return mov.load({
+						"dbworker": " "
+					});
 				});
 
 				it("Успешная инициализация с аргументами по умолчанию", function() {
-					var props = mov.getProperty(),
-						cMovs = mov.getMov(),
-						cMov = cMovs[0];
+					var props   = mov.getProperty();
+					var cMovs   = mov.getMov();
+					var cMov    = cMovs[0];
 
 					assert.equal(cMovs.length, 1);
 					assert.equal(props.length, 2);
@@ -688,46 +704,44 @@ describe("MovDataModel", function() {
 
 		describe('Проверка уникальности', function() {
 			var movsDBRecs;
+			var movLength = 20;
 
-			before(function(done) {
+			before(function() {
+				this.timeout(12000);
 
-				Promise.all([
-					// +5
-					mkMov().save(),
-					mkMov().save(),
-					mkMov().save(),
-					mkMov().save(),
-					mkMov().save(),
+				var movs = [];
 
-					// +5
-					mkMov().save(),
-					mkMov().save(),
-					mkMov().save(),
-					mkMov().save(),
-					mkMov().save()
+				for (var c = 0; c < movLength; c++)
+					movs.push(mkMov());
 
-					// =10
-				]).then(function() {
-					db.dbquery({
-						"query": "SELECT mmid FROM Movement WHERE mmPid IS NULL AND gsSpec = '" + sid + "'",
-						"callback": function(dbres, err) {
-							if (err = dbUtils.fetchErrStrFromRes(dbres))
-								throw new Error(err);
+				return Promise.all(
+					movs.map(function(mov) {
+						return mov.save({
+							"dbworker": " "
+						});
+					})
+				).then(function() {
+					var query = "SELECT mmid FROM Movement WHERE mmPid IS NULL AND gsSpec = '" + sid + "'";
 
-							movsDBRecs = dbres.recs;
-
-							done();
-						}
+					return db.query({
+						"query": query,
+						"dbworker": " "
 					});
 
-				}).catch(function(err) {
-					done(err);
+				}).then(function(dbres) {
+					movsDBRecs = dbres.recs;
 				});
 
 			});
 
-			it('', function() {
-				assert.equal(movsDBRecs.length, 10);
+			after(function() {
+				this.timeout(6000);
+
+				return clearDB();
+			});
+
+			it("Задачи. " + movLength + " уникальных записей в БД", function() {
+				assert.equal(movsDBRecs.length, movLength);
 			});
 		});
 	});

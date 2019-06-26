@@ -4,6 +4,8 @@
 // var modAjax = require("./Ajax");
 // var modDBAwwS = _use("DBAwwS");
 var modDBAwwS = require("eg-db-awws");
+var dbUtils = require("../utils/dbUtils.js");
+var voidFn = function() {};
 
 /**
  * @constructor
@@ -65,28 +67,59 @@ DBModel.prototype.instances = [];
  * @param {String} arg.query
  * @param {DBModel~dbqueryCallback} arg.callback
  * */
-DBModel.prototype.dbquery = function(arg){
-	if (typeof arg != "object") return;
+DBModel.prototype.query = function(arg){
+	arg = arg || {};
 
-	var dbquery		= typeof arg.query == "string" ? arg.query : null;
-	var callback		= typeof arg.callback == "function" ? arg.callback : new Function();
+	arg.format = "row[col]";
 
-	if (  !dbquery  ){
-		callback({
+	if (!arg.callback)
+		return this._dbQueryPromise(arg);
+
+	return this._dbQueryCallback(arg);
+};
+
+
+/**
+ * @deprecated
+ * */
+DBModel.prototype.dbquery = DBModel.prototype.query;
+
+
+DBModel.prototype._dbQueryPromise = function(arg) {
+	var _this = this;
+
+	if (!arg.query)
+		return Promise.reject("!dbquery");
+
+	return (
+		new Promise(function(resolve, reject) {
+			arg.callback = function(dbRes, err) {
+				if (err = dbUtils.fetchErrStrFromRes(dbRes))
+					return reject(err);
+
+				resolve(dbRes);
+			};
+
+			_this.dbAwwS.getDBData(arg);
+		})
+	);
+};
+
+
+DBModel.prototype._dbQueryCallback = function(arg) {
+	if (!arg.query) {
+		return arg.callback({
 			"info":{
 				"errors": ["!dbquery"],
 				"num_rows": 0
 			},
 			"recs": []
 		});
-		return;
 	}
 
-	arg.format = "row[col]";
-
-	this.dbAwwS.getDBData(arg)
-
+	this.dbAwwS.getDBData(arg);
 };
+
 
 DBModel.prototype.getInstance = function(arg){
 	if (typeof arg != "object"){
@@ -115,5 +148,6 @@ DBModel.prototype.getInstance = function(arg){
 	}
 	return new DBModel(arg);
 };
+
 
 module.exports = DBModel;

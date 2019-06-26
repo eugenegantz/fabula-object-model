@@ -1,7 +1,7 @@
 {
 	"name": "fabula-object-model",
 	"main": "./fabula-object-model/nodejs/FabulaObjectModel.js",
-	"version": "0.9.1",
+	"version": "0.9.3",
 	"description": "Изоморфная js-библиотека реализующая объектную модель для работы с \"jFabula\". Включает: события, утилиты, классы для работы с таблицами (Movements, DOCS, GANDS, Talk, Property, Firms), утилиты для работы с печатью, калькуляторы",
 	"author": {
 		"name": "EugeneGantz",
@@ -12,6 +12,6 @@
 		"eg-promise-cascade": "https://github.com/eugenegantz/promise.cascade.git"
 	},
 	"devDependencies": {
-		"mocha": "^4.0.1"
+		"mocha": "^6.0.0"
 	}
 }
