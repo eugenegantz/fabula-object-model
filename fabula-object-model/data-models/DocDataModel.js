@@ -261,81 +261,78 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"save": function(arg) {
 			arg = arg || {};
 
-			var self            = this,
-				dbawws          = self.getDBInstance(),
-				callback        = arg.callback || emptyFn,
-				docType         = self.get("docType", null, !1),
-				companyID       = self.get("company", null, !1);
+			var _this           = this,
+			    _promise        = Promise.resolve(),
+			    dbawws          = _this.getDBInstance(),
+			    callback        = arg.callback || emptyFn,
+			    docType         = _this.get("docType", null, !1),
+			    companyID       = _this.get("company", null, !1),
+			    isNew           = !this.get('id') && !this.get('docId');
 
 			delete arg.callback;
 
-			return Promise.resolve().then(function() {
-				if (!self.get("docId", null, !1)) {
-					return self.getNewDocID({
-						"docType": docType,
-						"companyID": companyID
-					}).then(function(docId) {
-						self.set("docId", docId);
+			function fetchNewDocId() {
+				return _this.getNewDocID({
+					"docType": docType,
+					"companyID": companyID
+				}).then(function() {
+					_this.set("docId", docId);
+				});
+			}
 
-						return self.insert(arg);
-					});
-				}
+			if (isNew) {
+				_promise = _promise.then(function() {
+					return this.fetchNewDocId();
+				});
 
-				return new Promise(function(resolve, reject) {
-					dbawws.dbquery({
-						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save" }),
-
-						"dbworker": " ",
-
-						"query": ""
+			} else {
+				_promise = _promise.then(function() {
+					var query = ""
 						+ " SELECT"
-						+   "  ID"
-						+   ", DocID"
-						+ " FROM DOCS"
+						+   "  id"
+						+   ", docId"
+						+ " FROM Docs"
 						+ " WHERE"
-						+   "    DocID = '" + self.get("docId") + "'"
-						+   " OR id = " + self.get("id"),
+						+   "    docId = '" + _this.get("docId") + "'"
+						+   " OR id = " + _this.get("id");
 
-						"callback": function(dbres, err) {
-							if (err = dbUtils.fetchErrStrFromRes(dbres))
-								return reject(err);
+					return (
+						dbawws.dbquery({
+							"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save" }),
 
-							resolve(dbres);
-						}
-					});
+							"dbworker": " ",
 
-				}).then(function(dbres) {
-					if (dbres.recs.length) {
-						self.set("id", dbres.recs[0].ID, null, !1);
+							"query": query
+						})
+					);
 
-						return self.update(arg);
-					}
+				}).then(function(dbRes) {
+					if (!dbRes.recs.length)
+						return fetchNewDocId(isNew = true);
 
-					if (self.get("docId", null, !1)) {
-						self.set("id", null, null, !1);
+					_this.set("id", dbRes.recs[0].id, null, !1);
+					_this.set("docId", dbRes.recs[0].docId, null, !1);
+				});
+			}
 
-						return self.insert(arg);
-					}
+			_promise = _promise.then(function() {
+				var movs = _this.getNestedMovs();
+				var movsById = {};
 
-					return self.getNewDocID({
-						"docType": docType,
-						"companyID": companyID
-					}).then(function(docId) {
-						self.set("id", null);
-						self.set("docId", docId);
-
-						return self.insert(arg);
-					})
+				movs.forEach(function(mov) {
+					movsById[mov.get('mmId')] = mov;
 				});
 
 			}).then(function() {
-				callback(null, self)
+				callback(null, _this)
 
 			}).catch(function(err) {
-				callback(err, self);
+				callback(err, _this);
 
 				return Promise.reject(err);
 			});
+
+			return _promise;
 		},
 
 
