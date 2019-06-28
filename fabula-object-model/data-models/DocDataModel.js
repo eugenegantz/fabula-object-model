@@ -7,6 +7,7 @@ var _utils                  = require("./../utils/utils"),
 	IMovCollection          = require("./IMovCollection.js"),
 	InterfaceFProperty      = require("./InterfaceFProperty"),
 	IFabModule              = require("./IFabModule.js"),
+	IFabTableRow            = require("./IFabTableRow.js"),
 	IEvent                  = require("./IEvent"),
 	ObjectA                 = require("./ObjectA.js"),
 	MovDataModel            = require("./MovDataModel");
@@ -36,6 +37,17 @@ var DocDataModel = function() {
 
 	this.state = this.STATE_DOC_INITIAL;
 };
+
+
+DocDataModel.getTableScheme = function() {
+	return DocDataModel.prototype.__docDataModelsDefaultFields;
+};
+
+
+DocDataModel.getTableName = function() {
+	return "Docs";
+};
+
 
 DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 	DefaultDataModel.prototype,
@@ -262,6 +274,10 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			arg = arg || {};
 
 			var _this           = this,
+			    dbDocRow        = null,
+			    dbMovsRows      = [],
+				dbMovsRowsById  = {},
+			    dbPropsRows     = [],
 			    _promise        = Promise.resolve(),
 			    dbawws          = _this.getDBInstance(),
 			    callback        = arg.callback || emptyFn,
@@ -271,7 +287,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			delete arg.callback;
 
-			function fetchNewDocId() {
+			function initNewDocId() {
 				return _this.getNewDocID({
 					"docType": docType,
 					"companyID": companyID
@@ -282,19 +298,45 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			if (isNew) {
 				_promise = _promise.then(function() {
-					return this.fetchNewDocId();
+					return this.initNewDocId();
 				});
 
 			} else {
 				_promise = _promise.then(function() {
 					var query = ""
-						+ " SELECT"
-						+   "  id"
-						+   ", docId"
+						+ " SELECT *"
 						+ " FROM Docs"
 						+ " WHERE"
 						+   "    docId = '" + _this.get("docId") + "'"
-						+   " OR id = " + _this.get("id");
+						+   " OR id = " + _this.get("id")
+
+						+ "; SELECT"
+						+   "  uid"
+						+   ", property"
+						+   ", [value]"
+						+   ", ExtID"
+						+ " FROM Property"
+						+ " WHERE"
+						+   "     pid = 0"
+						+   " AND ExtClass = 'DOCS'"
+						+   " AND ExtID IN ("
+						+       " SELECT DocID"
+						+       " FROM DOCS"
+						+       " WHERE"
+						+           "    docId = '" + _this.get("docId") + "'"
+						+           " OR id = " + _this.get("id")
+						+   ")"
+
+						+ "; SELECT *"
+						+ " FROM Movement"
+						+ " WHERE"
+						+   " Doc IN ("
+						+       " SELECT DocID"
+						+       " FROM DOCS"
+						+       " WHERE"
+						+           "    docId = '" + _this.get("docId") + "'"
+						+           " OR id = " + _this.get("id")
+						+   ")";
 
 					return (
 						dbawws.dbquery({
@@ -307,21 +349,61 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					);
 
 				}).then(function(dbRes) {
-					if (!dbRes.recs.length)
-						return fetchNewDocId(isNew = true);
+					dbDocRow = dbRes[0].recs[0];
 
-					_this.set("id", dbRes.recs[0].id, null, !1);
-					_this.set("docId", dbRes.recs[0].docId, null, !1);
+					if (!dbDocRow)
+						return initNewDocId(isNew = true);
+
+					var _dbDocRow = ObjectA.create(dbDocRow);
+
+					_this.set("docId", _dbDocRow.get("docId"), null, false);
+					_this.set("id", _dbDocRow.get("id"), null, false);
 				});
 			}
 
 			_promise = _promise.then(function() {
-				var movs = _this.getNestedMovs();
-				var movsById = {};
+				var queries         = [];
+				var nextProps       = [];
 
-				movs.forEach(function(mov) {
-					movsById[mov.get('mmId')] = mov;
+				nextProps.push.apply(nextProps, _this.getProperty());
+
+				dbMovsRows.forEach(function(row) {
+					// регистронезависимые ключи
+					// неизвестно как будет записан ключ "MMID"
+					var _row = ObjectA.create(row);
+
+					dbMovsRowsById[_row.get("mmId")] = row;
 				});
+
+				_this.getNestedMovs().forEach(function(mov) {
+					var query;
+					var id          = mov.get("mmId");
+					var nextFields  = mov.serializeFieldsObject();
+
+					// обновление уже существующей записи
+					if (dbMovsRowsById[id]) {
+						query = dbUtils.createUpdateFieldsQueryString({
+							"prevFields"    : dbMovsRowsById[id],
+							"nextFields"    : nextFields,
+							"tableScheme"   : mov.getTableScheme(),
+							"tableName"     : mov.getTableName()
+						});
+
+					} else {
+						query = dbUtils.createInsertFieldsQueryString({
+							"nextFields": nextFields,
+							"tableScheme"   : mov.getTableScheme(),
+							"tableName"     : mov.getTableName()
+						});
+					}
+
+					if (query)
+						queries.push(query);
+
+					nextProps = nextProps.push.apply(nextProps, mov.getProperty());
+				});
+
+
 
 			}).then(function() {
 				callback(null, _this)
@@ -761,28 +843,35 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
-		"serializeObject": function() {
-			var fieldsDecl = this.__docDataModelsDefaultFields,
-
-				ret = {
-					"className": "DocDataModel",
-					"fields": {},
-					"movs": [],
-					"props": JSON.parse(JSON.stringify(this.getProperty()))
-				};
+		"serializeFieldsObject": function() {
+			var fields          = {};
+			var movFieldsDecl   = this.getTableScheme();
 
 			this.getKeys().forEach(function(key) {
-				if (!fieldsDecl.get(key))
+				if (!movFieldsDecl.get(key))
 					return;
 
-				ret.fields[key] = this.get(key);
+				fields[key] = this.get(key);
 			}, this);
 
-			ret.movs = this.getMov().map(function(mov) {
+			return fields;
+		},
+
+
+		"serializeObject": function() {
+			var obj = {
+				"className": "DocDataModel",
+			};
+
+			obj.props = JSON.parse(JSON.stringify(this.getProperty()));
+
+			obj.fields = this.serializeFieldsObject();
+
+			obj.movs = this.getMov().map(function(mov) {
 				return mov.getJSON();
 			});
 
-			return ret;
+			return obj;
 		},
 
 
@@ -1353,58 +1442,78 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
-		"__docDataModelsDefaultFields": new ObjectA({
-			"id":               { "type": "N" },
-			"DocID":            { "type": "S" },
-			"ParentDoc":        { "type": "S" },
-			"ParentDoc2":       { "type": "S" },
-			"Tick":             { "type": "N" },
-			"OriginalDoc":      { "type": "S" },
-			"Company":          { "type": "S" },
-			"Status":           { "type": "S" },
-			"DocType":          { "type": "S" },
-			"User":             { "type": "S" },
-			"RegDate":          { "type": "D", "value": "NOW()" },
-			"DateAVR":          { "type": "D" },
-			"DateAcc":          { "type": "D" },
-			"TxtAcc":           { "type": "S" },
-			"WorkName":         { "type": "S" },
-			"Agent":            { "type": "S" },
-			"Manager":          { "type": "S" },
-			"FirmContract":     { "type": "N" },
-			"Person":           { "type": "S" },
-			"FirmCustomer":     { "type": "N" },
-			"PayType":          { "type": "S" },
-			"Discount":         { "type": "N" },
-			"Disc_Text":        { "type": "S" },
-			"Margin":           { "type": "N" },
-			"Marg_Text":        { "type": "S" },
-			"CurRate":          { "type": "N" },
-			"Currency":         { "type": "S" },
-			"Sum1":             { "type": "N" },
-			"Sum2":             { "type": "N" },
-			"Debt":             { "type": "N" },
-			"SumExt":           { "type": "N" },
-			"SumExt2":          { "type": "N" },
-			"SumExt3":          { "type": "N" },
-			"SumExtNDS":        { "type": "N" },
-			"RateNDS":          { "type": "N" },
-			"RateSpecTax":      { "type": "N" },
-			"SumNDS":           { "type": "N" },
-			"SumSpecTax":       { "type": "N" },
-			"Notice":           { "type": "S" },
-			"DocFlag":          { "type": "S" },
-			"FilterGS":         { "type": "S" },
-			"IsDeleted":        { "type": "N" },
-			"DateNew":          { "type": "D" },
-			"UserNew":          { "type": "S" },
-			"DateEdit":         { "type": "D", "value": "NOW()" },
-			"UserEdit":         { "type": "S" },
-			"TextAVR":          { "type": "S" },
-			"Addr":             { "type": "S" },
-			"Debt2":            { "type": "N" },
-			"SumExt4":          { "type": "N" }
-		})
+		"getTableScheme": function() {
+			return DocDataModel.getTableScheme();
+		},
+
+
+		"getTableName": function() {
+			return DocDataModel.getTableName();
+		},
+
+
+		"__docDataModelsDefaultFields": (function() {
+			var fields = new ObjectA({
+				"id":               { "type": "N", "primary": 1 },
+				"DocID":            { "type": "S", "unique": 1 },
+				"ParentDoc":        { "type": "S" },
+				"ParentDoc2":       { "type": "S" },
+				"Tick":             { "type": "N" },
+				"OriginalDoc":      { "type": "S" },
+				"Company":          { "type": "S" },
+				"Status":           { "type": "S" },
+				"DocType":          { "type": "S" },
+				"User":             { "type": "S" },
+				"RegDate":          { "type": "D", "value": "NOW()" },
+				"DateAVR":          { "type": "D" },
+				"DateAcc":          { "type": "D" },
+				"TxtAcc":           { "type": "S" },
+				"WorkName":         { "type": "S" },
+				"Agent":            { "type": "S" },
+				"Manager":          { "type": "S" },
+				"FirmContract":     { "type": "N" },
+				"Person":           { "type": "S" },
+				"FirmCustomer":     { "type": "N" },
+				"PayType":          { "type": "S" },
+				"Discount":         { "type": "N" },
+				"Disc_Text":        { "type": "S" },
+				"Margin":           { "type": "N" },
+				"Marg_Text":        { "type": "S" },
+				"CurRate":          { "type": "N" },
+				"Currency":         { "type": "S" },
+				"Sum1":             { "type": "N" },
+				"Sum2":             { "type": "N" },
+				"Debt":             { "type": "N" },
+				"SumExt":           { "type": "N" },
+				"SumExt2":          { "type": "N" },
+				"SumExt3":          { "type": "N" },
+				"SumExtNDS":        { "type": "N" },
+				"RateNDS":          { "type": "N" },
+				"RateSpecTax":      { "type": "N" },
+				"SumNDS":           { "type": "N" },
+				"SumSpecTax":       { "type": "N" },
+				"Notice":           { "type": "S" },
+				"DocFlag":          { "type": "S" },
+				"FilterGS":         { "type": "S" },
+				"IsDeleted":        { "type": "N" },
+				"DateNew":          { "type": "D" },
+				"UserNew":          { "type": "S" },
+				"DateEdit":         { "type": "D", "value": "NOW()" },
+				"UserEdit":         { "type": "S" },
+				"TextAVR":          { "type": "S" },
+				"Addr":             { "type": "S" },
+				"Debt2":            { "type": "N" },
+				"SumExt4":          { "type": "N" }
+			});
+
+			// продублировать ключи внутри деклараций полей
+			// для удобства использования
+			fields.getKeys().forEach(function(key) {
+				fields.get(key).key = key;
+			});
+
+			return fields;
+		})(),
 
 	}
 );

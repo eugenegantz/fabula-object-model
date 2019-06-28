@@ -112,6 +112,16 @@ InterfaceFProperty.mkDBInsertStr = function(argProp) {
 };
 
 
+InterfaceFProperty.getTableScheme = function() {
+	return InterfaceFProperty.prototype._interfaceFPropertyFields;
+};
+
+
+InterfaceFProperty.getTableName = function() {
+	return "Property";
+};
+
+
 /**
  * @abstract
  * */
@@ -119,20 +129,28 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 	InterfaceEvents.prototype,
 	{
 
-		"_interfaceFPropertyFields": new ObjectA({
-			"uid":          { "type": "integer" },
-			"pid":          { "type": "integer" },
-			"sort":         { "type": "integer" },
-			"value":        { "type": "string", "length": 250 },
-			"valuetype":    { "type": "string" },
-			"extclass":     { "type": "string" },
-			"extid":        { "type": "string" },
-			"property":     { "type": "string" },
-			"tick":         { "type": "integer" },
-			"[table]":      { "type": "string", "spec": 1 }
-			// spec - специальное поле. Отсутсвует в таблице. Участвует в логике.
-			// [table] указывает на название таблицы свойств
-		}),
+		"_interfaceFPropertyFields": (function() {
+			var fields = new ObjectA({
+				"uid":          { "type": "integer" },
+				"pid":          { "type": "integer" },
+				"sort":         { "type": "integer" },
+				"value":        { "type": "string", "length": 250 },
+				"valuetype":    { "type": "string" },
+				"extclass":     { "type": "string" },
+				"extid":        { "type": "string" },
+				"property":     { "type": "string" },
+				"tick":         { "type": "integer" },
+				"[table]":      { "type": "string", "spec": 1 }
+				// spec - специальное поле. Отсутсвует в таблице. Участвует в логике.
+				// [table] указывает на название таблицы свойств
+			});
+
+			fields.getKeys().forEach(function(key) {
+				fields.get(key).key = key;
+			});
+
+			return fields;
+		})(),
 
 
 		"hasChangedFProperty": function() {

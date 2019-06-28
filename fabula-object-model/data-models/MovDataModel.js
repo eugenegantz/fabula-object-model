@@ -39,6 +39,17 @@ function MovDataModel() {
 	this.state = this.STATE_MOV_INITIAL;
 }
 
+
+MovDataModel.getTableName = function() {
+	return "Movement";
+};
+
+
+MovDataModel.getTableScheme = function() {
+	return MovDataModel.prototype.__movDataModelDefaultFields;
+};
+
+
 MovDataModel.prototype = _utils.createProtoChain(
 	DefaultDataModel.prototype,
 	InterfaceFProperty.prototype,
@@ -225,28 +236,35 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"serializeObject": function() {
-			var movFieldsDecl = this.__movDataModelDefaultFields,
-
-				ret = {
-					"className": "MovDataModel",
-					"fields": {},
-					"movs": [],
-					"props": JSON.parse(JSON.stringify(this.getProperty()))
-				};
+		"serializeFieldsObject": function() {
+			var fields          = {};
+			var movFieldsDecl   = this.getTableScheme();
 
 			this.getKeys().forEach(function(key) {
 				if (!movFieldsDecl.get(key))
 					return;
 
-				ret.fields[key] = this.get(key);
+				fields[key] = this.get(key);
 			}, this);
 
-			ret.movs = this.getMov().map(function(mov) {
-				return mov.getJSON();
+			return fields;
+		},
+
+
+		"serializeObject": function() {
+			var obj = {
+				"className": "MovDataModel",
+			};
+
+			obj.props = JSON.parse(JSON.stringify(this.getProperty()));
+
+			obj.fields =  this.serializeFieldsObject();
+
+			obj.movs = this.getMov().map(function(mov) {
+				return mov.serializeObject();
 			});
 
-			return ret;
+			return obj;
 		},
 
 
@@ -950,47 +968,65 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"__movDataModelDefaultFields": new ObjectA({
-			"MMID":         { "type": "integer" },
-			"MMPID":        { "type": "integer" },
-			"IsDraft":      { "type": "integer" },
-			"Tick":         { "type": "integer" },
-			"Doc":          { "type": "string" },
-			"Doc1":         { "type": "string" },
-			"ParentDoc":    { "type": "string" },
-			"MMFlag":       { "type": "string" },
-			"InOut":        { "type": "integer" },
-			"GSDate":       { "type": "date" },
-			"GSDate2":      { "type": "date" },
-			"Mark":         { "type": "boolean" },
-			"CodeOp":       { "type": "string" },
-			"CodeDc":       { "type": "string" },
-			"ExtCode":      { "type": "string" },
-			"Storage":      { "type": "string" },
-			"GS":           { "type": "string" },
-			"GSSpec":       { "type": "string", "length": 120 },
-			"GSExt":        { "type": "integer" },
-			"Consigment":   { "type": "integer" },
-			"K2":           { "type": "integer" },
-			"Amount":       { "type": "float" },
-			"Rest":         { "type": "float" },
-			"RestSum":      { "type": "float" },
-			"Price":        { "type": "float" },
-			"PrimeCost":    { "type": "float" },
-			"Sum":          { "type": "float" },
-			"Sum2":         { "type": "float" },
-			"MAttr1":       { "type": "string" },
-			"MAttr2":       { "type": "string" },
-			"MAttr3":       { "type": "string" },
-			"MAttr4":       { "type": "string" },
-			"FirmProduct":  { "type": "integer" },
-			"Remark":       { "type": "string" },
-			"NameAVR":      { "type": "string" },
-			"Agent2":       { "type": "string" },
-			"Manager2":     { "type": "string" },
-			"Performer":    { "type": "string" },
-			"Stock":        { "type": "boolean" }
-		}),
+		"getTableName": function() {
+			return MovDataModel.getTableName();
+		},
+
+
+		"getTableScheme": function() {
+			return MovDataModel.getTableScheme();
+		},
+
+
+		"__movDataModelDefaultFields": (function() {
+			var fields = new ObjectA({
+				"MMID":         { "type": "integer" },
+				"MMPID":        { "type": "integer" },
+				"IsDraft":      { "type": "integer" },
+				"Tick":         { "type": "integer" },
+				"Doc":          { "type": "string" },
+				"Doc1":         { "type": "string" },
+				"ParentDoc":    { "type": "string" },
+				"MMFlag":       { "type": "string" },
+				"InOut":        { "type": "integer" },
+				"GSDate":       { "type": "date" },
+				"GSDate2":      { "type": "date" },
+				"Mark":         { "type": "boolean" },
+				"CodeOp":       { "type": "string" },
+				"CodeDc":       { "type": "string" },
+				"ExtCode":      { "type": "string" },
+				"Storage":      { "type": "string" },
+				"GS":           { "type": "string" },
+				"GSSpec":       { "type": "string", "length": 120 },
+				"GSExt":        { "type": "integer" },
+				"Consigment":   { "type": "integer" },
+				"K2":           { "type": "integer" },
+				"Amount":       { "type": "float" },
+				"Rest":         { "type": "float" },
+				"RestSum":      { "type": "float" },
+				"Price":        { "type": "float" },
+				"PrimeCost":    { "type": "float" },
+				"Sum":          { "type": "float" },
+				"Sum2":         { "type": "float" },
+				"MAttr1":       { "type": "string" },
+				"MAttr2":       { "type": "string" },
+				"MAttr3":       { "type": "string" },
+				"MAttr4":       { "type": "string" },
+				"FirmProduct":  { "type": "integer" },
+				"Remark":       { "type": "string" },
+				"NameAVR":      { "type": "string" },
+				"Agent2":       { "type": "string" },
+				"Manager2":     { "type": "string" },
+				"Performer":    { "type": "string" },
+				"Stock":        { "type": "boolean" }
+			});
+
+			fields.getKeys().forEach(function(key) {
+				fields.get(key).key = key;
+			});
+
+			return fields;
+		})(),
 
 
 		"_isRecursiveMov": function() {
