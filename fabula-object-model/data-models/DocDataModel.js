@@ -180,73 +180,38 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"rm": function(arg) {
 			arg = arg || {};
 
-			var self        = this,
-				db          = this.getDBInstance(),
-				callback    = arg.callback || emptyFn,
-				docId       = this.get("docId", null, !1);
+			var self        = this;
+			var db          = this.getDBInstance();
+			var callback    = arg.callback || emptyFn;
+			var docId       = this.get("docId", null, !1);
 
 			return Promise.resolve().then(function() {
 				if (!docId)
 					return Promise.reject("DocDataMode.rm(): !this.docId");
 
-				if (self.state == self.STATE_DOC_READY)
-					return Promise.resolve();
-
-				return self.load({
-					"dbcache": arg.dbcache,
-					"dbworker": " "
-				});
-
 			}).then(function() {
-				var promises = [
-					new Promise(function(resolve, reject) {
-						db.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.rm-d" }),
+				return db.query({
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.rm-d" }),
 
-							"dbworker": " ",
+					"dbworker": " ",
 
-							"query": ""
-							+ " DELETE"
-							+ " FROM Property"
-							+ " WHERE"
-							+   "     extClass = 'DOCS'"
-							+   " AND pid = 0"
-							+   " AND extId = '" + docId + "'"
+					"query": ""
+					+ " DELETE"
+					+ " FROM Property"
+					+ " WHERE"
+					+   "     extClass = 'DOCS'"
+					+   " AND extId = '" + docId + "'"
 
-							+ "; DELETE"
-							+ " FROM Ps_property"
-							+ " WHERE"
-							+   "     extClass = 'DOCS'"
-							+   " AND pid = 0"
-							+   " AND extId = '" + docId + "'"
+					+ "; DELETE"
+					+ " FROM Docs"
+					+ " WHERE"
+					+   " docId = '" + docId + "'"
 
-							+ "; DELETE"
-							+ " FROM Docs"
-							+ " WHERE"
-							+   " docId = '" + docId + "'",
-
-							"callback": function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									return reject(err);
-
-								resolve();
-							}
-						});
-					})
-				];
-
-				self.getMov().forEach(function(mov) {
-					if (!mov.get("mmId", null, !1))
-						return;
-
-					promises.push(
-						mov.rm({
-							"dbcache": arg.dbcache
-						})
-					);
+					+ "; DELETE"
+					+ " FROM Movement"
+					+ " WHERE"
+					+   " doc1 = '" + docId + "'"
 				});
-
-				return Promise.all(promises);
 
 			}).then(function() {
 				self.state = self.STATE_DOC_REMOVED;
@@ -273,17 +238,18 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"save": function(arg) {
 			arg = arg || {};
 
-			var _this           = this,
-			    dbDocRow        = null,
-			    dbMovsRows      = [],
-				dbMovsRowsById  = {},
-			    dbPropsRows     = [],
-			    _promise        = Promise.resolve(),
-			    dbawws          = _this.getDBInstance(),
-			    callback        = arg.callback || emptyFn,
-			    docType         = _this.get("docType", null, !1),
-			    companyID       = _this.get("company", null, !1),
-			    isNew           = !this.get('id') && !this.get('docId');
+			var _this           = this;
+			var db              = _this.getDBInstance();
+			var _promise        = Promise.resolve();
+			var dbDocRow        = null;
+			var dbMovsRows      = [];
+			var dbMovsRowsById  = {};
+			var dbPropsRows     = [];
+			var nextMovsById    = {};
+			var callback        = arg.callback || emptyFn;
+			var docType         = _this.get("docType", null, !1);
+			var companyID       = _this.get("company", null, !1);
+			var isNew           = !this.get('id') && !this.get('docId');
 
 			delete arg.callback;
 
@@ -291,7 +257,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				return _this.getNewDocID({
 					"docType": docType,
 					"companyID": companyID
-				}).then(function() {
+				}).then(function(docId) {
 					_this.set("docId", docId);
 				});
 			}
@@ -339,7 +305,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						+   ")";
 
 					return (
-						dbawws.dbquery({
+						db.dbquery({
 							"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save" }),
 
 							"dbworker": " ",
@@ -349,7 +315,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					);
 
 				}).then(function(dbRes) {
-					dbDocRow = dbRes[0].recs[0];
+					dbDocRow        = dbRes[0].recs[0];
+					dbPropsRows     = dbRes[1].recs;
+					dbMovsRows      = dbRes[2].recs;
 
 					if (!dbDocRow)
 						return initNewDocId(isNew = true);
@@ -362,9 +330,23 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			}
 
 			_promise = _promise.then(function() {
-				var queries         = [];
-				var nextProps       = [];
+				var query;
+				var toDelete            = [];
+				var queries             = [];
+				var nextProps           = [];
 
+				// Собрать запрос на обновление полей
+				query = dbUtils.createUpdateFieldsQueryString({
+					nextFields          : _this.serializeFieldsObject(),
+					prevFields          : dbDocRow,
+					tableScheme         : _this.getTableScheme(),
+					tableName           : _this.getTableName()
+				});
+
+				if (query)
+					queries.push(query);
+
+				// Собрать обновленные свойства
 				nextProps.push.apply(nextProps, _this.getProperty());
 
 				dbMovsRows.forEach(function(row) {
@@ -380,7 +362,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					var id          = mov.get("mmId");
 					var nextFields  = mov.serializeFieldsObject();
 
-					// обновление уже существующей записи
+					nextMovsById[id] = mov;
+
+					// Собрать запрос на обновление уже существующих записей
 					if (dbMovsRowsById[id]) {
 						query = dbUtils.createUpdateFieldsQueryString({
 							"prevFields"    : dbMovsRowsById[id],
@@ -390,6 +374,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						});
 
 					} else {
+						// Собрать запрос на вставку новых записей
 						query = dbUtils.createInsertFieldsQueryString({
 							"nextFields": nextFields,
 							"tableScheme"   : mov.getTableScheme(),
@@ -400,10 +385,40 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					if (query)
 						queries.push(query);
 
+					// Собрать обновленные свойства
 					nextProps = nextProps.push.apply(nextProps, mov.getProperty());
 				});
 
+				// Собрать идентификаторы удаленных задач
+				dbMovsRows.forEach(function(row) {
+					var _row = ObjectA.create(row);
+					var id = _row.get("mmId");
 
+					if (!nextMovsById[id])
+						toDelete.push(id);
+				});
+
+				// Собрать запрос на обновление, удаление, вставку свойств
+				query = InterfaceFProperty.createUpsertDeleteQueryString({
+					"prevProps": dbPropsRows,
+					"nextProps": nextProps
+				});
+
+				if (query)
+					queries.push(query);
+
+				// Собирать запрос на удаление задач
+				if (toDelete.length)
+					queries.push("DELETE FROM Movements WHERE mmId IN (" + toDelete + ")");
+
+				if (!queries.length)
+					return;
+
+				queries = queries.join("; ");
+
+				return db.query({
+					"query": queries
+				});
 
 			}).then(function() {
 				callback(null, _this)
@@ -421,6 +436,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		/**
 		 * Новая запись в БД
 		 *
+		 * @deprecated
+		 *
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
 		 * @param {String | Object=} arg.dbcache
@@ -428,6 +445,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @return {Promise}
 		 * */
 		"insert": function(arg) {
+			console.warn("DocDataModel.insert(): deprecated");
+
 			arg = arg || {};
 
 			var self            = this,

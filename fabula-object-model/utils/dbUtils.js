@@ -149,6 +149,39 @@ module.exports = {
 
 
 	/**
+	 * @param {Object | Array} arg.fields
+	 * @param arg.tableScheme
+	 *
+	 * @return {String}
+	 * */
+	"createDeleteQueryString": function(arg) {
+		arg = arg || {};
+
+		var _this           = this;
+		var fields          = arg.fields;
+		var tableScheme     = arg.tableScheme;
+		var toDelete        = [];
+		var primaryDecl     = _this.getTablePrimaryFieldDecl(tableScheme);
+
+		fields = [].concat(fields || []);
+
+		fields.forEach(function(row) {
+			toDelete.push(
+				_this.mkVal(
+					row[primaryDecl.key],
+					primaryDecl
+				)
+			);
+		});
+
+		if (!toDelete.length)
+			return "";
+
+		return _this.mkFld(primaryDecl.key) + " IN (" + toDelete + ")"
+	},
+
+
+	/**
 	 * Создать запрос на обновление строки в БД
 	 *
 	 * @param {Object} arg.prevFields

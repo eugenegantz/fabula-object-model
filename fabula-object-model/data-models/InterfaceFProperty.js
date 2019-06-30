@@ -62,6 +62,107 @@ var InterfaceFProperty = function() {
 };
 
 
+/**
+ * @param arg.nextProps
+ * @param arg.prevProps
+ *
+ * @return {String}
+ * */
+InterfaceFProperty.createUpsertDeleteQueryString = function(arg) {
+	function _filter(arr) {
+		return arr.reduce(function(arr, mRow) {
+			if (!mRow)
+				return arr;
+
+			if (!(mRow instanceof ObjectA))
+				mRow = new ObjectA(mRow);
+
+			if (!(mRow.get("property") && mRow.get("value")))
+				return arr;
+
+			arr.push(mRow);
+
+			return arr;
+		}, []);
+	}
+
+	arg = arg || {};
+
+	var prevProps               = [].concat(arg.prevProps || []);
+	var nextProps               = [].concat(arg.nextProps || []);
+
+	prevProps                   = _filter(prevProps);
+	nextProps                   = _filter(nextProps);
+
+	var tableScheme             = this.getTableScheme();
+	var queries                 = [];
+	var nextPropsByUId          = {};
+	var prevPropsByUId          = {};
+	var deletedPropsUId         = [];
+
+	// ---------------------------------
+	// Ссылки на свойства задачи
+	// ---------------------------------
+	nextProps.forEach(function(row) {
+		nextPropsByUId[row.get("uid")] = row;
+	});
+
+	// ---------------------------------
+	// Создание ссылок на свойства в базе.
+	// Создание списка удаленных, добавленных и обновленных свойств
+	// ---------------------------------
+	prevProps.forEach(function(row) {
+		row = new ObjectA(row);
+
+		var sets        = [];
+		var uid         = row.get("uid");
+		var nextRow     = nextPropsByUId[uid];
+
+		prevPropsByUId[uid] = row;
+
+		if (!nextRow)
+			return deletedPropsUId.push(uid);
+
+		row.getKeys().forEach(function(key) {
+			var fieldDecl = tableScheme.get(key);
+
+			if (!fieldDecl || fieldDecl.spec)
+				return;
+
+			if (nextRow.get(key) != row.get(key))
+				sets.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(nextRow.get(key), fieldDecl));
+		});
+
+		if (!sets.length)
+			return;
+
+		queries.push(""
+			+ " UPDATE Property"
+			+ " SET " + sets.join(", ")
+			+ " WHERE"
+			+   " [uid] = " + uid
+		);
+	});
+
+	// ---------------------------------
+	// Запись новых свойств
+	// ---------------------------------
+	nextProps.forEach(function(row) {
+		if (prevPropsByUId[row.get("uid")])
+			return;
+
+		queries.push.apply(queries, [].concat(InterfaceFProperty.mkDBInsertStr(row) || []));
+	});
+
+	// ---------------------------------
+
+	if (deletedPropsUId.length)
+		queries.push("DELETE FROM Property WHERE uid IN (" + deletedPropsUId.join(",") + ")");
+
+	return queries.join("; ");
+};
+
+
 InterfaceFProperty.mkDBInsertStr = function(argProp) {
 	argProp = [].concat(argProp || []);
 
