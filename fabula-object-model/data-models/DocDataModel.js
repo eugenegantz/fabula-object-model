@@ -86,7 +86,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					self.set("docType", parsed.docType, null, !1);
 					self.set("company", parsed.company, null, !1);
 
-					this._updateMovDoc(e.value, this.get('docId'));
+					// rm: теперь doc, doc1, parentDoc в задачах считываются прямо из экземпляра заявки - единый источник правды
+					// this._updateMovDoc(e.value, this.get('docId'));
 				}
 			],
 
@@ -135,7 +136,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			"add-fab-mov": [
 				function(self, e) {
-					e.mov.set("doc", this.get("docId"));
+					// rm: теперь doc, doc1, parentDoc в задачах считываются прямо из экземпляра заявки - единый источник правды
+					// e.mov.set("doc", this.get("docId"));
 					e.mov.setDocInstance(this);
 				}
 			]
@@ -144,6 +146,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 
 		/**
+		 * @deprecated теперь doc, doc1, parentDoc в задачах считываются прямо из экземпляра заявки - единый источник правды
+		 *
 		 * @param {String} nextDocId
 		 * @param {String=} prevDocId
 		 *
@@ -238,18 +242,20 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"save": function(arg) {
 			arg = arg || {};
 
-			var _this           = this;
-			var db              = _this.getDBInstance();
-			var _promise        = Promise.resolve();
-			var dbDocRow        = null;
-			var dbMovsRows      = [];
-			var dbMovsRowsById  = {};
-			var dbPropsRows     = [];
-			var nextMovsById    = {};
-			var callback        = arg.callback || emptyFn;
-			var docType         = _this.get("docType", null, !1);
-			var companyID       = _this.get("company", null, !1);
-			var isNew           = !this.get('id') && !this.get('docId');
+			var _this                   = this;
+			var db                      = _this.getDBInstance();
+			var _promise                = Promise.resolve();
+			var dbDocRow                = null;
+			var dbMovsRows              = [];
+			var dbMovsRowsById          = {};
+			var dbPropsRows             = [];
+			var nextMovsById            = {};
+			var callback                = arg.callback || emptyFn;
+			var docType                 = _this.get("docType", null, !1);
+			var companyID               = _this.get("company", null, !1);
+			var isNew                   = !this.get('id') && !this.get('docId');
+			var mAttrList               = ["mAttr1", "mAttr2", "mAttr3", "mAttr4"];
+			var movsByMAttrRand         = {};
 
 			delete arg.callback;
 
@@ -306,7 +312,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					return (
 						db.dbquery({
-							"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save" }),
+							"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save-load" }),
 
 							"dbworker": " ",
 
@@ -333,21 +339,35 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var query;
 				var toDelete            = [];
 				var queries             = [];
-				var nextProps           = [];
 
-				// Собрать запрос на обновление полей
-				query = dbUtils.createUpdateFieldsQueryString({
-					nextFields          : _this.serializeFieldsObject(),
-					prevFields          : dbDocRow,
-					tableScheme         : _this.getTableScheme(),
-					tableName           : _this.getTableName()
-				});
+				// ----------------------------------
+				// Docs
+				// ----------------------------------
+
+				if (isNew) {
+					// Собрать запрос на вставку новой записи
+					dbUtils.createInsertFieldsQueryString({
+						"nextFields"          : _this.serializeFieldsObject(),
+						"tableScheme"         : _this.getTableScheme(),
+						"tableName"           : _this.getTableName()
+					});
+
+				} else {
+					// Собрать запрос на обновление полей
+					query = dbUtils.createUpdateFieldsQueryString({
+						"nextFields"          : _this.serializeFieldsObject(),
+						"prevFields"          : dbDocRow,
+						"tableScheme"         : _this.getTableScheme(),
+						"tableName"           : _this.getTableName()
+					});
+				}
 
 				if (query)
 					queries.push(query);
 
-				// Собрать обновленные свойства
-				nextProps.push.apply(nextProps, _this.getProperty());
+				// ----------------------------------
+				// Movements
+				// ----------------------------------
 
 				dbMovsRows.forEach(function(row) {
 					// регистронезависимые ключи
@@ -359,10 +379,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				_this.getNestedMovs().forEach(function(mov) {
 					var query;
+					var mAttrRand   = Math.random().toString().slice(-16);
 					var id          = mov.get("mmId");
 					var nextFields  = mov.serializeFieldsObject();
 
-					nextMovsById[id] = mov;
+					if (id)
+						nextMovsById[id] = mov;
 
 					// Собрать запрос на обновление уже существующих записей
 					if (dbMovsRowsById[id]) {
@@ -374,6 +396,20 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						});
 
 					} else {
+						// -----------------------------------------------------------------
+						// Если MAttr[n] не занято, записать в него случайное число
+						// для повышения уникальности записи
+						// -----------------------------------------------------------------
+						mAttrList.some(function(key) {
+							if (!mov.get(key, null, !1)) {
+								mov.set(key, mAttrRand);
+
+								return true;
+							}
+						});
+
+						movsByMAttrRand[mAttrRand] = mov;
+
 						// Собрать запрос на вставку новых записей
 						query = dbUtils.createInsertFieldsQueryString({
 							"nextFields": nextFields,
@@ -384,9 +420,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					if (query)
 						queries.push(query);
-
-					// Собрать обновленные свойства
-					nextProps = nextProps.push.apply(nextProps, mov.getProperty());
 				});
 
 				// Собрать идентификаторы удаленных задач
@@ -396,12 +429,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					if (!nextMovsById[id])
 						toDelete.push(id);
-				});
-
-				// Собрать запрос на обновление, удаление, вставку свойств
-				query = InterfaceFProperty.createUpsertDeleteQueryString({
-					"prevProps": dbPropsRows,
-					"nextProps": nextProps
 				});
 
 				if (query)
@@ -417,10 +444,170 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				queries = queries.join("; ");
 
 				return db.query({
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save-mov-1" }),
+
+					"dbworker": " ",
+
 					"query": queries
 				});
 
 			}).then(function() {
+				// ----------------------------------
+				// Movements.mmpid
+				// ----------------------------------
+
+				// Прочесть новые mmid
+				var mAttrList = Object.keys(movsByMAttrRand).map(function(m) {
+					return '"' + m + '"';
+				});
+
+				var query = ""
+					+ " SELECT mmid, mattr1, mattr2, mattr3, mattr4"
+					+ " FROM Movements"
+					+ " WHERE"
+					+ "        mAttr1 IN (" + mAttrList + ")"
+					+ "     OR mAttr2 IN (" + mAttrList + ")"
+					+ "     OR mAttr3 IN (" + mAttrList + ")"
+					+ "     OR mAttr4 IN (" + mAttrList + ")";
+
+				return db.query({
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save-load-mov" }),
+
+					"dbworker": " ",
+
+					"query": query
+				});
+
+			}).then(function(dbRes) {
+				var queries = [];
+
+				dbRes.recs.forEach(function(row) {
+					var mov = (
+						   movsByMAttrRand[row.mattr1]
+						|| movsByMAttrRand[row.mattr2]
+						|| movsByMAttrRand[row.mattr3]
+						|| movsByMAttrRand[row.mattr4]
+					);
+
+					mov.set("mmId", row.mmid);
+				});
+
+				_this.getNestedMovs().forEach(function(mov) {
+					var query;
+					var id                  = mov.get("mmid");
+					var pMov                = mov.getParentMovInstance();
+					var changedFields       = mov.getChanged();
+
+					// ----------------------------------
+					// Movements.mmpid
+					// ----------------------------------
+
+					if (mov.get("mmpid") != pMov.get("mmid")) {
+						query = dbUtils.createUpdateFieldsQueryString({
+							"prevFields": {
+								"mmpid": mov.get("mmpid")
+							},
+							"nextFields": {
+								"mmpid": pMov.get("mmid")
+							},
+							"tableScheme": MovDataModel.getTableScheme(),
+							"tableName": MovDataModel.getTableName()
+						});
+
+						mov.set("mmpid", pMov.get("mmid"));
+
+						if (query)
+							queries.push(query);
+					}
+
+					// ----------------------------------
+					// Movements.mmflag
+					// ----------------------------------
+
+					if (
+						!!~changedFields.indexOf("mmflag")
+						&& mov.get("mmid")
+						&& mov.get("mmflag")
+					) {
+						query = ""
+							+ " INSERT INTO Talk (dt, txt, agent, [mm], [tm], [key], [part])"
+							+ " SELECT"
+							+   " NOW()"
+							+   " ," + "'Фаза: ' & mmFlag & ' &rArr; " + mov.get("mmflag") + "'"
+							+   " ," + 999
+							+   " ," + "mmId"
+							+   " ," + "FORMAT(TIME(),'HH:MM')"
+							+   " ," + "NOW()"
+							+   " ," + 0
+							+ " FROM Movement"
+							+ " WHERE"
+							+   " mmId = " + id
+							+ ";";
+
+						queries.push(query);
+					}
+				});
+
+				if (!queries.length)
+					return;
+
+				queries = queries.join("; ");
+
+				return db.query({
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save-mov-2" }),
+
+					"dbworker": " ",
+
+					"query": queries
+				});
+
+			}).then(function() {
+				// ----------------------------------
+				// Properties
+				// ----------------------------------
+
+				var query;
+				var queries         = [];
+				var nextProps       = [];
+
+				// Собрать обновленные свойства
+				nextProps.push.apply(nextProps, _this.getProperty());
+
+				_this.getNestedMovs().forEach(function(mov) {
+					var query;
+
+					// Собрать обновленные свойства
+					nextProps = nextProps.push.apply(nextProps, mov.getProperty());
+
+					if (query)
+						queries.push(query);
+				});
+
+				// записать свойства
+				// Собрать запрос на обновление, удаление, вставку свойств
+				query = InterfaceFProperty.createUpsertDeleteQueryString({
+					"prevProps": dbPropsRows,
+					"nextProps": nextProps
+				});
+
+				if (!query)
+					return;
+
+				return db.query({
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save-props" }),
+
+					"dbworker": " ",
+
+					"query": query
+				});
+
+			}).then(function() {
+				_this._mDocClsHistory();
+
+				_this.getNestedMovs().forEach(function(mov) {
+					mov._mMovClsHistory();
+				});
+
 				callback(null, _this)
 
 			}).catch(function(err) {
@@ -445,146 +632,18 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @return {Promise}
 		 * */
 		"insert": function(arg) {
+			// event: "before-insert"
+			// event: "before-doc-insert"
+			// event: "after-insert"
+			// event: "doc-insert-error"
+
 			console.warn("DocDataModel.insert(): deprecated");
 
-			arg = arg || {};
-
-			var self            = this,
-				docId           = this.get("docId", null, !1),
-				callback        = arg.callback || emptyFn,
-				dbawws          = self.getDBInstance(),
-				dbq             = [],
-				docFieldsDecl   = this.__docDataModelsDefaultFields,
-				disabledFields  = new ObjectA({ "id": 1 }),
-				values          = [],
-				fields          = [];
-
-			self.trigger("before-insert");
-
-			(function() {
-				var e = new IEvent("before-doc-insert");
-
-				e.doc = self;
-
-				self.triggerNestedMovs("before-doc-insert", e);
-			})();
-
-			docFieldsDecl.getKeys().forEach(function(key) {
-				if (disabledFields.get(key))
-					return;
-
-				var val,
-					fldDecl = docFieldsDecl.get(key);
-
-				// если поле пустое (кроме чисел) - пропустить
-				if (
-					_utils.isEmpty(val = self.get(key, null, !1))
-					&& _utils.isEmpty(val = fldDecl.value)
-				) {
-					return;
-				}
-
-				values.push(dbUtils.mkVal(val, fldDecl));
-				fields.push(dbUtils.mkFld(key));
-			});
-
-			dbq.push("INSERT INTO DOCS (" + fields.join(",") + ") VALUES (" + values.join(",") + ")");
-			dbq.push("DELETE FROM Property WHERE extClass = 'DOCS' AND extId = '" + docId + "' ");
-
-			dbq.push.apply(
-				dbq,
-				[].concat(
-					self.getUpsertOrDelFPropsQueryStrByDBRes([], {
-						"extClass": "DOCS",
-						"extId": docId,
-						"pid": 0
-					}) || []
-				)
-			);
-
-			return new Promise(function(resolve, reject) {
-				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.ins-0" }),
-					"dbworker": " ",
-					"query": dbq.join("; "),
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
-
-						resolve();
-					}
-				});
-
-			}).then(function() {
-				var promises = [
-					new Promise(function(resolve, reject) {
-						dbawws.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.ins-id" }),
-
-							"dbworker": " ",
-
-							"query": "SELECT id FROM Docs WHERE docId = '" + self.get("docId", null, !1) + "'",
-
-							"callback": function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									return reject(err);
-
-								self.set("id", dbres.recs[0].id, null, !1);
-
-								resolve();
-							}
-						})
-					})
-				];
-
-				promises.push.apply(
-					promises,
-					self.getMov().map(function(mov) {
-						if (mov.get("doc1") != docId)
-							mov.set("doc", docId);
-
-						return mov.save({
-							"dbcache": arg.dbcache
-						});
-					})
-				);
-
-				return Promise.all(promises);
-
-			}).then(function() {
-				self._mDocClsHistory();
-
-				callback(null, self);
-
-				self.trigger("after-insert");
-
-				(function() {
-					var e = new IEvent("after-doc-insert");
-
-					e.doc = self;
-
-					self.triggerNestedMovs("after-doc-insert", e);
-				})();
-
-			}).catch(function(err) {
-				callback(err, self);
-
-				self.trigger("insert-error");
-
-				(function() {
-					var e = new IEvent("doc-insert-error");
-
-					e.doc = self;
-
-					self.triggerNestedMovs("doc-insert-error", e);
-				})();
-
-				return Promise.reject(err);
-			});
+			return this.save(arg);
 		},
 
 
-		_getSaveOpt: function(arg) {
+		"_getSaveOpt": function(arg) {
 			function get2(obj) {
 				return ['insert', 'update', 'delete'].reduce(function(obj, key) {
 					if (!(key in obj))
@@ -622,243 +681,17 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @return {Promise}
 		 * */
 		"update": function(ownArg, parentArg, childrenArg, movArg) {
-			ownArg = Object.assign({}, ownArg);
-			movArg = Object.assign({ "dbcache": ownArg.dbcache }, movArg);
+			// event: "before-update"
+			// event: "before-doc-update"
+			// event: "after-update"
+			// event: "after-doc-update"
+			// event: "update-error"
+			// event: "doc-update-error"
+			// event: "doc-update-error"
 
-			var self            = this,
-				callback        = ownArg.callback || emptyFn,
-				dbawws          = self.getDBInstance();
+			console.warn("DocDataModel.update(): deprecated");
 
-			ownArg.saveOpt = self._getSaveOpt(ownArg.saveOpt);
-
-			self.trigger("before-update");
-
-			(function() {
-				var e = new IEvent("before-doc-update");
-
-				e.doc = self;
-
-				self.triggerNestedMovs("before-doc-update", e);
-			})();
-
-			return new Promise(function(resolve, reject) {
-				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(ownArg.dbcache, { "m": "m-doc.upd-s" }),
-
-					"dbworker": ownArg.dbworker,
-
-					"query": ""
-					+ "SELECT"
-					+   "  uid"
-					+   ", property"
-					+   ", [value]"
-					+   ", ExtID"
-					+ " FROM Property"
-					+ " WHERE"
-					+   "     pid = 0"
-					+   " AND ExtClass = 'DOCS'"
-					+   " AND ExtID IN ("
-					+       " SELECT DocID"
-					+       " FROM DOCS"
-					+       " WHERE"
-					+           " id = " + self.get("id", null, !1)
-					+   ")"
-
-					+ "; SELECT MMID"
-					+ " FROM Movement"
-					+ " WHERE"
-					+   " Doc IN ("
-					+       " SELECT DocID"
-					+       " FROM DOCS"
-					+       " WHERE"
-					+           " id = " + self.get("id", null, !1)
-					+   ")",
-
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
-
-						resolve(dbres);
-					}
-				});
-
-			}).then(function(dbres) {
-				var changedFields = self.getChanged(),
-					docFieldsDecl = self.__docDataModelsDefaultFields,
-
-					disabledFields = new ObjectA({
-						"id": 1
-					}),
-
-					dbPropsRecs         = dbres[0].recs,
-					dbMovsRecs          = dbres[1].recs,
-					selfMovsRefByMMId   = {},
-					dbMovsRefByMMId     = {},
-					values              = [],
-					dbq                 = [];
-
-				// ------------------------------------
-				// Обновление полей в строке
-				// ------------------------------------
-				if (ownArg.saveOpt.fields.update) {
-					changedFields.forEach(function(key) {
-						var fldDecl = docFieldsDecl.get(key);
-
-						if (!fldDecl)
-							return;
-
-						if (disabledFields.get(key))
-							return;
-
-						values.push(
-							dbUtils.mkFld(key) + " = " +
-							dbUtils.mkVal(self.get(key), fldDecl)
-						);
-					});
-
-					if (values.length)
-						dbq.push("UPDATE DOCS SET " + values.join(", ") + " WHERE ID = " + self.get("ID"));
-				}
-
-				// --------------------------------------
-
-				if (
-					   ownArg.saveOpt.props.insert
-					&& ownArg.saveOpt.props.update
-					&& ownArg.saveOpt.props.delete
-				) {
-					dbq.push.apply(
-						dbq,
-						[].concat(
-							self.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
-								"pid": 0,
-								"extId": self.get("docId", null, !1),
-								"extClass": "DOCS"
-							}) || []
-						)
-					);
-				}
-
-				// --------------------------------------
-				// Ссылки на задачи
-				// --------------------------------------
-
-				// Ссылки на задачи внутри текущего экземпляра заявки
-				self.getMov().forEach(function(mov) {
-					selfMovsRefByMMId[mov.get("mmid", null, !1)] = mov;
-				});
-
-				// Ссылки на задачи внутри текущей БД
-				dbMovsRecs.forEach(function(row) {
-					dbMovsRefByMMId[row.MMID] = row;
-				});
-
-				var promises = [];
-
-				// --------------------------------------
-				// Запросы в БД: поля и свойства заявки
-				// --------------------------------------
-				if (dbq.length) {
-					promises.push(
-						new Promise(function(resolve, reject) {
-							dbawws.dbquery({
-								"dbcache": self.iFabModuleGetDBCache(ownArg.dbcache, { "m": "m-doc.upd-0" }),
-								"dbworker": " ",
-								"query": dbq.join("; "),
-								"callback": function(dbres, err) {
-									if (err = dbUtils.fetchErrStrFromRes(dbres))
-										return reject(err);
-
-									resolve();
-								}
-							});
-						})
-					);
-				}
-
-				// --------------------------------------
-				// Список удаленных подчиненных задач
-				// --------------------------------------
-				if (ownArg.saveOpt.movs.delete) {
-					dbMovsRecs.forEach(function(row) {
-						if (selfMovsRefByMMId[row.MMID])
-							return;
-
-						var mov = new MovDataModel();
-
-						mov.set("mmId", row.MMID);
-
-						promises.push(
-							mov.rm({
-								"dbcache": ownArg.dbcache
-							})
-						);
-					});
-				}
-
-				// --------------------------------------
-
-				return Promise.all(promises).then(function() {
-					return Promise.all(
-						self.getMov().reduce(function(prev, mov) {
-							var mmId = mov.get("MMID");
-
-							if (!mov.getChanged().length && !mov.hasChangedFProperty())
-								return prev;
-
-							if (!!~ownArg.saveOpt.movs.except.fields.mmid.indexOf(mmId))
-								return prev;
-
-							if (dbMovsRefByMMId[mmId] && !ownArg.saveOpt.movs.update)
-								return;
-
-							if (!dbMovsRefByMMId[mmId] && !ownArg.saveOpt.movs.insert)
-								return;
-
-							if (
-								mov.get("Doc1") != self.get("DocID")
-								&& mov.get("Doc") != self.get("DocID")
-							) {
-								mov.set("Doc", self.get("DocID"));
-							}
-
-							prev.push(mov.save(movArg));
-
-							return prev;
-						}, [])
-					);
-				});
-
-			}).then(function() {
-				self._mDocClsHistory();
-
-				callback(null, self);
-
-				self.trigger("after-update");
-
-				(function() {
-					var e = new IEvent("after-doc-update");
-
-					e.doc = self;
-
-					self.triggerNestedMovs("after-doc-update", e);
-				})();
-
-			}).catch(function(err) {
-				callback(err, self);
-
-				self.trigger("update-error");
-
-				(function() {
-					var e = new IEvent("doc-update-error");
-
-					e.doc = self;
-
-					self.triggerNestedMovs("doc-update-error", e);
-				})();
-
-				return Promise.reject(err);
-			});
+			return this.save(ownArg);
 		},
 
 
@@ -918,7 +751,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			arg = Object.assign({}, arg);
 
 			var self                = this,
-			    loadAlg             = arg.loadAlgorithm || "batch",
 			    docFieldsDecl       = self.__docDataModelsDefaultFields,
 			    fields              = arg.fields;
 
@@ -954,20 +786,17 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				return prev;
 			}, []);
 
-			if ("batch" == loadAlg)
-				return this._loadBatch(arg);
-
-			return this._loadRecursively(arg);
+			return this._loadBatch(arg);
 		},
 
 
 		"_loadBatch": function(arg) {
 			arg = arg || {};
 
-			var self                = this,
-			    dbawws              = self.getDBInstance(),
+			var _this               = this,
+			    dbawws              = _this.getDBInstance(),
 			    callback            = arg.callback || emptyFn,
-			    docId               = self.get("docId", null, !1),
+			    docId               = _this.get("docId", null, !1),
 			    fields              = arg.fields;
 
 			return Promise.resolve().then(function() {
@@ -997,7 +826,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					+   " AND extId = '" + docId + "'";
 
 				return dbawws.query({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.load" }),
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.load" }),
 
 					"dbworker": arg.dbworker,
 
@@ -1015,19 +844,19 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				if (!docRow)
 					return Promise.reject("DocDataModel.load(): specified doc record have not found in DOCS table");
 
-				self.getKeys().forEach(function(k) {
-					self.set(k, void 0, null, !1);
+				_this.getKeys().forEach(function(k) {
+					_this.set(k, void 0, null, !1);
 				});
 
-				self.delMov({});
+				_this.delMov({});
 
-				self.deleteFProperty();
+				_this.deleteFProperty();
 
-				self.set(docRow);
+				_this.set(docRow);
 
 				propsRecs.forEach(function(mRow) {
 					if (!mRow.pid)
-						return self.addProperty(mRow);
+						return _this.addProperty(mRow);
 
 					if (!movPropsByMMId[mRow.pid])
 						movPropsByMMId[mRow.pid] = [];
@@ -1040,10 +869,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					mov.set(row);
 
-					var parent,
-					    id          = mov.get("mmId"),
-					    pid         = mov.get('mmPId');
+					var parent;
+					var id          = mov.get("mmId");
+					var pid         = mov.get("mmPId");
+					var movDoc      = mov.get("doc");
+					var movPDoc     = mov.get("parentDoc");
 
+					// Привязать свойства к задаче
 					mov.addProperty(movPropsByMMId[id] || []);
 
 					movsById[id] = mov;
@@ -1068,137 +900,26 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						delete movsParentAwaitByPId[id];
 					}
 
-					self.addMov(mov);
+					// Привязать задачу к заявке
+					_this.addMov(mov);
+
+					// Привязать заявку к задаче
+					if (movDoc == _this.get("docId"))
+						mov.setDocInstance(_this);
+
+					// Привязать родительскую заявку к задаче
+					if (movPDoc == _this.get("docId"))
+						mov.setParentDocInstance(_this);
 				});
 
-				self._mDocClsHistory();
+				_this._mDocClsHistory();
 
-				self.state = self.STATE_DOC_READY;
+				_this.state = _this.STATE_DOC_READY;
 
-				callback(null, self);
+				callback(null, _this);
 
 			}).catch(function(err) {
-				callback(err, self);
-
-				return Promise.reject(err);
-			});
-		},
-
-
-		/**
-		 * @deprecated
-		 * */
-		"_loadRecursively": function(arg) {
-			arg = arg || {};
-
-			var self                = this,
-				movArg              = Object.assign({ "dbcache": arg.dbcache }, arg.movArg),
-				dbawws              = self.getDBInstance(),
-				callback            = arg.callback || emptyFn,
-				docId               = self.get("docId", null, !1),
-				useSubMovs          = !!arg.useSubMovs, // TODO переименовать arg.useSubMovs
-				fields              = arg.fields;
-
-			return Promise.resolve().then(function() {
-				if (!docId)
-					return Promise.reject("DocDataModel.load(): docId field is not assigned");
-
-				var query = ""
-					+ " SELECT " + fields.join(",")
-					+ " FROM DOCS"
-					+ " WHERE"
-					+   " DocID = '" + docId + "'"
-
-					+ "; SELECT mmid"
-					+ " FROM Movement"
-					+ " WHERE"
-					+   " Doc = '" + docId + "'"
-					+ (useSubMovs ? " OR ParentDoc = '" + docId + "' " : "")
-
-					+ "; SELECT"
-					+   "  uid"
-					+   ", extClass"
-					+   ", extID"
-					+   ", property"
-					+   ", value"
-					+ " FROM Property"
-					+ " WHERE"
-					+   "     pid = 0"
-					+   " AND ExtClass = 'DOCS'"
-					+   " AND ExtID = '" + docId + "'";
-
-				return dbawws.query({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.load" }),
-
-					"dbworker": arg.dbworker,
-
-					"query": query
-				});
-
-			}).then(function(dbres) {
-				if (!dbres[0].recs.length)
-					return Promise.reject("DocDataMode.load(): specified doc record have not found in DOCS table");
-
-				var dbRecDoc = dbres[0].recs[0],
-					dbRecsMovs = dbres[1].recs,
-					dbRecsProps = dbres[2].recs;
-
-				self.getKeys().forEach(function(k) {
-					self.set(k, void 0, null, !1);
-				});
-
-				self.delMov({});
-
-				self.deleteFProperty();
-
-				self.set(dbRecDoc);
-
-				self.addProperty(dbRecsProps);
-
-				return Promise.all(
-					dbRecsMovs.map(function(row) {
-						var mov = new MovDataModel();
-
-						mov.set(row);
-
-						self.addMov(mov);
-
-						return mov.load(movArg);
-					})
-				);
-
-			}).then(function() {
-				var docMovsIdxByMMId = {};
-
-				/*
-				* Связывание общих экземпляров задач.
-				* Инициализированные mov и doc имеют разные экземпляры одинаковых записей
-				* */
-				self.getMov().forEach(function(mov, idx, movs) {
-					var mmid = mov.get("mmid", null, !1);
-
-					docMovsIdxByMMId[mmid] = idx;
-
-					mov.getNestedMovs().forEach(function(mov) {
-						var mmid = mov.get("mmid", null, !1);
-
-						if (!(mmid in docMovsIdxByMMId))
-							return;
-
-						var idx = docMovsIdxByMMId[mmid];
-
-						movs[idx] = mov;
-					});
-				});
-
-				self._mDocClsHistory();
-
-				self.state = self.STATE_DOC_READY;
-
-				callback(null, self);
-
-			}).catch(function(err) {
-				callback(err, self);
+				callback(err, _this);
 
 				return Promise.reject(err);
 			});

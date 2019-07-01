@@ -7,8 +7,72 @@ var DefaultDataModel    = require("./DefaultDataModel"),
 	IFabModule          = require("./IFabModule.js"),
 	ObjectA             = require("./ObjectA.js"),
 	emptyFn             = function() {},
+	MField              = require("./field-models/MField.js"),
 	dbUtils             = require("./../utils/dbUtils.js"),
 	_utils              = require("./../utils/utils");
+
+
+var MFieldDoc = (function() {
+	var _protoGet = MField.prototype.get;
+
+	return _utils.createProtoChain(MField.prototype, {
+
+		"get": function() {
+			var mCtx    = this.getModelCtx();
+			var docObj  = mCtx.getDocInstance();
+
+			if (!docObj)
+				return _protoGet.call(this);
+
+			return docObj.get("docId", null, false);
+		},
+
+	});
+})();
+
+
+var MFieldParentDoc = (function() {
+	var _protoGet = MField.prototype.get;
+
+	return _utils.createProtoChain(MField.prototype, {
+
+		"get": function() {
+			var mCtx    = this.getModelCtx();
+			var docObj  = mCtx.getParentDocInstance();
+
+			if (!docObj)
+				return _protoGet.call(this);
+
+			return docObj.get("docId", null, false);
+		},
+
+	});
+})();
+
+
+var MFieldDoc1 = (function() {
+	var _protoGet = MField.prototype.get;
+
+	return _utils.createProtoChain(MField.prototype, {
+
+		"get": function() {
+			var mCtx    = this.getModelCtx();
+			var docObj  = mCtx.getDocInstance();
+			var pDocObj = mCtx.getParentDocInstance();
+
+			if (docObj)
+				return docObj.get("docId", null, false);
+
+			if (pDocObj)
+				return pDocObj.get("docId", null, false);
+
+			return _protoGet.call(this);
+		},
+
+	});
+})();
+
+
 
 // TODO пересмотреть алиасы
 /**
@@ -19,6 +83,10 @@ function MovDataModel() {
 	IFabModule.call(this);
 	IMovCollection.call(this);
 	InterfaceFProperty.call(this);
+
+	this.declField("doc", new MFieldDoc({ modelCtx: this }));
+	this.declField("doc1", new MFieldDoc1({ modelCtx: this }));
+	this.declField("parentDoc", new MFieldParentDoc({ modelCtx: this }));
 
 	this.set({
 		"GSDate": new Date()
@@ -1052,6 +1120,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 		"getDocInstance": function() {
 			return this._mMovDocInstance;
+		},
+
+
+		"setParentDocInstance": function(doc) {
+			this._mMovParentDocInstance = doc;
+		},
+
+
+		"getParentDocInstance": function() {
+			return this._mMovParentDocInstance;
 		},
 
 
