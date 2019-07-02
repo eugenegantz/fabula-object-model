@@ -270,17 +270,20 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			if (isNew) {
 				_promise = _promise.then(function() {
-					return this.initNewDocId();
+					return initNewDocId();
 				});
 
 			} else {
 				_promise = _promise.then(function() {
+					var _id      = _this.get("id") || "NULL";
+					var _docId   = _this.get("docId") ? "'" + _this.get("docId") + "'" : "NULL";
+
 					var query = ""
-						+ " SELECT *"
+						+ " SELECT *, Format(RegDate,'yyyy-mm-dd Hh:Nn:Ss') as RegDate"
 						+ " FROM Docs"
 						+ " WHERE"
-						+   "    docId = '" + _this.get("docId") + "'"
-						+   " OR id = " + _this.get("id")
+						+   "    docId = " + _docId
+						+   " OR id = " + _id
 
 						+ "; SELECT"
 						+   "  uid"
@@ -289,25 +292,24 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						+   ", ExtID"
 						+ " FROM Property"
 						+ " WHERE"
-						+   "     pid = 0"
-						+   " AND ExtClass = 'DOCS'"
-						+   " AND ExtID IN ("
-						+       " SELECT DocID"
+						+   "     extClass = 'DOCS'"
+						+   " AND extId IN ("
+						+       " SELECT docId"
 						+       " FROM DOCS"
 						+       " WHERE"
-						+           "    docId = '" + _this.get("docId") + "'"
-						+           " OR id = " + _this.get("id")
+						+           "    docId = " + _docId
+						+           " OR id = " + _id
 						+   ")"
 
 						+ "; SELECT *"
 						+ " FROM Movement"
 						+ " WHERE"
-						+   " Doc IN ("
-						+       " SELECT DocID"
+						+   " doc1 IN ("
+						+       " SELECT docId"
 						+       " FROM DOCS"
 						+       " WHERE"
-						+           "    docId = '" + _this.get("docId") + "'"
-						+           " OR id = " + _this.get("id")
+						+           "    docId = " + _docId
+						+           " OR id = " + _id
 						+   ")";
 
 					return (
@@ -346,7 +348,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				if (isNew) {
 					// Собрать запрос на вставку новой записи
-					dbUtils.createInsertFieldsQueryString({
+					query = dbUtils.createInsertFieldsQueryString({
 						"nextFields"          : _this.serializeFieldsObject(),
 						"tableScheme"         : _this.getTableScheme(),
 						"tableName"           : _this.getTableName()
@@ -366,7 +368,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					queries.push(query);
 
 				// ----------------------------------
-				// Movements
+				// Movement
 				// ----------------------------------
 
 				dbMovsRows.forEach(function(row) {
@@ -395,6 +397,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 							"tableName"     : mov.getTableName()
 						});
 
+						if (query) {
+							// deprecated
+							// для обратно совместимости с версией 0.9.1 и тестами
+							mov.trigger("before-update");
+						}
+
 					} else {
 						// -----------------------------------------------------------------
 						// Если MAttr[n] не занято, записать в него случайное число
@@ -416,6 +424,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 							"tableScheme"   : mov.getTableScheme(),
 							"tableName"     : mov.getTableName()
 						});
+
+						if (query) {
+							// deprecated
+							// для обратно совместимости с версией 0.9.1 и тестами
+							mov.trigger("before-insert");
+						}
 					}
 
 					if (query)
@@ -431,12 +445,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						toDelete.push(id);
 				});
 
-				if (query)
-					queries.push(query);
-
 				// Собирать запрос на удаление задач
 				if (toDelete.length)
-					queries.push("DELETE FROM Movements WHERE mmId IN (" + toDelete + ")");
+					queries.push("DELETE FROM Movement WHERE mmId IN (" + toDelete + ")");
 
 				if (!queries.length)
 					return;
@@ -453,7 +464,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			}).then(function() {
 				// ----------------------------------
-				// Movements.mmpid
+				// Movement.mmpid
 				// ----------------------------------
 
 				// Прочесть новые mmid
@@ -461,9 +472,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					return '"' + m + '"';
 				});
 
+				if (!mAttrList.length)
+					return;
+
 				var query = ""
 					+ " SELECT mmid, mattr1, mattr2, mattr3, mattr4"
-					+ " FROM Movements"
+					+ " FROM Movement"
 					+ " WHERE"
 					+ "        mAttr1 IN (" + mAttrList + ")"
 					+ "     OR mAttr2 IN (" + mAttrList + ")"
@@ -476,33 +490,34 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					"dbworker": " ",
 
 					"query": query
+				}).then(function(dbRes) {
+					dbRes.recs.forEach(function(row) {
+						var mov = (
+							   movsByMAttrRand[row.mattr1]
+							|| movsByMAttrRand[row.mattr2]
+							|| movsByMAttrRand[row.mattr3]
+							|| movsByMAttrRand[row.mattr4]
+						);
+
+						mov.set("mmId", row.mmid);
+					});
 				});
 
-			}).then(function(dbRes) {
+			}).then(function() {
 				var queries = [];
-
-				dbRes.recs.forEach(function(row) {
-					var mov = (
-						   movsByMAttrRand[row.mattr1]
-						|| movsByMAttrRand[row.mattr2]
-						|| movsByMAttrRand[row.mattr3]
-						|| movsByMAttrRand[row.mattr4]
-					);
-
-					mov.set("mmId", row.mmid);
-				});
 
 				_this.getNestedMovs().forEach(function(mov) {
 					var query;
 					var id                  = mov.get("mmid");
 					var pMov                = mov.getParentMovInstance();
-					var changedFields       = mov.getChanged();
+
+					var _dbRow              = ObjectA.create(dbMovsRowsById[id] || {});
 
 					// ----------------------------------
-					// Movements.mmpid
+					// Movement.mmpid
 					// ----------------------------------
 
-					if (mov.get("mmpid") != pMov.get("mmid")) {
+					if (pMov && mov.get("mmpid") != pMov.get("mmid")) {
 						query = dbUtils.createUpdateFieldsQueryString({
 							"prevFields": {
 								"mmpid": mov.get("mmpid")
@@ -521,19 +536,18 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					}
 
 					// ----------------------------------
-					// Movements.mmflag
+					// Movement.mmflag
 					// ----------------------------------
 
 					if (
-						!!~changedFields.indexOf("mmflag")
-						&& mov.get("mmid")
-						&& mov.get("mmflag")
+						mov.get("mmid")
+						&& _dbRow.get("mmflag") != mov.get("mmflag")
 					) {
 						query = ""
 							+ " INSERT INTO Talk (dt, txt, agent, [mm], [tm], [key], [part])"
 							+ " SELECT"
 							+   " NOW()"
-							+   " ," + "'Фаза: ' & mmFlag & ' &rArr; " + mov.get("mmflag") + "'"
+							+   " ," + "'Фаза: " + _dbRow.get("mmid") + " &rArr; " + mov.get("mmflag") + "'"
 							+   " ," + 999
 							+   " ," + "mmId"
 							+   " ," + "FORMAT(TIME(),'HH:MM')"
@@ -577,7 +591,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					var query;
 
 					// Собрать обновленные свойства
-					nextProps = nextProps.push.apply(nextProps, mov.getProperty());
+					nextProps.push.apply(nextProps, mov.getProperty());
 
 					if (query)
 						queries.push(query);
@@ -747,64 +761,20 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 *
 		 * @return {Promise}
 		 * */
-		"load": function (arg) {
+		"load": function(arg) {
 			arg = Object.assign({}, arg);
 
-			var self                = this,
-			    docFieldsDecl       = self.__docDataModelsDefaultFields,
-			    fields              = arg.fields;
-
-			delete arg.loadAlgorithm;
-
-			if (!fields || !fields.length) {
-				fields = [
-					"ID",
-					"DocID",
-					"Agent",
-					"Manager",
-					"User",
-					"Person",
-					"FirmContract",
-					"Sum1",
-					"Debt",
-					"Company",
-					"DocType",
-					"Status",
-					"Format(RegDate,'yyyy-mm-dd Hh:Nn:Ss') as RegDate"
-				];
-			}
-
-			arg.fields = fields.reduce(function(prev, fld) {
-				if (!docFieldsDecl.get(fld))
-					return prev;
-
-				if (!/[()]/g.test(fld))
-					fld = ("[" + fld + "]");
-
-				prev.push(fld);
-
-				return prev;
-			}, []);
-
-			return this._loadBatch(arg);
-		},
-
-
-		"_loadBatch": function(arg) {
-			arg = arg || {};
-
-			var _this               = this,
-			    dbawws              = _this.getDBInstance(),
-			    callback            = arg.callback || emptyFn,
-			    docId               = _this.get("docId", null, !1),
-			    fields              = arg.fields;
+			var _this               = this;
+			var dbawws              = _this.getDBInstance();
+			var callback            = arg.callback || emptyFn;
+			var docId               = _this.get("docId", null, !1);
 
 			return Promise.resolve().then(function() {
 				if (!docId)
 					return Promise.reject("DocDataModel.load(): docId field is not assigned");
 
 				var query = ""
-					+ " SELECT " + fields.join(",")
+					+ " SELECT *, Format(RegDate,'yyyy-mm-dd Hh:Nn:Ss') as RegDate"
 					+ " FROM DOCS"
 					+ " WHERE"
 					+   " docId = '" + docId + "'"
@@ -1257,5 +1227,26 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 	}
 );
+
+
+// Подмешивать docid в свойства
+// Чтобы был единый источник правды
+(function() {
+	var _protoGetFPropertyA = DocDataModel.prototype.getFPropertyA;
+
+	return DocDataModel.prototype.getFPropertyA = function() {
+		var _this = this;
+		var props = _protoGetFPropertyA.apply(this, arguments);
+
+		props.forEach(function(propRow) {
+			propRow.set("extClass", "DOCS");
+			propRow.set("pid", 0);
+			propRow.set("extId", _this.get("docId"));
+		});
+
+		return props;
+	};
+})();
+
 
 module.exports = DocDataModel;

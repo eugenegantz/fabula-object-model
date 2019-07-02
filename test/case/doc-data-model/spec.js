@@ -1,4 +1,4 @@
-describe("DocDataModel", function() {
+describe.only("DocDataModel", function() {
 	var fom,
 		stand,
 		db,
@@ -13,9 +13,19 @@ describe("DocDataModel", function() {
 
 		sid = (Math.random() + '').slice(-10);
 
+	function mkSID() {
+		return (Math.random() + '').slice(-10);
+	}
 
-	function mkMov() {
+	/**
+	 * @arg.sid
+	 * */
+	function mkMov(arg) {
+		var sid = arg.sid;
 		var mov = fom.create("MovDataModel");
+
+		if (!sid)
+			throw new Error("!arg.sid");
 
 		mov.set("mmFlag", "3");
 		mov.set("amount", 999);
@@ -30,8 +40,16 @@ describe("DocDataModel", function() {
 	}
 
 
-	function mkDoc() {
+	/**
+	 * @param {Object} arg
+	 * @param {Number} arg.sid
+	 * */
+	function mkDoc(arg) {
+		var sid = arg.sid;
 		var doc = fom.create("DocDataModel");
+
+		if (!sid)
+			throw new Error("!arg.sid");
 
 		doc.set("notice", sid);
 		doc.set("agent", 999);
@@ -43,34 +61,33 @@ describe("DocDataModel", function() {
 		doc.addProperty({ value: 100, property: "doc" + sid });
 		doc.addProperty({ value: 200, property: "doc" + sid });
 
-		doc.addMov(mkMov());
-		doc.addMov(mkMov());
+		doc.addMov(mkMov({ "sid": sid }));
+		doc.addMov(mkMov({ "sid": sid }));
 
 		return doc;
 	}
 
 
-	function clearDB(cb) {
-		this.timeout(5000);
+	/**
+	 * @param {Object} arg
+	 * @param {Number} arg.sid
+	 * */
+	function clearDoc(arg) {
+		var sid = arg.sid;
 
-		db.dbquery({
-			"dbcache": Math.random() + "",
+		if (!sid)
+			throw new Error("!arg.sid");
 
-			"dbworker": " ",
-
-			"query": ""
-			+ "DELETE FROM talk WHERE mm IN (SELECT mmid FROM Movement WHERE gsSpec = '" + sid +  "')"
-
-			+ "; DELETE FROM Property WHERE property = 'mov" + sid + "'"
-
-			+ "; DELETE FROM Property WHERE property = 'doc" + sid + "'"
-
+		var query = ""
+			+ "  DELETE FROM Docs WHERE notice = '" + sid + "'"
 			+ "; DELETE FROM Movement WHERE gsSpec = '" + sid + "'"
+			+ "; DELETE FROM Property WHERE extClass = 'DOCS' AND pid = 0 AND property = 'doc" + sid + "'"
+			+ "; DELETE FROM Property WHERE extClass = 'DOCS' AND property = 'mov" + sid + "'";
 
-			+ "; DELETE FROM Docs WHERE notice = '" + sid + "' AND notice IS NOT NULL",
-			callback: function() {
-				cb();
-			}
+		return db.query({
+			"query": query,
+			"dbworker": " ",
+			"dbcache": "test_clear_doc"
 		});
 	}
 
@@ -98,38 +115,40 @@ describe("DocDataModel", function() {
 	});
 
 
-	afterEach(clearDB);
-
-
 	describe(".getNewDocID()", function() {
 		var doc,
 			docId,
 			checkDBRecs;
 
-		before(function(done) {
-			doc = mkDoc();
+		var sid = mkSID();
 
-			doc.getNewDocID({
+		before(function() {
+			doc = mkDoc({ "sid": sid });
+
+			return doc.getNewDocID({
 				"companyID": doc.get("company"),
 				"docType": doc.get("docType")
 			}).then(function(_docId) {
 				docId = _docId;
 
 			}).then(function() {
-				db.dbquery({
+				return db.dbquery({
 					"dbworker": " ",
 
 					"dbcache": Math.random() + "",
 
 					"query": "SELECT docId FROM DOCS WHERE docId = '" + docId + "'",
-
-					"callback": function(dbres) {
-						checkDBRecs = dbres.recs;
-
-						done();
-					}
 				});
-			}).catch(done);
+
+			}).then(function(dbres) {
+				checkDBRecs = dbres.recs;
+			});
+		});
+
+		after(function() {
+			this.timeout(6000);
+
+			return clearDoc({ "sid": sid });
 		});
 
 		it("Длина кода == 10, соответствие паттерну", function() {
@@ -141,15 +160,19 @@ describe("DocDataModel", function() {
 
 
 	describe(".insert()", function() {
-		var doc,
-			dbRecsMovs,
-			dbRecsProps,
-			dbRecsDocs;
+		var doc;
+		var dbRecsMovs;
+		var dbRecsProps;
+		var dbRecsDocs;
 
-		before(function(done) {
-			doc = mkDoc();
+		var sid = mkSID();
 
-			doc.getNewDocID({
+		before(function() {
+			this.timeout(6000);
+
+			doc = mkDoc({ "sid": sid });
+
+			return doc.getNewDocID({
 				"companyID": doc.get("company"),
 				"docType": doc.get("docType")
 			}).then(function(docId) {
@@ -158,53 +181,49 @@ describe("DocDataModel", function() {
 				return doc.insert();
 
 			}).then(function() {
-				return new Promise(function(resolve, reject) {
-					var _query = ""
-						+ "SELECT docId"
-						+ " FROM Docs"
-						+ " WHERE"
-						+   " notice = '" + sid + "'"
-						+   " AND agent = '999'"
-						+   " AND firmContract = 1";
+				var _query = ""
+					+ "SELECT docId"
+					+ " FROM Docs"
+					+ " WHERE"
+					+   " notice = '" + sid + "'"
+					+   " AND agent = '999'"
+					+   " AND firmContract = 1";
 
-					db.dbquery({
-						"dbworker": " ",
+				var query = ""
+					+ _query
 
-						"dbcache": Math.random() + "",
+					+ "; SELECT [value]"
+					+ " FROM Property"
+					+ " WHERE"
+					+   " pid = 0"
+					+   " AND property = 'doc" + sid + "'"
+					+   " AND extClass = 'DOCS'"
+					+   " AND extId IN (" + _query + ")"
 
-						"query": ""
-							+ _query
+					+ "; SELECT mmId"
+					+ " FROM Movement"
+					+ " WHERE"
+					+   " doc IN (" + _query + ")";
 
-							+ "; SELECT [value]"
-							+ " FROM Property"
-							+ " WHERE"
-							+   " pid = 0"
-							+   " AND property = 'doc" + sid + "'"
-							+   " AND extClass = 'DOCS'"
-							+   " AND extId IN (" + _query + ")"
+				return db.dbquery({
+					"dbworker": " ",
 
-							+ "; SELECT mmId"
-							+ " FROM Movement"
-							+ " WHERE"
-							+   " doc IN (" + _query + ")",
+					"dbcache": Math.random() + "",
 
-						"callback": function(dbres, err) {
-							if (err = dbUtils.fetchErrStrFromRes(dbres))
-								return reject(err);
-
-							dbRecsDocs = dbres[0].recs;
-							dbRecsProps = dbres[1].recs;
-							dbRecsMovs = dbres[2].recs;
-
-							resolve();
-						}
-					});
+					"query": query
 				});
 
-			}).then(function() {
-				done();
+			}).then(function(dbres) {
+				dbRecsDocs = dbres[0].recs;
+				dbRecsProps = dbres[1].recs;
+				dbRecsMovs = dbres[2].recs;
+			});
+		});
 
-			}).catch(done);
+		after(function() {
+			this.timeout(6000);
+
+			return clearDoc({ "sid": sid });
 		});
 
 		it("Заявка записана и две задачи записаны в БД", function() {
@@ -217,8 +236,6 @@ describe("DocDataModel", function() {
 
 	describe(".update()", function() {
 
-		afterEach(clearDB);
-
 		describe("Изменились только поля заявки", function() {
 			this.timeout(6000);
 
@@ -228,12 +245,14 @@ describe("DocDataModel", function() {
 				dbRecsDocs,
 				eventMovUpd = 0;
 
-			before(function(done) {
+			var sid = mkSID();
+
+			before(function() {
 				this.timeout(6000);
 
-				doc = mkDoc();
+				doc = mkDoc({ "sid": sid });
 
-				doc.getNewDocID({
+				return doc.getNewDocID({
 					"companyID": doc.get("company"),
 					"docType": doc.get("docType")
 				}).then(function(docId) {
@@ -301,11 +320,13 @@ describe("DocDataModel", function() {
 							}
 						});
 					});
+				});
+			});
 
-				}).then(function() {
-					done();
+			after(function() {
+				this.timeout(6000);
 
-				}).catch(done);
+				return clearDoc({ "sid": sid });
 			});
 
 			it("Записи обновились", function() {
@@ -318,22 +339,23 @@ describe("DocDataModel", function() {
 			});
 		});
 
-		describe("Изменились поля заявки и подч. задачи (поле doc)", function() {
+		describe.only("Изменились поля заявки и подч. задачи (поле doc)", function() {
 			this.timeout(6000);
 
-			var doc,
-				dbRecsMovs,
-				dbRecsProps,
-				dbRecsDocs,
-				eventMovUpd = 0,
-				movChangedFields = [];
+			var doc;
+			var dbRecsMovs;
+			var dbRecsProps;
+			var dbRecsDocs;
+			var eventMovUpd = 0;
+			var movChangedFields = [];
+			var sid = mkSID();
 
-			before(function(done) {
+			before(function() {
 				this.timeout(6000);
 
-				doc = mkDoc();
+				doc = mkDoc({ "sid": sid });
 
-				doc.getNewDocID({
+				return doc.getNewDocID({
 					"companyID": doc.get("company"),
 					"docType": doc.get("docType")
 				}).then(function(docId) {
@@ -362,55 +384,51 @@ describe("DocDataModel", function() {
 					return doc.update();
 
 				}).then(function() {
-					return new Promise(function(resolve, reject) {
-						var _query = ""
-							+ "SELECT docId"
-							+ " FROM Docs"
-							+ " WHERE"
-							+ " notice = '" + sid + "'"
-							+   " AND agent = '888'"
-							+   " AND docId = '" + doc.get("docId") + "'"
-							+   " AND company = '" + doc.get("company") + "'"
-							+   " AND firmContract = 1";
+					var _query = ""
+						+ " SELECT docId"
+						+ " FROM Docs"
+						+ " WHERE"
+						+       "     notice = '" + sid + "'"
+						+       " AND agent = '888'"
+						+       " AND docId = '" + doc.get("docId") + "'"
+						+       " AND company = '" + doc.get("company") + "'"
+						+       " AND firmContract = 1";
 
-						db.dbquery({
-							"dbworker": " ",
+					var query = ""
+						+ _query
 
-							"dbcache": Math.random() + "",
+						+ "; SELECT [value]"
+						+ " FROM Property"
+						+ " WHERE"
+						+   "     pid = 0"
+						+   " AND property = 'doc" + sid + "'"
+						+   " AND extClass = 'DOCS'"
+						+   " AND extId IN (" + _query + ")"
 
-							"query": ""
-							+ _query
+						+ "; SELECT mmId"
+						+ " FROM Movement"
+						+ " WHERE"
+						+   " doc IN (" + _query + ")";
 
-							+ "; SELECT [value]"
-							+ " FROM Property"
-							+ " WHERE"
-							+   "     pid = 0"
-							+   " AND property = 'doc" + sid + "'"
-							+   " AND extClass = 'DOCS'"
-							+   " AND extId IN (" + _query + ")"
+					return db.query({
+						"dbworker": " ",
 
-							+ "; SELECT mmId"
-							+ " FROM Movement"
-							+ " WHERE"
-							+   " doc IN (" + _query + ")",
+						"dbcache": Math.random() + "",
 
-							"callback": function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									return reject(err);
-
-								dbRecsDocs = dbres[0].recs;
-								dbRecsProps = dbres[1].recs;
-								dbRecsMovs = dbres[2].recs;
-
-								resolve();
-							}
-						});
+						"query": query
 					});
 
-				}).then(function() {
-					done();
+				}).then(function(dbres) {
+					dbRecsDocs = dbres[0].recs;
+					dbRecsProps = dbres[1].recs;
+					dbRecsMovs = dbres[2].recs;
+				});
+			});
 
-				}).catch(done);
+			after(function() {
+				this.timeout(6000);
+
+				return clearDoc({ "sid": sid });
 			});
 
 			it("" +
@@ -435,12 +453,14 @@ describe("DocDataModel", function() {
 				eventMovUpd = 0,
 				movChangedFields = [];
 
-			before(function(done) {
+			var sid = mkSID();
+
+			before(function() {
 				this.timeout(6000);
 
-				doc = mkDoc();
+				doc = mkDoc({ "sid": sid });
 
-				doc.getNewDocID({
+				return doc.getNewDocID({
 					"companyID": doc.get("company"),
 					"docType": doc.get("docType")
 				}).then(function(docId) {
@@ -462,11 +482,13 @@ describe("DocDataModel", function() {
 					});
 
 					return doc.update();
+				});
+			});
 
-				}).then(function() {
-					done();
+			after(function() {
+				this.timeout(6000);
 
-				}).catch(done);
+				return clearDoc({ "sid": sid });
 			});
 
 			it("" +
@@ -483,37 +505,43 @@ describe("DocDataModel", function() {
 		});
 
 		describe("Удаление задачи", function() {
-			var doc,
-				dbRecsMovs;
+			var doc;
+			var dbRecsMovs;
+			var sid = mkSID();
 
-			before(function(done) {
+			before(function() {
 				this.timeout(6000);
 
-				doc = mkDoc();
+				doc = mkDoc({ "sid": sid });
 
-				doc.save().then(function() {
+				return doc.save().then(function() {
 					doc.delMov(doc.getMov()[0]);
 
 					return doc.save();
 
 				}).then(function() {
-					db.dbquery({
+					var query = ""
+						+ "SELECT mmId FROM Movement"
+						+ " WHERE"
+						+   " doc1 = '" + doc.get("docId") + "'";
+
+					return db.query({
 						"dbworker": " ",
 
 						"dbcache": Math.random() + "",
 
-						"query": ""
-						+ "SELECT mmId FROM Movement"
-						+ " WHERE"
-						+   " doc1 = '" + doc.get("docId") + "'",
-						"callback": function(dbres) {
-							dbRecsMovs = dbres.recs;
-
-							done();
-						}
+						"query": query
 					});
 
-				}).catch(done);
+				}).then(function(dbres) {
+					dbRecsMovs = dbres.recs;
+				});
+			});
+
+			after(function() {
+				this.timeout(6000);
+
+				return clearDoc({ "sid": sid });
 			});
 
 			it("", function() {
@@ -526,17 +554,16 @@ describe("DocDataModel", function() {
 
 	describe(".save()", function() {
 
-		afterEach(clearDB);
-
 		describe("запись - insert", function() {
-			var doc,
-				nextDocId,
-				eventDocBeforeInsert = false;
+			var doc;
+			var nextDocId;
+			var eventDocBeforeInsert = false;
+			var sid = mkSID();
 
-			before(function(done) {
+			before(function() {
 				this.timeout(6000);
 
-				doc = mkDoc();
+				doc = mkDoc({ "sid": sid });
 
 				doc.on("before-insert", function() {
 					eventDocBeforeInsert = true;
@@ -544,9 +571,13 @@ describe("DocDataModel", function() {
 					nextDocId = doc.get("docId");
 				});
 
-				doc.save().then(function() {
-					done();
-				}).catch(done);
+				return doc.save();
+			});
+
+			after(function() {
+				this.timeout(6000);
+
+				return clearDoc({ "sid": sid });
 			});
 
 			it(
@@ -559,28 +590,32 @@ describe("DocDataModel", function() {
 					assert.ok(docIdRegExp.test(nextDocId));
 					assert.ok(eventDocBeforeInsert);
 				}
-			)
+			);
 		});
 
 		describe("перезапись - update", function() {
-			var doc,
-				eventDocBeforeUpdate = false;
+			var doc;
+			var eventDocBeforeUpdate = false;
+			var sid = mkSID();
 
-			before(function(done) {
+			before(function() {
 				this.timeout(6000);
 
-				doc = mkDoc();
+				doc = mkDoc({ "sid": sid });
 
 				doc.on("before-update", function() {
 					eventDocBeforeUpdate = true;
 				});
 
-				doc.save().then(function() {
+				return doc.save().then(function() {
 					return doc.save();
-
-				}).then(function() {
-					done();
 				});
+			});
+
+			after(function() {
+				this.timeout(6000);
+
+				return clearDoc({ "sid": sid });
 			});
 
 			it(
@@ -599,14 +634,15 @@ describe("DocDataModel", function() {
 
 
 	describe(".load()", function() {
-		var doc,
-			doc2,
-			fields;
+		var doc;
+		var doc2;
+		var fields;
+		var sid = mkSID();
 
 		before(function() {
 			this.timeout(6000);
 
-			doc = mkDoc();
+			doc = mkDoc({ "sid": sid });
 
 			return doc.save().then(function() {
 				doc2 = fom.create("DocDataModel");
@@ -627,6 +663,12 @@ describe("DocDataModel", function() {
 			});
 		});
 
+		after(function() {
+			this.timeout(6000);
+
+			return clearDoc({ "sid": sid });
+		});
+
 		it(
 			"заявка содержит две задачи; " +
 			"в заявке нет изм. полей или свойств; " +
@@ -640,7 +682,8 @@ describe("DocDataModel", function() {
 				fields.forEach(function(key) {
 					assert.equal(doc2.get(key), doc.get(key), key);
 				});
-			});
+			}
+		);
 	});
 
 

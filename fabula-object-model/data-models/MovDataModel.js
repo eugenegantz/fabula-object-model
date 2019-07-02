@@ -15,7 +15,11 @@ var DefaultDataModel    = require("./DefaultDataModel"),
 var MFieldDoc = (function() {
 	var _protoGet = MField.prototype.get;
 
-	return _utils.createProtoChain(MField.prototype, {
+	function MFieldDoc() {
+		MField.apply(this, arguments);
+	}
+
+	MFieldDoc.prototype = _utils.createProtoChain(MField.prototype, {
 
 		"get": function() {
 			var mCtx    = this.getModelCtx();
@@ -28,13 +32,19 @@ var MFieldDoc = (function() {
 		},
 
 	});
+
+	return MFieldDoc;
 })();
 
 
 var MFieldParentDoc = (function() {
 	var _protoGet = MField.prototype.get;
 
-	return _utils.createProtoChain(MField.prototype, {
+	function MFieldParentDoc() {
+		MField.apply(this, arguments);
+	}
+
+	MFieldParentDoc.prototype = _utils.createProtoChain(MField.prototype, {
 
 		"get": function() {
 			var mCtx    = this.getModelCtx();
@@ -47,13 +57,19 @@ var MFieldParentDoc = (function() {
 		},
 
 	});
+
+	return MFieldParentDoc;
 })();
 
 
 var MFieldDoc1 = (function() {
 	var _protoGet = MField.prototype.get;
 
-	return _utils.createProtoChain(MField.prototype, {
+	function MFieldDoc1() {
+		MField.apply(this, arguments);
+	}
+
+	MFieldDoc1.prototype = _utils.createProtoChain(MField.prototype, {
 
 		"get": function() {
 			var mCtx    = this.getModelCtx();
@@ -70,6 +86,8 @@ var MFieldDoc1 = (function() {
 		},
 
 	});
+
+	return MFieldDoc1;
 })();
 
 
@@ -142,59 +160,6 @@ MovDataModel.prototype = _utils.createProtoChain(
 				function(self, e) {
 					e.mov.set("mmPId", this.get("mmId"));
 					e.mov._setParentMovInstance(self);
-				}
-			],
-
-			"set:parentdoc": [
-				function() {
-					var e                   = arguments[1],
-					    nextParentDocId     = e.value,
-					    prevParentDocId     = this.get("parentDoc"),
-					    prevDocId           = this.get("doc"),
-					    prevDocId1          = this.get("doc1");
-
-					if (!nextParentDocId)
-						return this.set("doc1", prevDocId);
-
-					if (prevParentDocId == prevDocId1)
-						this.set("doc1", nextParentDocId);
-				}
-			],
-
-			"set:doc1": [
-				function() {
-					var e           = arguments[1],
-					    doc1        = e.value;
-
-					this.updateFProperty(null, { "extId": doc1 });
-				}
-			],
-
-			"set:doc": [
-				function() {
-					var e           = arguments[1],
-					    arg         = e.argument || {},
-					    recursive   = "recursive" in arg ? arg : true,
-					    parentDoc   = this.get("ParentDoc", null, !1),
-					    prevDocId   = this.get("Doc"),
-					    nextDocId   = e.value;
-
-					if (recursive) {
-						this.getMov().forEach(function(mov) {
-							if (prevDocId == mov.get("doc1", null, !1))
-								mov.set("doc1", nextDocId);
-
-							if (prevDocId == mov.get("doc"))
-								mov.set("doc", nextDocId);
-						});
-					}
-
-					// Если у заявки присутствует "doc", то "doc1" приравнивается "doc"
-					// Если у заявки отсутствует "doc", то "doc1" приравнивается "parentDoc"
-
-					!nextDocId
-						? this.set("doc1", parentDoc)
-						: this.set("doc1", nextDocId);
 				}
 			],
 
@@ -367,42 +332,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 				if (!(mmid = +self.get("mmid")))
 					return reject("!mmid");
 
-				var fields = arg.fields;
-
-				if (_utils.isEmpty(fields)) {
-					fields = [
-						"MMID",
-						"MMPID",
-						"ParentDoc",
-						"Doc",
-						"Doc1",
-						"GS",
-						"GSSpec",
-						"MMFlag",
-						"Amount",
-						"Sum",
-						"Sum2",
-						"Price",
-						"CodeOp",
-						"Performer",
-						"Manager2",
-						"Agent2",
-						"Format(GSDate,'yyyy-mm-dd Hh:Nn:Ss') as GSDate"
-					];
-				}
-
-				fields = fields.map(function(fld) {
-					fld = (fld + "").toLowerCase();
-
-					if (/[()]/g.test(fld))
-						return fld;
-
-					return "[" + fld + "]";
-				});
-
 				var query = ""
 					// Записи движения ТиУ
-					+ " SELECT " + fields.join(",")
+					+ " SELECT *, Format(GSDate,'yyyy-mm-dd Hh:Nn:Ss') as GSDate"
 					+ " FROM Movement "
 					+ " WHERE"
 					+   "    mmid = " + mmid
@@ -1048,7 +980,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 		"__movDataModelDefaultFields": (function() {
 			var fields = new ObjectA({
-				"MMID":         { "type": "integer" },
+				"MMID":         { "type": "integer", "primary": 1 },
 				"MMPID":        { "type": "integer" },
 				"IsDraft":      { "type": "integer" },
 				"Tick":         { "type": "integer" },
@@ -1255,5 +1187,26 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 	}
 );
+
+
+// Подмешивать docid в свойства
+// Чтобы был единый источник правды
+(function() {
+	var _protoGetFPropertyA = MovDataModel.prototype.getFPropertyA;
+
+	return MovDataModel.prototype.getFPropertyA = function() {
+		var _this = this;
+		var props = _protoGetFPropertyA.apply(this, arguments);
+
+		props.forEach(function(propRow) {
+			propRow.set("extClass", "DOCS");
+			propRow.set("pid", _this.get("mmId"));
+			propRow.set("extId", _this.get("doc1"));
+		});
+
+		return props;
+	}
+})();
+
 
 module.exports = MovDataModel;

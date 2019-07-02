@@ -134,7 +134,7 @@ module.exports = {
 	"getTablePrimaryFieldDecl": function(tableScheme) {
 		var primaryField = null;
 
-		Object.keys(tableScheme).some(function(key) {
+		tableScheme.getKeys().some(function(key) {
 			var fieldDecl = tableScheme.get(key);
 
 			if (!fieldDecl)
@@ -223,7 +223,7 @@ module.exports = {
 		if (!diff.length)
 			return "";
 
-		return "UPDATE " + tableName + " SET " + diff.join(", ") + " WHERE [" + primaryKey + "] = " + nextFields[primaryKey];
+		return "UPDATE " + tableName + " SET " + diff.join(", ") + " WHERE [" + primaryKey + "] = " + nextFields.get(primaryKey);
 	},
 
 

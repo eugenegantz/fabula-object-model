@@ -112,8 +112,6 @@ InterfaceFProperty.createUpsertDeleteQueryString = function(arg) {
 	// Создание списка удаленных, добавленных и обновленных свойств
 	// ---------------------------------
 	prevProps.forEach(function(row) {
-		row = new ObjectA(row);
-
 		var sets        = [];
 		var uid         = row.get("uid");
 		var nextRow     = nextPropsByUId[uid];
