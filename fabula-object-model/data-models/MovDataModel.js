@@ -12,6 +12,31 @@ var DefaultDataModel    = require("./DefaultDataModel"),
 	_utils              = require("./../utils/utils");
 
 
+var MFieldMMPId = (function() {
+	var _protoGet = MField.prototype.get;
+
+	function MFieldMMPId() {
+		MField.apply(this, arguments);
+	}
+
+	MFieldMMPId.prototype = _utils.createProtoChain(MField.prototype, {
+
+		"get": function() {
+			var mCtx    = this.getModelCtx();
+			var movObj  = mCtx.getParentMovInstance();
+
+			if (!movObj)
+				return _protoGet.call(this);
+
+			return movObj.get("mmId", null, false);
+		},
+
+	});
+
+	return MFieldMMPId;
+})();
+
+
 var MFieldDoc = (function() {
 	var _protoGet = MField.prototype.get;
 
@@ -105,6 +130,7 @@ function MovDataModel() {
 	this.declField("doc", new MFieldDoc({ modelCtx: this }));
 	this.declField("doc1", new MFieldDoc1({ modelCtx: this }));
 	this.declField("parentDoc", new MFieldParentDoc({ modelCtx: this }));
+	this.declField("mmpid", new MFieldMMPId({ modelCtx: this }));
 
 	this.set({
 		"GSDate": new Date()
@@ -158,22 +184,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			"add-fab-mov": [
 				function(self, e) {
-					e.mov.set("mmPId", this.get("mmId"));
 					e.mov._setParentMovInstance(self);
 				}
 			],
-
-			"set:mmid": [
-				function() {
-					var e = arguments[1];
-
-					this.getMov().forEach(function(mov) {
-						mov.set("MMPID", e.value, null, false);
-					});
-
-					this.updateFProperty(null, { "pid": e.value });
-				}
-			]
 
 		}),
 
@@ -1072,6 +1085,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 		"_getParentMovInstance": function() {
 			return this._mMovParentMovInstance;
+		},
+
+
+		"setParentMovInstance": function(mov) {
+			return this._setParentMovInstance(mov);
 		},
 
 

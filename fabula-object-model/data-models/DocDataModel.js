@@ -10,7 +10,93 @@ var _utils                  = require("./../utils/utils"),
 	IFabTableRow            = require("./IFabTableRow.js"),
 	IEvent                  = require("./IEvent"),
 	ObjectA                 = require("./ObjectA.js"),
+	MField                  = require("./field-models/MField.js"),
 	MovDataModel            = require("./MovDataModel");
+
+debugger;
+
+var MFieldDocId = (function() {
+	var _protoSet = MField.prototype.set;
+
+	function MFieldDocId() {
+		MField.apply(this, arguments);
+	}
+
+	MFieldDocId.prototype = _utils.createProtoChain(MField.prototype, {
+
+		"get": function() {
+			var mCtx            = this.getModelCtx();
+			var gands           = mCtx.getGandsInstance();
+
+			var code            = mCtx.get("_docIdCode");
+			var company         = mCtx.get("company");
+			var docType         = mCtx.get("docType");
+			var regDate         = mCtx.get("regDate");
+
+			var _regDate        = new Date(regDate);
+			var year            = _regDate.getFullYear().toString().slice(-1);
+
+			var docTypeGSRow    = gands.dataRefByGSID.get("SYОП" + docType);
+
+			if (
+				   !docTypeGSRow
+				|| !code
+				|| !company
+				|| !docType
+				|| !regDate
+			) {
+				return null;
+			}
+
+			var prefix          = docTypeGSRow.GSCodeNumber;
+
+			// Ел9ни03221
+			return company + year + prefix + code;
+		},
+
+		"set": function(val) {
+			if (!val)
+				return _protoSet.call(this, val);
+
+			var mCtx            = this.getModelCtx();
+			var _docId          = mCtx.parseDocID(val);
+
+			var code            = _docId.code;
+			var company         = _docId.company;
+			var docType         = _docId.docType;
+			var year            = _docId.year;
+
+			var now             = new Date();
+			var _regDate        = new Date(mCtx.get('reDate'));
+			var regDateFullYear = now.getFullYear().toString().slice(0, 3) + year;
+
+			_regDate.setFullYear(regDateFullYear);
+
+			// Format(RegDate,'yyyy-mm-dd Hh:Nn:Ss') as RegDate"
+
+			var regDate = (""
+				+       _regDate.getFullYear()
+				+ "-" + (_regDate.getMonth() + 1)
+				+ "-" + _regDate.getDate()
+
+				+ " " + _regDate.getHours()
+				+ ":" + _regDate.getMinutes()
+				+ ":" + _regDate.getSeconds()
+			);
+
+			mCtx.set("_docIdCode", code, null, false);
+			mCtx.set("company", company, null, false);
+			mCtx.set("docType", docType, null, false);
+			mCtx.set("regDate", regDate, null, false);
+
+			return _protoSet.call(this, val);
+		}
+
+	});
+
+	return MFieldDocId;
+})();
+
 
 // TODO пересмотреть алиасы
 /**
@@ -22,6 +108,8 @@ var DocDataModel = function() {
 	InterfaceFProperty.call(this);
 	IMovCollection.call(this);
 	IFabModule.call(this);
+
+	this.declField("docId", new MFieldDocId({ modelCtx: this }));
 
 	// -------------------------------------
 
@@ -69,71 +157,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 		"mDocEvents": new ObjectA({
 
-			"set:docid": [
-				function(self, e) {
-					self = this;
-
-					if (
-						!e.value
-						|| typeof e.value != "string"
-						|| e.value.length != 10
-					) {
-						return;
-					}
-
-					var parsed = this.parseDocID(e.value);
-
-					self.set("docType", parsed.docType, null, !1);
-					self.set("company", parsed.company, null, !1);
-
-					// rm: теперь doc, doc1, parentDoc в задачах считываются прямо из экземпляра заявки - единый источник правды
-					// this._updateMovDoc(e.value, this.get('docId'));
-				}
-			],
-
-			"set:company": [
-				function(self, e) {
-					self = this;
-
-					var docId = this.get("docId", null, !1);
-
-					if (!docId)
-						return;
-
-					var p = this.parseDocID(docId);
-
-					self.set("docId", e.value + p.year + p.prefix + p.code);
-				}
-			],
-
-			"set:doctype": [
-				function(self, e) {
-					self = this;
-
-					var gands = this.getGandsInstance(),
-						docId = self.get("docId", null, !1);
-
-					if (!docId)
-						return;
-
-					var p = this.parseDocID(self.get("docId", null, !1)),
-						docType = e.value,
-						prefix;
-
-					var gsGroup = gands.dataRefByGSIDGroup.get("SYОП");
-
-					gsGroup.some(function(row) {
-						if (8 == row.GSID.length && row.GSID.slice(4) == docType)
-							return prefix = row.GSCodeNumber;
-					});
-
-					if (!prefix)
-						return;
-
-					self.set("docId", p.company + p.year + prefix + p.code);
-				}
-			],
-
 			"add-fab-mov": [
 				function(self, e) {
 					// rm: теперь doc, doc1, parentDoc в задачах считываются прямо из экземпляра заявки - единый источник правды
@@ -143,33 +166,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			]
 
 		}),
-
-
-		/**
-		 * @deprecated теперь doc, doc1, parentDoc в задачах считываются прямо из экземпляра заявки - единый источник правды
-		 *
-		 * @param {String} nextDocId
-		 * @param {String=} prevDocId
-		 *
-		 * @return
-		 * */
-		"_updateMovDoc": function(nextDocId, prevDocId) {
-			prevDocId = prevDocId || this.get('docId', null, !1);
-
-			this.getNestedMovs().forEach(function(mov) {
-				if (!mov || typeof mov != "object")
-					return;
-
-				var doc         = mov.get("doc"),
-				    parentDoc   = mov.get("parentDoc");
-
-				if (doc == prevDocId)
-					mov.set('doc', nextDocId, { recursive: false });
-
-				if (parentDoc == prevDocId)
-					mov.set('parentDoc', nextDocId)
-			});
-		},
 
 
 		/**
@@ -279,7 +275,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					var _docId   = _this.get("docId") ? "'" + _this.get("docId") + "'" : "NULL";
 
 					var query = ""
-						+ " SELECT *, Format(RegDate,'yyyy-mm-dd Hh:Nn:Ss') as RegDate"
+						+ " SELECT *, Format(RegDate,'yyyy-mm-dd Hh:Nn:Ss') AS RegDate"
 						+ " FROM Docs"
 						+ " WHERE"
 						+   "    docId = " + _docId
@@ -301,7 +297,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						+           " OR id = " + _id
 						+   ")"
 
-						+ "; SELECT *"
+						+ "; SELECT *, Format(gsDate,'yyyy-mm-dd Hh:Nn:Ss') AS gsDate"
 						+ " FROM Movement"
 						+ " WHERE"
 						+   " doc1 IN ("
@@ -332,8 +328,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					var _dbDocRow = ObjectA.create(dbDocRow);
 
-					_this.set("docId", _dbDocRow.get("docId"), null, false);
-					_this.set("id", _dbDocRow.get("id"), null, false);
+					if (!_this.get("docId"))
+						_this.set("docId", _dbDocRow.get("docId"), null, false);
+
+					if (!_this.get("id"))
+						_this.set("id", _dbDocRow.get("id"), null, false);
 				});
 			}
 
@@ -341,6 +340,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var query;
 				var toDelete            = [];
 				var queries             = [];
+				var updatedMovs         = [];
+				var insertedMovs        = [];
 
 				// ----------------------------------
 				// Docs
@@ -354,6 +355,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						"tableName"           : _this.getTableName()
 					});
 
+					if (query)
+						_this.trigger("before-insert");
+
 				} else {
 					// Собрать запрос на обновление полей
 					query = dbUtils.createUpdateFieldsQueryString({
@@ -362,6 +366,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						"tableScheme"         : _this.getTableScheme(),
 						"tableName"           : _this.getTableName()
 					});
+
+					if (query)
+						_this.trigger("before-update");
 				}
 
 				if (query)
@@ -381,15 +388,17 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				_this.getNestedMovs().forEach(function(mov) {
 					var query;
-					var mAttrRand   = Math.random().toString().slice(-16);
-					var id          = mov.get("mmId");
-					var nextFields  = mov.serializeFieldsObject();
+					var nextFields;
+					var mAttrRand;
+					var id = mov.get("mmId");
 
 					if (id)
 						nextMovsById[id] = mov;
 
 					// Собрать запрос на обновление уже существующих записей
 					if (dbMovsRowsById[id]) {
+						nextFields  = mov.serializeFieldsObject();
+
 						query = dbUtils.createUpdateFieldsQueryString({
 							"prevFields"    : dbMovsRowsById[id],
 							"nextFields"    : nextFields,
@@ -401,6 +410,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 							// deprecated
 							// для обратно совместимости с версией 0.9.1 и тестами
 							mov.trigger("before-update");
+
+							updatedMovs.push(mov);
 						}
 
 					} else {
@@ -408,6 +419,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						// Если MAttr[n] не занято, записать в него случайное число
 						// для повышения уникальности записи
 						// -----------------------------------------------------------------
+						mAttrRand   = Math.random().toString().slice(-16);
+
 						mAttrList.some(function(key) {
 							if (!mov.get(key, null, !1)) {
 								mov.set(key, mAttrRand);
@@ -416,11 +429,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 							}
 						});
 
+						nextFields = mov.serializeFieldsObject();
+
 						movsByMAttrRand[mAttrRand] = mov;
 
 						// Собрать запрос на вставку новых записей
 						query = dbUtils.createInsertFieldsQueryString({
-							"nextFields": nextFields,
+							"nextFields"    : nextFields,
 							"tableScheme"   : mov.getTableScheme(),
 							"tableName"     : mov.getTableName()
 						});
@@ -429,6 +444,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 							// deprecated
 							// для обратно совместимости с версией 0.9.1 и тестами
 							mov.trigger("before-insert");
+
+							insertedMovs.push(mov);
 						}
 					}
 
@@ -460,6 +477,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					"dbworker": " ",
 
 					"query": queries
+				}).then(function() {
+					updatedMovs.forEach(function(mov) {
+						mov.trigger("after-update");
+					});
+					insertedMovs.forEach(function(mov) {
+						mov.trigger("after-insert");
+					});
 				});
 
 			}).then(function() {

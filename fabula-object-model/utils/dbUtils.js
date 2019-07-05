@@ -3,6 +3,8 @@
 var ObjectA = require("./../data-models/ObjectA");
 var utils = require("./utils.js");
 
+debugger;
+
 module.exports = {
 
 	"stringTypes": {
@@ -35,6 +37,10 @@ module.exports = {
 	"mkVal": function(val, fldDecl) {
 		var type = fldDecl.type,
 			len = fldDecl.length;
+
+		// Если поле допускает запись пустых строк
+		if ("" === val && fldDecl.emptyString)
+			return "\"\"";
 
 		if (utils.isEmpty(val))
 			return "NULL";
@@ -203,6 +209,7 @@ module.exports = {
 		var diff            = [];
 
 		nextFields.getKeys().forEach(function(key) {
+			var type;
 			var fieldDecl = tableScheme.get(key);
 
 			if (!fieldDecl)
@@ -212,6 +219,9 @@ module.exports = {
 				return;
 
 			if (prevFields.get(key) == nextFields.get(key))
+				return;
+
+			if (!_this._isChanged(prevFields.get(key), nextFields.get(key), fieldDecl))
 				return;
 
 			diff.push(
@@ -263,6 +273,74 @@ module.exports = {
 			return "";
 
 		return "INSERT INTO " + tableName + " (" + keys.join(", ") + ") VALUES (" + values.join(", ") + ")";
+	},
+
+
+	"_dateValueToPrimitiveNumber": function(value, decl) {
+		if (!value)
+			return null;
+
+		if (value instanceof Date)
+			return value.getTime();
+
+		if (typeof value == "string")
+			return (new Date(value)).getTime();
+
+		return null;
+	},
+
+
+	"_numberValueToPrimitive": function(value, decl) {
+		if (typeof value == "number")
+			return value;
+
+		if (utils.isEmpty(value))
+			return null;
+
+		return +value;
+	},
+
+
+	"_stringValueToPrimitive": function(value, decl) {
+		if (decl.emptyString && value === "")
+			return value;
+
+		if (utils.isEmpty(value))
+			return null;
+
+		return value + "";
+	},
+
+
+	"_booleanValueToPrimitive": function(value, decl) {
+		return !!value;
+	},
+
+
+	"_valueToPrimitive": function(value, decl) {
+		var type = decl.type;
+
+		if (this.booleanTypes[type])
+			return this._booleanValueToPrimitive(value, decl);
+
+		if (this.stringTypes[type])
+			return this._stringValueToPrimitive(value, decl);
+
+		if (this.numberTypes[type])
+			return this._numberValueToPrimitive(value, decl);
+
+		if (this.dateTypes[type])
+			return this._dateValueToPrimitiveNumber(value, decl);
+
+		return value;
+	},
+
+
+	"_isChanged": function(value1, value2, fieldDecl) {
+		value1 = this._valueToPrimitive(value1, fieldDecl);
+		value2 = this._valueToPrimitive(value2, fieldDecl);
+
+		return value1 != value2;
 	}
 
 };

@@ -339,7 +339,7 @@ describe.only("DocDataModel", function() {
 			});
 		});
 
-		describe.only("Изменились поля заявки и подч. задачи (поле doc)", function() {
+		describe("Изменились поля заявки и подч. задачи (поле doc)", function() {
 			this.timeout(6000);
 
 			var doc;
@@ -593,7 +593,7 @@ describe.only("DocDataModel", function() {
 			);
 		});
 
-		describe("перезапись - update", function() {
+		describe.only("перезапись - update", function() {
 			var doc;
 			var eventDocBeforeUpdate = false;
 			var sid = mkSID();
