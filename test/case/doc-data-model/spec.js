@@ -1,17 +1,15 @@
 describe.only("DocDataModel", function() {
-	var fom,
-		stand,
-		db,
-		gands,
-		dbUtils = require("./../../../fabula-object-model/utils/dbUtils.js"),
+	var fom;
+	var stand;
+	var db;
+	var gands;
+	var dbUtils = require("./../../../fabula-object-model/utils/dbUtils.js");
 
 		// 2015/01/01 - 1 янв. 2015
-		timestamp = 1420056000000,
-		date = new Date(timestamp),
+	var timestamp = 1420056000000;
+	var date = new Date(timestamp);
 
-		docIdRegExp = /^\D{2}\d{1}\D{2}\d{5}$/i;
-
-		sid = (Math.random() + '').slice(-10);
+	var docIdRegExp = /^\D{2}\d{1}\D{2}\d{5}$/i;
 
 	function mkSID() {
 		return (Math.random() + '').slice(-10);
@@ -61,8 +59,25 @@ describe.only("DocDataModel", function() {
 		doc.addProperty({ value: 100, property: "doc" + sid });
 		doc.addProperty({ value: 200, property: "doc" + sid });
 
-		doc.addMov(mkMov({ "sid": sid }));
-		doc.addMov(mkMov({ "sid": sid }));
+		var mov1        = mkMov({ "sid": sid });
+		var mov11       = mkMov({ "sid": sid });
+		var mov12       = mkMov({ "sid": sid });
+		var mov2        = mkMov({ "sid": sid });
+		var mov21       = mkMov({ "sid": sid });
+		var mov22       = mkMov({ "sid": sid });
+
+		mov1.addMov(mov11);
+		mov1.addMov(mov12);
+		mov2.addMov(mov21);
+		mov2.addMov(mov22);
+
+		doc.addMov(mov1);
+		doc.addMov(mov2);
+
+		mov21.setDocInstance(void 0);
+		mov22.setDocInstance(void 0);
+		mov21.setParentDocInstance(doc);
+		mov22.setParentDocInstance(doc);
 
 		return doc;
 	}
@@ -79,10 +94,12 @@ describe.only("DocDataModel", function() {
 			throw new Error("!arg.sid");
 
 		var query = ""
-			+ "  DELETE FROM Docs WHERE notice = '" + sid + "'"
+			+ "  DELETE FROM Talk WHERE mm IN (SELECT mmid FROM Movement WHERE gsSpec = '" + sid + "')"
+			+ "; DELETE FROM Docs WHERE notice = '" + sid + "'"
 			+ "; DELETE FROM Movement WHERE gsSpec = '" + sid + "'"
 			+ "; DELETE FROM Property WHERE extClass = 'DOCS' AND pid = 0 AND property = 'doc" + sid + "'"
-			+ "; DELETE FROM Property WHERE extClass = 'DOCS' AND property = 'mov" + sid + "'";
+			+ "; DELETE FROM Property WHERE extClass = 'DOCS' AND property = 'mov" + sid + "'"
+			+ "";
 
 		return db.query({
 			"query": query,
@@ -164,6 +181,7 @@ describe.only("DocDataModel", function() {
 		var dbRecsMovs;
 		var dbRecsProps;
 		var dbRecsDocs;
+		var dbRecsTalks;
 
 		var sid = mkSID();
 
@@ -182,7 +200,7 @@ describe.only("DocDataModel", function() {
 
 			}).then(function() {
 				var _query = ""
-					+ "SELECT docId"
+					+ "SELECT docid"
 					+ " FROM Docs"
 					+ " WHERE"
 					+   " notice = '" + sid + "'"
@@ -192,7 +210,7 @@ describe.only("DocDataModel", function() {
 				var query = ""
 					+ _query
 
-					+ "; SELECT [value]"
+					+ "; SELECT [value], pid, extclass, extid"
 					+ " FROM Property"
 					+ " WHERE"
 					+   " pid = 0"
@@ -200,8 +218,26 @@ describe.only("DocDataModel", function() {
 					+   " AND extClass = 'DOCS'"
 					+   " AND extId IN (" + _query + ")"
 
-					+ "; SELECT mmId"
+					+ "; SELECT mmid, doc, doc1, parentdoc"
 					+ " FROM Movement"
+					+ " WHERE"
+					+   " doc IN (" + _query + ")"
+
+					+ "; SELECT mmid, doc, doc1, parentdoc"
+					+ " FROM Movement"
+					+ " WHERE"
+					+   " parentDoc IN (" + _query + ")"
+
+					+ "; SELECT"
+					+ " talkId"
+					+   ", dt"
+					+   ", txt"
+					+   ", agent"
+					+   ", doc"
+					+   ", part"
+					+   ", key"
+					+   ", mm"
+					+ " FROM Talk"
 					+ " WHERE"
 					+   " doc IN (" + _query + ")";
 
@@ -214,9 +250,11 @@ describe.only("DocDataModel", function() {
 				});
 
 			}).then(function(dbres) {
-				dbRecsDocs = dbres[0].recs;
-				dbRecsProps = dbres[1].recs;
-				dbRecsMovs = dbres[2].recs;
+				dbRecsDocs      = dbres[0].recs;
+				dbRecsProps     = dbres[1].recs;
+				dbRecsMovs      = dbres[2].recs;
+				dbRecsMovs2     = dbres[3].recs;
+				dbRecsTalks     = dbres[4].recs;
 			});
 		});
 
@@ -226,10 +264,55 @@ describe.only("DocDataModel", function() {
 			return clearDoc({ "sid": sid });
 		});
 
-		it("Заявка записана и две задачи записаны в БД", function() {
+		it("Заявка записана в БД", function() {
 			assert.equal(dbRecsDocs.length, 1);
+		});
+
+		it("Записано 4 задачи, где doc = docid", function() {
+			assert.equal(dbRecsMovs.length, 4);
+
+			dbRecsMovs.forEach(function(row) {
+				assert.equal(row.doc, doc.get("docId"));
+				assert.equal(row.doc1, doc.get("docId"));
+			});
+		});
+
+		it("Записано 2 задачи, где parentDoc = docid", function() {
+			assert.equal(dbRecsMovs2.length, 2);
+
+			dbRecsMovs2.forEach(function(row) {
+				assert.equal(row.parentdoc, doc.get("docId"));
+				assert.equal(row.doc1, doc.get("docId"));
+			});
+		});
+
+		it("Записано два свойства заявки", function() {
 			assert.equal(dbRecsProps.length, 2);
-			assert.equal(dbRecsMovs.length, 2);
+		});
+
+		it("property.extid == docid", function() {
+			dbRecsProps.forEach(function(row) {
+				assert.equal(row.extclass, "DOCS");
+				assert.equal(row.pid, 0);
+				assert.equal(row.extid, doc.get("docId"));
+			});
+		});
+
+		it("Записано 4-ре строки в talk", function() {
+			assert.equal(dbRecsTalks.length, 6);
+		});
+
+		it("talk.doc == docId", function() {
+			var mmTable = {};
+
+			doc.getNestedMovs().forEach(function(mov) {
+				mmTable[mov.get("mmid")] = true;
+			});
+
+			dbRecsTalks.forEach(function(tRow) {
+				assert.equal(tRow.doc, doc.get("docId"));
+				assert.ok(mmTable[tRow.mm]);
+			});
 		});
 	});
 
@@ -380,6 +463,8 @@ describe.only("DocDataModel", function() {
 							eventMovUpd++;
 						});
 					});
+
+					debugger;
 
 					return doc.update();
 
@@ -593,7 +678,7 @@ describe.only("DocDataModel", function() {
 			);
 		});
 
-		describe.only("перезапись - update", function() {
+		describe("перезапись - update", function() {
 			var doc;
 			var eventDocBeforeUpdate = false;
 			var sid = mkSID();

@@ -3,8 +3,6 @@
 var ObjectA = require("./../data-models/ObjectA");
 var utils = require("./utils.js");
 
-debugger;
-
 module.exports = {
 
 	"stringTypes": {

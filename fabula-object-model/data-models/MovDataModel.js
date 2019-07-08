@@ -1064,7 +1064,33 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		"getDocInstance": function() {
-			return this._mMovDocInstance;
+			var doc;
+			var pMov = this;
+			var c = 0;
+
+			if (this._mMovDocInstance)
+				return this._mMovDocInstance;
+
+			// если установлен parentDoc - считать, что ссылка на doc не установлена намерено
+			// поиск в родительских задачах не производить
+			if (this._mMovParentDocInstance)
+				return;
+
+			// если doc не указан явно, искать объект у родителей
+			for (;;) {
+				if (!(pMov = pMov.getParentMovInstance()))
+					break;
+
+				if (doc = pMov.getDocInstance())
+					break;
+
+				// если по какой-то причине возникнет рекурсия
+				// чтобы не повесить контекст выполнения, установлен счетчик
+				if (c++ > 100)
+					break;
+			}
+
+			return doc;
 		},
 
 
