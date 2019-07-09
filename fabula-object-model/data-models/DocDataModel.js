@@ -178,46 +178,52 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"rm": function(arg) {
 			arg = arg || {};
 
-			var self        = this;
+			var _this       = this;
 			var db          = this.getDBInstance();
 			var callback    = arg.callback || emptyFn;
-			var docId       = this.get("docId", null, !1);
+			var id          = _this.get("id");
+			var docId       = _this.get("docId");
 
 			return Promise.resolve().then(function() {
-				if (!docId)
-					return Promise.reject("DocDataMode.rm(): !this.docId");
+				if (!docId && !id)
+					return Promise.reject("DocDataMode.rm(): !docId && !id");
 
 			}).then(function() {
+				var query;
+				var _subQuery;
+				var _where      = [];
+
+				if (docId)
+					_where.push("docId = '" + _this.get("docId") + "'");
+
+				if (id)
+					_where.push("id = " + id);
+
+				_where = _where.join(" OR ");
+
+				_subQuery = "SELECT docId FROM Docs WHERE " + _where;
+
+				query = ""
+					+ "  DELETE FROM Talk WHERE doc IN (" + _subQuery + ")"
+					+ "; DELETE FROM Property WHERE extClass = 'DOCS' AND extId IN (" + _subQuery + ")"
+					+ "; DELETE FROM Movement WHERE doc1 IN (" + _subQuery + ")"
+					+ "; DELETE FROM Docs WHERE " + _where;
+
 				return db.query({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.rm-d" }),
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.rm-d" }),
 
 					"dbworker": " ",
 
-					"query": ""
-					+ " DELETE"
-					+ " FROM Property"
-					+ " WHERE"
-					+   "     extClass = 'DOCS'"
-					+   " AND extId = '" + docId + "'"
-
-					+ "; DELETE"
-					+ " FROM Docs"
-					+ " WHERE"
-					+   " docId = '" + docId + "'"
-
-					+ "; DELETE"
-					+ " FROM Movement"
-					+ " WHERE"
-					+   " doc1 = '" + docId + "'"
+					"query": query
 				});
 
 			}).then(function() {
-				self.state = self.STATE_DOC_REMOVED;
+				_this.state = _this.STATE_DOC_REMOVED;
 
-				callback(null, self);
+				callback(null, _this);
 
 			}).catch(function(err) {
-				callback(err, self);
+				callback(err, _this);
 
 				return Promise.reject(err);
 			});
@@ -246,10 +252,26 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			var companyID               = _this.get("company", null, !1);
 			var isNew                   = !this.get('id') && !this.get('docId');
 			var mAttrList               = ["mAttr1", "mAttr2", "mAttr3", "mAttr4"];
-			var movsByMAttrRand         = {};
 			var _dbDoc                  = new DocDataModel();
+			var updatedMovs             = [];
+			var insertedMovs            = [];
 
 			delete arg.callback;
+
+			function createMovKey(mov) {
+				var movKey      = "";
+				var keys        = ["mmid", "mattr1", "mattr2", "mattr3", "mattr4", "gs", "gsspec"];
+
+				if (mov instanceof MovDataModel)
+					mov = mov.serializeFieldsObject();
+
+				keys.forEach(function(key) {
+					if (mov[key])
+						movKey += mov[key];
+				});
+
+				return movKey;
+			}
 
 			function initNewDocId() {
 				return _this.getNewDocID({
@@ -292,8 +314,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var query;
 				var toDelete            = [];
 				var queries             = [];
-				var updatedMovs         = [];
-				var insertedMovs        = [];
 
 				// ----------------------------------
 				// Docs
@@ -342,11 +362,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					if (id)
 						nextMovsById[id] = mov;
 
-					// Собрать запрос на обновление уже существующих записей
 					if (dbMovsRowsById[id]) {
 						nextFields = mov.serializeFieldsObject();
 						prevFields = dbMovsRowsById[id].serializeFieldsObject();
 
+						// Собрать запрос на обновление уже существующих записей
 						query = dbUtils.createUpdateFieldsQueryString({
 							"prevFields"    : prevFields,
 							"nextFields"    : nextFields,
@@ -378,8 +398,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						});
 
 						nextFields = mov.serializeFieldsObject();
-
-						movsByMAttrRand[mAttrRand] = mov;
 
 						// Собрать запрос на вставку новых записей
 						query = dbUtils.createInsertFieldsQueryString({
@@ -438,22 +456,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				// Movement.mmpid
 				// ----------------------------------
 
-				// Прочесть новые mmid
-				var mAttrList = Object.keys(movsByMAttrRand).map(function(m) {
-					return '"' + m + '"';
-				});
-
-				if (!mAttrList.length)
-					return;
-
 				var query = ""
-					+ " SELECT mmid, mattr1, mattr2, mattr3, mattr4"
+					+ " SELECT mmid, mattr1, mattr2, mattr3, mattr4, gs, gsspec"
 					+ " FROM Movement"
 					+ " WHERE"
-					+ "        mAttr1 IN (" + mAttrList + ")"
-					+ "     OR mAttr2 IN (" + mAttrList + ")"
-					+ "     OR mAttr3 IN (" + mAttrList + ")"
-					+ "     OR mAttr4 IN (" + mAttrList + ")";
+					+   " doc1 = '" + _this.get("docId") + "'";
 
 				return db.query({
 					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save-load-mov" }),
@@ -462,15 +469,21 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					"query": query
 				}).then(function(dbRes) {
-					dbRes.recs.forEach(function(row) {
-						var mov = (
-							   movsByMAttrRand[row.mattr1]
-							|| movsByMAttrRand[row.mattr2]
-							|| movsByMAttrRand[row.mattr3]
-							|| movsByMAttrRand[row.mattr4]
-						);
+					var movsByKey = {};
 
-						mov.set("mmId", row.mmid);
+					// только новые и измененные
+					// если новый mmid
+					// если изменился mmid
+					updatedMovs.concat(insertedMovs).forEach(function(mov) {
+						movsByKey[createMovKey(mov)] = mov;
+					});
+
+					dbRes.recs.forEach(function(row) {
+						var movKey  = createMovKey(Object.assign({}, row, { "mmid": null }));
+						var mov     = movsByKey[movKey];
+
+						if (mov)
+							mov.set("mmId", row.mmid);
 					});
 				});
 
@@ -489,12 +502,17 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					// Movement.mmpid
 					// ----------------------------------
 
-					if (pMov && mov.get("mmpid") != pMov.get("mmid")) {
+					// если есть родительская задача
+					// если в родительской задаче изменилось значение для "mmid"
+					// отразить изменение о подчинении в БД
+					if (pMov && !!~pMov.getChanged().indexOf("mmid")) {
 						query = dbUtils.createUpdateFieldsQueryString({
 							"prevFields": {
-								"mmpid": mov.get("mmpid")
+								"mmid": mov.get("mmid"),
+								"mmpid": null
 							},
 							"nextFields": {
+								"mmid": mov.get("mmid"),
 								"mmpid": pMov.get("mmid")
 							},
 							"tableScheme": MovDataModel.getTableScheme(),
@@ -569,9 +587,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				_dbDoc.getNestedMovs().forEach(function(mov) {
 					prevProps.push.apply(prevProps, mov.getProperty());
 				});
-
-				if (!isNew)
-					debugger;
 
 				// записать свойства
 				// Собрать запрос на обновление, удаление, вставку свойств
@@ -793,6 +808,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					+   ", extID"
 					+   ", property"
 					+   ", value"
+					+   ", pid"
 					+ " FROM Property"
 					+ " WHERE"
 					+   "     extClass = 'DOCS'"
@@ -811,12 +827,10 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				});
 
 			}).then(function(dbRes) {
-				var movPropsByMMId          = {},
-				    movsById                = {},
-				    movsParentAwaitByPId    = {},
-				    docRow                  = dbRes[0].recs[0],
-				    movsRecs                = dbRes[1].recs,
-				    propsRecs               = dbRes[2].recs;
+				var movsById                = {};
+				var docRow                  = dbRes[0].recs[0];
+				var movsRecs                = dbRes[1].recs;
+				var propsRecs               = dbRes[2].recs;
 
 				if (!docRow)
 					return Promise.reject("DocDataModel.load(): specified doc record have not found in DOCS table");
@@ -831,62 +845,60 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				_this.set(docRow);
 
-				propsRecs.forEach(function(mRow) {
-					if (!mRow.pid)
-						return _this.addProperty(mRow);
+				// удалить рудиментарные поля
+				_this.unDeclField("docs.regdate");
 
-					if (!movPropsByMMId[mRow.pid])
-						movPropsByMMId[mRow.pid] = [];
+				movsRecs.map(function(row) {
+					// Собрать задачи
+					var mov         = new MovDataModel();
 
-					movPropsByMMId[mRow.pid].push(mRow);
-				});
-
-				movsRecs.forEach(function(row) {
-					var mov = new MovDataModel();
-
+					// Записать поля задачи
 					mov.set(row);
 
-					var parent;
+					// удалить рудиментарные поля
+					_this.unDeclField("movement.gsdate");
+					_this.unDeclField("movement.gsdate2");
+
 					var id          = mov.get("mmId");
-					var pid         = mov.get("mmPId");
+
+					// Собрать HashMap задач по mmId
+					movsById[id] = mov;
+
+					return mov;
+
+				}).forEach(function(mov) {
+					var pid         = mov.get("pid");
+					var pMov        = movsById[pid];
 					var movDoc      = mov.get("doc");
 					var movPDoc     = mov.get("parentDoc");
 
-					// Привязать свойства к задаче
-					mov.addProperty(movPropsByMMId[id] || []);
+					// Связать задачи между собой
+					if (pMov)
+						pMov.addMov(mov);
 
-					movsById[id] = mov;
-
-					if (pid) {
-						parent = movsById[pid];
-
-						if (parent) {
-							parent.addMov(mov);
-
-						} else {
-							if (!movsParentAwaitByPId[pid])
-								movsParentAwaitByPId[pid] = [];
-
-							movsParentAwaitByPId[pid].push(mov);
-						}
-					}
-
-					if (movsParentAwaitByPId[id]) {
-						mov.addMov(movsParentAwaitByPId[id]);
-
-						delete movsParentAwaitByPId[id];
-					}
-
-					// Привязать задачу к заявке
-					_this.addMov(mov);
+					// Подчинить заявке задачи, которые не подчинены задачам в текущей заявке
+					if (!pMov)
+						_this.addMov(mov);
 
 					// Привязать заявку к задаче
-					if (movDoc == _this.get("docId"))
-						mov.setDocInstance(_this);
+					movDoc == _this.get("docId")
+						? mov.setDocInstance(_this)
+						: mov.setDocInstance(void 0);
 
 					// Привязать родительскую заявку к задаче
-					if (movPDoc == _this.get("docId"))
-						mov.setParentDocInstance(_this);
+					movPDoc == _this.get("docId")
+						? mov.setParentDocInstance(_this)
+						: mov.setParentDocInstance(void 0);
+				});
+
+				propsRecs.forEach(function(mRow) {
+					// Привязать свойства к заявке
+					if (!+mRow.pid)
+						return _this.addProperty(mRow);
+
+					// Привязать свойства к задаче
+					if (movsById[mRow.pid])
+						movsById[mRow.pid].addFProperty(mRow);
 				});
 
 				_this._mDocClsHistory();

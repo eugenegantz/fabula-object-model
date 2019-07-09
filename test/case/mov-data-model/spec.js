@@ -1,6 +1,6 @@
 "use strict";
 
-describe("MovDataModel", function() {
+describe.only("MovDataModel", function() {
 	var fom,
 		db,
 		mov,
@@ -21,7 +21,7 @@ describe("MovDataModel", function() {
 			"dbworker": " ",
 
 			"query": ""
-				+ "DELETE FROM talk WHERE mm IN (SELECT mmid FROM Movement WHERE gsSpec = '" + sid +  "')"
+				+ "  DELETE FROM talk WHERE mm IN (SELECT mmid FROM Movement WHERE gsSpec = '" + sid +  "')"
 
 				+ "; DELETE FROM Property WHERE property = '" + sid + "'"
 
@@ -435,7 +435,7 @@ describe("MovDataModel", function() {
 
 			describe("upd: fields; upd: props; upd: cMovs", function() {
 
-				this.timeout(5000);
+				this.timeout(6000);
 
 				var cMov,
 					prop,
@@ -445,7 +445,7 @@ describe("MovDataModel", function() {
 					pTalkRecs,
 					eventBeforeUpd = 0;
 
-				before(function(done) {
+				before(function() {
 					mov = mkMov();
 					mov.addMov(mkMov());
 					mov.addMov(mkMov());
@@ -453,7 +453,7 @@ describe("MovDataModel", function() {
 					mov.addProperty(null);
 					mov.addProperty({ value: "" });
 
-					mov.save({ "dbworker": " " }).then(function() {
+					return mov.save({ "dbworker": " " }).then(function() {
 						mov.set("mmflag", "4");
 						mov.set("sum", "100");
 
@@ -474,7 +474,7 @@ describe("MovDataModel", function() {
 						return mov.save({ "dbworker": " " });
 
 					}).then(function() {
-						db.dbquery({
+						return db.query({
 							"dbworker": " ",
 
 							"query": ""
@@ -513,19 +513,14 @@ describe("MovDataModel", function() {
 							+ " WHERE"
 							+ "     txt LIKE '%" + mov.get("mmflag", null, false) + "%'"
 							+ "     AND mm = " + mov.get("mmid", null, false),
-							callback: function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									throw new Error(err);
+						});
 
-								pMovRecs        = dbres[0].recs;
-								pMovPropsRecs   = dbres[1].recs;
-								cMovsRecs       = dbres[2].recs;
-								pTalkRecs       = dbres[3].recs;
-
-								done();
-							}
-						})
-					}).catch(done)
+					}).then(function(dbres) {
+						pMovRecs        = dbres[0].recs;
+						pMovPropsRecs   = dbres[1].recs;
+						cMovsRecs       = dbres[2].recs;
+						pTalkRecs       = dbres[3].recs;
+					});
 				});
 
 				it("Записи должны обновиться", function() {
@@ -553,10 +548,10 @@ describe("MovDataModel", function() {
 
 
 		describe(".save()", function() {
-			var beforeUpdate,
-				beforeInsert;
+			var beforeUpdate;
+			var beforeInsert;
 
-			before(function(done) {
+			before(function() {
 				mov = mkMov();
 
 				mov.on("before-insert", function() {
@@ -567,20 +562,25 @@ describe("MovDataModel", function() {
 					beforeUpdate = true;
 				});
 
-				mov
-					.save()
-					.then(mov.save.bind(mov))
-					.then(function() {
-						done();
-					})
-					.catch(done);
+				return Promise.resolve().then(function() {
+					return mov.save({
+						"dbworker": " "
+					});
+
+				}).then(function() {
+					return mov.save({
+						"dbworker": " "
+					});
+				})
 			});
 
-			it("события before-insert, before-update отработали", function() {
+			it('Событие "before-update"', function() {
 				assert.ok(beforeUpdate);
-				assert.ok(beforeInsert);
-			})
+			});
 
+			it('Событие "before-insert"', function() {
+				assert.ok(beforeInsert);
+			});
 		});
 
 
@@ -588,34 +588,38 @@ describe("MovDataModel", function() {
 			var pMovRecs,
 				pMovTalkRecs;
 
-			before(function(done) {
+			before(function() {
 				mov = mkMov();
 				mov.addMov(mkMov());
 				mov.addMov(mkMov());
 
-				mov.save().then(() => {
-					return mov.rm();
+				return Promise.resolve().then(function() {
+					return mov.save({
+						"dbworker": " "
+					});
+
+				}).then(() => {
+					return mov.rm({
+						"dbworker": " "
+					});
+
 				}).then(function() {
-					db.dbquery({
+					var query = ""
+						+ "  SELECT mmid FROM Movement WHERE gsSpec = '" + sid + "'"
+						+ "; SELECT mm FROM talk WHERE mm = " + mov.get("mmid", null, false);
+
+					return db.dbquery({
 						"dbworker": " ",
 
 						"dbcache": Math.random() + "",
 
-						"query": ""
-						+ "SELECT mmid FROM Movement WHERE gsSpec = '" + sid + "'"
-						+ "; SELECT mm FROM talk WHERE mm = " + mov.get("mmid", null, false),
+						"query": query
+					});
 
-						"callback": function(dbres, err) {
-							if (err = dbUtils.fetchErrStrFromRes(dbres))
-								return done(err);
-
-							pMovRecs = dbres[0].recs;
-							pMovTalkRecs = dbres[1].recs;
-
-							done();
-						}
-					})
-				}).catch(done);
+				}).then(function(dbres) {
+					pMovRecs        = dbres[0].recs;
+					pMovTalkRecs    = dbres[1].recs;
+				});
 			});
 
 			it("Все гл. и подч. задачи, записи в табл. talk должны быть удалены", function() {
@@ -628,19 +632,23 @@ describe("MovDataModel", function() {
 		describe(".load()", function() {
 			var mmid, awaitedFld;
 
-			before(function(done) {
-				this.timeout(5000);
+			before(function() {
+				this.timeout(6000);
 
 				var mov = mkMov();
 
 				awaitedFld = mov.getJSON().fields;
 
 				mov.addMov(mkMov());
-				mov.save().then(function() {
-					mmid = mov.get("mmid", null, false);
 
-					done();
-				}).catch(done);
+				return Promise.resolve().then(function() {
+					return mov.save({
+						"dbworker": " "
+					});
+
+				}).then(function() {
+					mmid = mov.get("mmid", null, false);
+				});
 			});
 
 			after(function(done) {
@@ -654,18 +662,19 @@ describe("MovDataModel", function() {
 			describe("+cMov, +props", function() {
 				var mov;
 
-				before(function(done) {
+				before(function() {
 					mov = fom.create("MovDataModel");
 					mov.set("mmid", mmid);
-					mov.load().then(function() {
-						done();
-					}).catch(done)
+
+					return mov.load({
+						"dbworker": " "
+					});
 				});
 
 				it("Успешная инициализация с аргументами по умолчанию", function() {
-					var props = mov.getProperty(),
-						cMovs = mov.getMov(),
-						cMov = cMovs[0];
+					var props   = mov.getProperty();
+					var cMovs   = mov.getMov();
+					var cMov    = cMovs[0];
 
 					assert.equal(cMovs.length, 1);
 					assert.equal(props.length, 2);
