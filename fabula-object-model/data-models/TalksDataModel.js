@@ -72,12 +72,13 @@ TalksDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
 
 				if (!idx && nextMMFlag) {
 					return str + ""
-						+ " INSERT INTO Talk (dt, txt, agent, [mm], [tm], [key], [part])"
+						+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
 						+ " SELECT"
 						+   " NOW()"
 						+   " ," + "'Фаза: ' & mmFlag & ' &rArr; " + nextMMFlag + (msg ? "<br>" + msg : "") + "'"
 						+   " ," + agent
 						+   " ," + "mmId"
+						+   " ," + "doc1"
 						+   " ," + "FORMAT(TIME(),'HH:MM')"
 						+   " ," + "NOW()"
 						+   " ," + idx

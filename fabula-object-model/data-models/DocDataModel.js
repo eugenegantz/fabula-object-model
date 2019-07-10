@@ -320,6 +320,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				// ----------------------------------
 
 				if (isNew) {
+					// deprecated
+					// Прежде чем соберется запрос
+					// Чтобы иметь доступ к еще незаписанным полям
+					_this.trigger("before-insert");
+
 					// Собрать запрос на вставку новой записи
 					query = dbUtils.createInsertFieldsQueryString({
 						"nextFields"          : _this.serializeFieldsObject(),
@@ -327,9 +332,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						"tableName"           : _this.getTableName()
 					});
 
-					_this.trigger("before-insert");
-
 				} else {
+					// deprecated
+					// Прежде чем соберется запрос
+					// Чтобы иметь доступ к еще незаписанным полям
+					_this.trigger("before-update");
+
 					// Собрать запрос на обновление полей
 					query = dbUtils.createUpdateFieldsQueryString({
 						"nextFields"          : _this.serializeFieldsObject(),
@@ -337,8 +345,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						"tableScheme"         : _this.getTableScheme(),
 						"tableName"           : _this.getTableName()
 					});
-
-					_this.trigger("before-update");
 				}
 
 				if (query)
@@ -377,6 +383,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						if (query) {
 							// deprecated
 							// для обратно совместимости с версией 0.9.1 и тестами
+							// В отличии от MovDataModel, нет возможности изменить поля
 							mov.trigger("before-update");
 
 							updatedMovs.push(mov);
@@ -409,6 +416,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						if (query) {
 							// deprecated
 							// для обратно совместимости с версией 0.9.1 и тестами
+							// В отличии от MovDataModel, нет возможности изменить поля
 							mov.trigger("before-insert");
 
 							insertedMovs.push(mov);
@@ -428,8 +436,10 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				});
 
 				// Собирать запрос на удаление задач
-				if (toDelete.length)
+				if (toDelete.length) {
 					queries.push("DELETE FROM Movement WHERE mmId IN (" + toDelete + ")");
+					queries.push("DELETE FROM Talk WHERE mm IN (" + toDelete + ")");
+				}
 
 				if (!queries.length)
 					return;
@@ -867,7 +877,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					return mov;
 
 				}).forEach(function(mov) {
-					var pid         = mov.get("pid");
+					var pid         = mov.get("mmpid");
 					var pMov        = movsById[pid];
 					var movDoc      = mov.get("doc");
 					var movPDoc     = mov.get("parentDoc");
@@ -1164,7 +1174,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			this.clearChanged();
 			this.clearFPropertyHistory();
 
-			this.getMov().forEach(function(mov) {
+			this.getNestedMovs().forEach(function(mov) {
 				mov.clearChanged();
 				mov.clearFPropertyHistory();
 			});
