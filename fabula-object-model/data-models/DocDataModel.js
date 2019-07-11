@@ -695,15 +695,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 *
 		 * @param {Object=} ownArg - аргументы для сохр. заявки
 		 * @param {Function=} ownArg.callback
-		 * @param {Object=} parentArg - аргументы сохранения родительской заявки, если такая есть
-		 * @param {Object=} childrenArg - аргумент сохр. подчиненной заявки, если такие есть
-		 * @param {Object=} movArg - аргументы сохранения подчиненных задач // см. MovDataModel
 		 * @param {String | Object=} ownArg.dbcache
 		 * @param {String=} ownArg.dbworker
 		 *
 		 * @return {Promise}
 		 * */
-		"update": function(ownArg, parentArg, childrenArg, movArg) {
+		"update": function(ownArg) {
 			// event: "before-update"
 			// event: "before-doc-update"
 			// event: "after-update"
@@ -764,9 +761,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
 		 * @param {String} arg.dbworker
-		 * @param {Object=} arg.movArg
+		 * @param {String=} arg.where
 		 * @param {String | Object=} arg.dbcache
-		 * @param {function=} arg.loadAlgorithm
 		 *
 		 * @return {Promise}
 		 * */
@@ -776,12 +772,18 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			var _this               = this;
 			var dbawws              = _this.getDBInstance();
 			var callback            = arg.callback || emptyFn;
+			var where               = arg.where;
 			var docId               = _this.get("docId", null, !1);
 			var id                  = _this.get("id", null, !1);
 
 			return Promise.resolve().then(function() {
-				if (!docId && !id)
-					return Promise.reject('DocDataModel.load(): "docId" and "id" field is not assigned');
+				if (
+					   !where
+					&& !docId
+					&& !id
+				) {
+					return Promise.reject('DocDataModel.load(): "docId" and "id" and "args.where" field is not assigned');
+				}
 
 				var _where = [];
 
@@ -792,6 +794,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					_where.push("id = " + id);
 
 				_where = _where.join(" OR ");
+
+				if (where)
+					_where = where;
 
 				var query = ""
 					+ " SELECT"
