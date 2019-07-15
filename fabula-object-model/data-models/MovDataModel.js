@@ -1062,6 +1062,10 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 		"setDocInstance": function(doc) {
 			this._mMovDocInstance = doc;
+
+			// TODO: костыль. сделать единый источник правды
+			if (!doc)
+				this.set("doc", void 0, null, false);
 		},
 
 
@@ -1098,6 +1102,10 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 		"setParentDocInstance": function(doc) {
 			this._mMovParentDocInstance = doc;
+
+			// TODO: костыль. сделать единый источник правды
+			if (!doc)
+				this.set("parentDoc", void 0, null ,false);
 		},
 
 

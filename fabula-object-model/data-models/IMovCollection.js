@@ -212,7 +212,7 @@ IMovCollection.prototype = {
 		opt.fields  = opt.fields || {};
 
 		var diff            = [],
-		    prevMovs        = this.getMov(),
+		    prevMovs        = this.getMov().slice(0),
 		    beforeEachMov   = opt.mov.beforeEach,
 		    movFn           = opt.mov.walker || this._iMovCollectionStdMergeWalker,
 		    cmpFn           = opt.mov.cmp || this._iMovCollectionStdMergeCmpFn;
