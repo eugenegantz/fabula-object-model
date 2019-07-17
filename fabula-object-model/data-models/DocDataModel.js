@@ -452,13 +452,6 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					"dbworker": " ",
 
 					"query": queries
-				}).then(function() {
-					updatedMovs.forEach(function(mov) {
-						mov.trigger("after-update");
-					});
-					insertedMovs.forEach(function(mov) {
-						mov.trigger("after-insert");
-					});
 				});
 
 			}).then(function() {
@@ -494,6 +487,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 						if (mov)
 							mov.set("mmId", row.mmid);
+					});
+
+					updatedMovs.forEach(function(mov) {
+						mov.trigger("after-update");
+					});
+
+					insertedMovs.forEach(function(mov) {
+						mov.trigger("after-insert");
 					});
 				});
 

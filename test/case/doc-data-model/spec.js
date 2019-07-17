@@ -1,4 +1,4 @@
-describe("DocDataModel", function() {
+describe.only("DocDataModel", function() {
 	var fom;
 	var stand;
 	var db;
@@ -185,6 +185,8 @@ describe("DocDataModel", function() {
 		var dbRecsDocs;
 		var dbRecsTalks;
 		var mmTable = {};
+		var eventMovBeforeInsert = [];
+		var eventMovAfterInsert = [];
 
 		var sid = mkSID();
 
@@ -198,6 +200,15 @@ describe("DocDataModel", function() {
 				"docType": doc.get("docType")
 			}).then(function(docId) {
 				doc.set("docId", docId);
+
+				doc.getNestedMovs().forEach(function(mov) {
+					mov.on("before-insert", function() {
+						eventMovBeforeInsert.push(mov.serializeFieldsObject());
+					});
+					mov.on("after-insert", function() {
+						eventMovAfterInsert.push(mov.serializeFieldsObject())
+					});
+				});
 
 				return doc.insert();
 
@@ -345,6 +356,26 @@ describe("DocDataModel", function() {
 			assert.equal(rows.length, 12);
 		});
 
+		it('Задачи. Событие "before-insert" выполнилось 6 раз', function() {
+			assert.equal(eventMovBeforeInsert.length, 6);
+		});
+
+		it('Задачи. Событие "before-insert". Не задано значение для поля "mmid"', function() {
+			eventMovBeforeInsert.forEach(function(movFields) {
+				assert.equal(!!movFields.mmid, false);
+			});
+		});
+
+		it('Задачи. Событие "after-insert" выполнилось 6 раз', function() {
+			assert.equal(eventMovAfterInsert.length, 6);
+		});
+
+		it('Задачи. Событие "after-insert". Установлено значение для поля "mmid"', function() {
+			eventMovAfterInsert.forEach(function(movFields) {
+				assert.equal(!!movFields.mmid, true);
+			});
+		});
+
 		it("Свойства. property.extid == docid", function() {
 			dbRecsProps.forEach(function(row) {
 				assert.equal(row.extclass, "DOCS");
@@ -374,9 +405,10 @@ describe("DocDataModel", function() {
 			var dbRecsMovs;
 			var dbRecsProps;
 			var dbRecsDocs;
-			var eventMovUpd     = 0;
-			var movsTable       = {};
-			var sid             = mkSID();
+			var eventMovBeforeUpdate    = 0;
+			var eventMovBeforeInsert    = 0;
+			var movsTable               = {};
+			var sid                     = mkSID();
 
 			before(function() {
 				this.timeout(6000);
@@ -400,7 +432,13 @@ describe("DocDataModel", function() {
 					// Так проверяется незаписывание заявкой неизм. задач
 					doc.getMov().forEach(function(mov) {
 						mov.on("before-update", function() {
-							eventMovUpd++;
+							eventMovBeforeUpdate++;
+						});
+					});
+
+					doc.getMov().forEach(function(mov) {
+						mov.on("before-insert", function() {
+							eventMovBeforeInsert++;
 						});
 					});
 
@@ -479,8 +517,12 @@ describe("DocDataModel", function() {
 				assert.equal(rows.length, 2);
 			});
 
-			it('Задачи. Событие "after-update" не выполнилось', function() {
-				assert.equal(eventMovUpd, 0);
+			it('Задачи. Событие "before-update" не выполнилось', function() {
+				assert.equal(eventMovBeforeUpdate, 0);
+			});
+
+			it('Задачи. Событие "before-insert" не выполнилось', function() {
+				assert.equal(eventMovBeforeInsert, 0);
 			});
 
 			it("Задачи. 6 записей", function() {
@@ -542,7 +584,8 @@ describe("DocDataModel", function() {
 			var dbRecsMovs;
 			var dbRecsProps;
 			var dbRecsDocs;
-			var eventMovUpd = 0;
+			var eventMovBeforeUpdate = 0;
+			var eventMovAfterUpdate = 0;
 			var movChangedFields = [];
 			var sid = mkSID();
 			var movsTable = {};
@@ -574,7 +617,10 @@ describe("DocDataModel", function() {
 					doc.getNestedMovs().forEach(function(mov) {
 						mov.on("before-update", function() {
 							movChangedFields.push(mov.getChanged());
-							eventMovUpd++;
+							eventMovBeforeUpdate++;
+						});
+						mov.on("after-update", function() {
+							eventMovAfterUpdate++;
 						});
 					});
 
@@ -661,7 +707,11 @@ describe("DocDataModel", function() {
 			});
 
 			it("Задачи. Событие before-update выполнилось 6-ть раз", function() {
-				assert.equal(eventMovUpd, 6);
+				assert.equal(eventMovBeforeUpdate, 6);
+			});
+
+			it("Задачи. Событие after-update выполнилось 6-ть раз", function() {
+				assert.equal(eventMovAfterUpdate, 6);
 			});
 
 			it("Задачи. 12 свойств", function() {
