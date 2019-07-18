@@ -65,7 +65,7 @@ var MFieldDocId = (function() {
 			var year            = _docId.year;
 
 			var now             = new Date();
-			var _regDate        = new Date(mCtx.get('reDate'));
+			var _regDate        = new Date(mCtx.get('regDate'));
 			var regDateFullYear = now.getFullYear().toString().slice(0, 3) + year;
 
 			_regDate.setFullYear(regDateFullYear);
