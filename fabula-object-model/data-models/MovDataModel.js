@@ -1186,6 +1186,26 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		"clone": function() {
+			var _this   = this;
+			var clone   = new MovDataModel();
+
+			this.getKeys().forEach(function(key) {
+				clone.set(key, _this.get(key, null, false), null, false);
+			});
+
+			_this.getMov().forEach(function(mov) {
+				clone.addMov(mov.clone());
+			});
+
+			_this.getFPropertyA().forEach(function(propRow) {
+				clone.addFProperty(propRow.getClone());
+			});
+
+			return clone;
+		},
+
+
 		/**
 		 * @param {Object=} arg
 		 * @param {Function=} arg.callback
