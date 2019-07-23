@@ -970,16 +970,20 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 
 		/**
-		 * Спросить историю
+		 * Сбросить историю
 		 * */
 		"_mMovClsHistory": function() {
 			this.clearChanged();
 			this.clearFPropertyHistory();
 
 			this.getMov().forEach(function(mov) {
-				mov.clearChanged();
-				mov.clearFPropertyHistory();
+				mov._mMovClsHistory();
 			});
+		},
+
+
+		"clearModelHistory": function() {
+			this._mMovClsHistory();
 		},
 
 
@@ -1201,6 +1205,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 			_this.getFPropertyA().forEach(function(propRow) {
 				clone.addFProperty(propRow.getClone());
 			});
+
+			clone.clearModelHistory();
 
 			return clone;
 		},

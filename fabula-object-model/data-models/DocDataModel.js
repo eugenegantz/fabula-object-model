@@ -1162,6 +1162,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				clone.addFProperty(propRow.getClone());
 			});
 
+			clone.clearModelHistory();
+
 			return clone;
 		},
 
@@ -1201,9 +1203,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			this.clearFPropertyHistory();
 
 			this.getNestedMovs().forEach(function(mov) {
-				mov.clearChanged();
-				mov.clearFPropertyHistory();
+				mov.clearModelHistory();
 			});
+		},
+
+
+		"clearModelHistory": function() {
+			this._mDocClsHistory();
 		},
 
 
