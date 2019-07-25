@@ -149,6 +149,8 @@ function MovDataModel() {
 	this._mMovClsHistory();
 
 	this.state = this.STATE_MOV_INITIAL;
+
+	this.trigger("constructor");
 }
 
 
@@ -187,6 +189,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 					e.mov._setParentMovInstance(self);
 				}
 			],
+
+			"constructor": []
 
 		}),
 
@@ -282,12 +286,17 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"serializeFieldsObject": function() {
+		"serializeFieldsObject": function(arg) {
+			arg = Object.assign(arg || {});
+
 			var fields          = {};
 			var movFieldsDecl   = this.getTableScheme();
 
+			if (!('strictToTableScheme' in arg))
+				arg.strictToTableScheme = true;
+
 			this.getKeys().forEach(function(key) {
-				if (!movFieldsDecl.get(key))
+				if (arg.strictToTableScheme && !movFieldsDecl.get(key))
 					return;
 
 				fields[key] = this.get(key);
@@ -297,17 +306,19 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
-		"serializeObject": function() {
+		"serializeObject": function(arg) {
+			arg = Object.assign(arg || {});
+
 			var obj = {
 				"className": "MovDataModel",
 			};
 
 			obj.props = JSON.parse(JSON.stringify(this.getProperty()));
 
-			obj.fields =  this.serializeFieldsObject();
+			obj.fields =  this.serializeFieldsObject(arg.fields);
 
 			obj.movs = this.getMov().map(function(mov) {
-				return mov.serializeObject();
+				return mov.serializeObject(arg);
 			});
 
 			return obj;
@@ -317,8 +328,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 		/**
 		 * @deprecated
 		 * */
-		"getJSON": function() {
-			return this.serializeObject();
+		"getJSON": function(arg) {
+			return this.serializeObject(arg);
 		},
 
 

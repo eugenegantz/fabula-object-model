@@ -122,6 +122,8 @@ var DocDataModel = function() {
 	this._mDocClsHistory();
 
 	this.state = this.STATE_DOC_INITIAL;
+
+	this.trigger("constructor");
 };
 
 
@@ -161,7 +163,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					// e.mov.set("doc", this.get("docId"));
 					e.mov.setDocInstance(this);
 				}
-			]
+			],
+
+			"constructor": []
 
 		}),
 
@@ -716,12 +720,17 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
-		"serializeFieldsObject": function() {
+		"serializeFieldsObject": function(arg) {
+			arg = Object.assign(arg || {});
+
 			var fields          = {};
 			var movFieldsDecl   = this.getTableScheme();
 
+			if (!('strictToTableScheme' in arg))
+				arg.strictToTableScheme = true;
+
 			this.getKeys().forEach(function(key) {
-				if (!movFieldsDecl.get(key))
+				if (arg.strictToTableScheme && !movFieldsDecl.get(key))
 					return;
 
 				fields[key] = this.get(key);
@@ -731,17 +740,19 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
-		"serializeObject": function() {
+		"serializeObject": function(arg) {
+			arg = Object.assign(arg || {});
+
 			var obj = {
 				"className": "DocDataModel",
 			};
 
 			obj.props = JSON.parse(JSON.stringify(this.getProperty()));
 
-			obj.fields = this.serializeFieldsObject();
+			obj.fields = this.serializeFieldsObject(arg.fields);
 
 			obj.movs = this.getMov().map(function(mov) {
-				return mov.getJSON();
+				return mov.serializeObject(arg);
 			});
 
 			return obj;
@@ -751,8 +762,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		/**
 		 * @deprecated
 		 * */
-		"getJSON": function() {
-			return this.serializeObject();
+		"getJSON": function(arg) {
+			return this.serializeObject(arg);
 		},
 
 
