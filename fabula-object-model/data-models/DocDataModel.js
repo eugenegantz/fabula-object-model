@@ -122,6 +122,8 @@ var DocDataModel = function() {
 	this._mDocClsHistory();
 
 	this.state = this.STATE_DOC_INITIAL;
+
+	this.trigger("constructor");
 };
 
 
@@ -161,7 +163,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					// e.mov.set("doc", this.get("docId"));
 					e.mov.setDocInstance(this);
 				}
-			]
+			],
+
+			"constructor": []
 
 		}),
 

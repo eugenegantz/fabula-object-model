@@ -149,6 +149,8 @@ function MovDataModel() {
 	this._mMovClsHistory();
 
 	this.state = this.STATE_MOV_INITIAL;
+
+	this.trigger("constructor");
 }
 
 
@@ -187,6 +189,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 					e.mov._setParentMovInstance(self);
 				}
 			],
+
+			"constructor": []
 
 		}),
 
