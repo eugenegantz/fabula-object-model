@@ -8,7 +8,7 @@
 		"email": "eugengantz@gmail.com"
 	},
 	"dependencies": {
-		"eg-db-awws": "git@github.com:eugenegantz/eg-db-awws.git",
+		"eg-db-awws": "https://github.com/eugenegantz/eg-db-awws.git",
 		"eg-promise-cascade": "https://github.com/eugenegantz/promise.cascade.git"
 	},
 	"devDependencies": {
