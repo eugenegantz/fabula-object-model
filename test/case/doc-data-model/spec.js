@@ -1,4 +1,4 @@
-describe.only("DocDataModel", function() {
+describe("DocDataModel", function() {
 	var fom;
 	var stand;
 	var db;
@@ -142,6 +142,8 @@ describe.only("DocDataModel", function() {
 		var sid = mkSID();
 
 		before(function() {
+			this.timeout(6000);
+
 			doc = mkDoc({ "sid": sid });
 
 			return doc.getNewDocID({
@@ -399,7 +401,7 @@ describe.only("DocDataModel", function() {
 	describe(".update()", function() {
 
 		describe("Изменились только поля заявки", function() {
-			this.timeout(6000);
+			this.timeout(10000);
 
 			var doc;
 			var dbRecsMovs;
@@ -411,7 +413,7 @@ describe.only("DocDataModel", function() {
 			var sid                     = mkSID();
 
 			before(function() {
-				this.timeout(6000);
+				this.timeout(10000);
 
 				doc = mkDoc({ "sid": sid });
 

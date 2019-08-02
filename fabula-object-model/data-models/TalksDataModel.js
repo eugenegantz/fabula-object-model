@@ -1,9 +1,13 @@
 "use strict";
 
-var dbUtils = require("./../utils/dbUtils.js"),
-	utils = require("./../utils/utils.js"),
-	IFabModule = require("./IFabModule.js"),
+var IFabModule = require("./IFabModule.js"),
 	voidFn = function() {};
+
+var utils = {
+	"db": require("./../utils/dbUtils.js"),
+	"string": require("./../utils/string.js"),
+	"common": require("./../utils/utils.js"),
+};
 
 // Для совместимости
 var getContextDB = function() {
@@ -23,7 +27,7 @@ var TalksDataModel = function() {
 	this.instances.push(this);
 };
 
-TalksDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
+TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 
 	"instances": [],
 
@@ -55,12 +59,12 @@ TalksDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
 			callback        = arg.callback || voidFn,
 			db              = getContextDB.call(this);
 
-		return new Promise(function(resolve, reject) {
+		return Promise.resolve().then(function() {
 			if (!db)
-				return reject("TalksDataModel.postTalk(): !db");
+				return Promise.reject("TalksDataModel.postTalk(): !db");
 
 			if (!mmId)
-				return reject("TalksDataModel.postTalk(): !arg.mmid");
+				return Promise.reject("TalksDataModel.postTalk(): !arg.mmid");
 
 			var msg = message.match(new RegExp(".{1," + (self.STR_LIMIT - 1) + "}(\\s|$)|.{1," + self.STR_LIMIT + "}", "g")) || [];
 
@@ -68,7 +72,7 @@ TalksDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
 			!msg.length && nextMMFlag && msg.push("");
 
 			var query = msg.reduce(function(str, msg, idx) {
-				msg = dbUtils.secureStr(msg).replace("'", "\\'");
+				msg = utils.db.secureStr(msg).replace("'", "\\'");
 
 				if (!idx && nextMMFlag) {
 					return str + ""
@@ -77,10 +81,10 @@ TalksDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
 						+   " NOW()"
 						+   " ," + "'Фаза: ' & mmFlag & ' &rArr; " + nextMMFlag + (msg ? "<br>" + msg : "") + "'"
 						+   " ," + agent
-						+   " ," + "mmId"
-						+   " ," + "doc1"
+						+   " ," + "[mmid]"
+						+   " ," + "[doc1]"
 						+   " ," + "FORMAT(TIME(),'HH:MM')"
-						+   " ," + "NOW()"
+						+   " ," + "NOW() & ' " + utils.string.random(3) + "'"
 						+   " ," + idx
 						+ " FROM Movement"
 						+ " WHERE"
@@ -89,32 +93,32 @@ TalksDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
 				}
 
 				return str + ""
-					+ " INSERT INTO Talk (dt, txt, agent, [mm], [tm], [key], [part])"
-					+ " VALUES ("
+					+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
+					+ " SELECT "
 					+   " NOW()"
 					+   " ," + "'" + msg + "'"
 					+   " ," + agent
-					+   " ," + mmId
+					+   " ," + "[mmid]"
+					+   " ," + "[doc1]"
 					+   " ," + "FORMAT(TIME(),'HH:MM')"
-					+   " ," + "NOW()"
+					+   " ," + "NOW() & ' " + utils.string.random(3) + "'"
 					+   " ," + idx
-					+ " );";
+					+ " FROM Movement"
+					+ " WHERE"
+					+   " mmId = " + mmId
+					+ ";"
 			}, "");
 
 			if (!query)
-				return resolve();
+				return;
 
-			db.dbquery({
-				"dbworker": " ",
-				"query": query,
-				"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-talk.post" }),
-				"callback": function(dbres, err) {
-					if (err = dbUtils.fetchErrStrFromRes(dbres))
-						return reject(err);
-
-					resolve();
-				}
-			});
+			return (
+				db.query({
+					"dbworker": " ",
+					"query": query,
+					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-talk.post" }),
+				})
+			);
 
 		}).then(function() {
 			callback(null, self);

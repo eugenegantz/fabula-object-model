@@ -1,8 +1,6 @@
 "use strict";
 
-var _utils                  = require("./../utils/utils"),
-	dbUtils                 = require("./../utils/dbUtils.js"),
-	emptyFn                 = function() {},
+var emptyFn                 = function() {},
 	DefaultDataModel        = require("./DefaultDataModel"),
 	IMovCollection          = require("./IMovCollection.js"),
 	InterfaceFProperty      = require("./InterfaceFProperty"),
@@ -13,6 +11,12 @@ var _utils                  = require("./../utils/utils"),
 	MField                  = require("./field-models/MField.js"),
 	MovDataModel            = require("./MovDataModel");
 
+var utils = {
+	"common": require("./../utils/utils.js"),
+	"string": require("./../utils/string.js"),
+	"db": require("./../utils/dbUtils.js")
+};
+
 var MFieldDocId = (function() {
 	var _protoSet = MField.prototype.set;
 
@@ -20,7 +24,7 @@ var MFieldDocId = (function() {
 		MField.apply(this, arguments);
 	}
 
-	MFieldDocId.prototype = _utils.createProtoChain(MField.prototype, {
+	MFieldDocId.prototype = utils.common.createProtoChain(MField.prototype, {
 
 		"get": function() {
 			var mCtx            = this.getModelCtx();
@@ -330,7 +334,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					_this.trigger("before-insert");
 
 					// Собрать запрос на вставку новой записи
-					query = dbUtils.createInsertFieldsQueryString({
+					query = utils.db.createInsertFieldsQueryString({
 						"nextFields"          : _this.serializeFieldsObject(),
 						"tableScheme"         : _this.getTableScheme(),
 						"tableName"           : _this.getTableName()
@@ -343,7 +347,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					_this.trigger("before-update");
 
 					// Собрать запрос на обновление полей
-					query = dbUtils.createUpdateFieldsQueryString({
+					query = utils.db.createUpdateFieldsQueryString({
 						"nextFields"          : _this.serializeFieldsObject(),
 						"prevFields"          : _dbDoc.serializeFieldsObject(),
 						"tableScheme"         : _this.getTableScheme(),
@@ -377,7 +381,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						prevFields = dbMovsRowsById[id].serializeFieldsObject();
 
 						// Собрать запрос на обновление уже существующих записей
-						query = dbUtils.createUpdateFieldsQueryString({
+						query = utils.db.createUpdateFieldsQueryString({
 							"prevFields"    : prevFields,
 							"nextFields"    : nextFields,
 							"tableScheme"   : mov.getTableScheme(),
@@ -411,7 +415,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						nextFields = mov.serializeFieldsObject();
 
 						// Собрать запрос на вставку новых записей
-						query = dbUtils.createInsertFieldsQueryString({
+						query = utils.db.createInsertFieldsQueryString({
 							"nextFields"    : nextFields,
 							"tableScheme"   : mov.getTableScheme(),
 							"tableName"     : mov.getTableName()
@@ -521,7 +525,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					// если в родительской задаче изменилось значение для "mmid"
 					// отразить изменение о подчинении в БД
 					if (pMov && !!~pMov.getChanged().indexOf("mmid")) {
-						query = dbUtils.createUpdateFieldsQueryString({
+						query = utils.db.createUpdateFieldsQueryString({
 							"prevFields": {
 								"mmid": mov.get("mmid"),
 								"mmpid": null
@@ -557,7 +561,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 							+   " ," + id
 							+   " ," + "'" + mov.get("doc1") + "'"
 							+   " ," + "FORMAT(TIME(),'HH:MM')"
-							+   " ," + "NOW()"
+							+   " ," + "NOW() & ' " + utils.string.random(3) + "'"
 							+   " ," + 0
 							+ " )";
 
@@ -1040,43 +1044,38 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				companyID       = arg.companyID,
 				docTypeGsRow    = gands.dataRefByGSID.get("SYОП" + docType);
 
-			return new Promise(function(resolve, reject) {
+			return Promise.resolve().then(function() {
 				if (typeof companyID != "string" || companyID.length != 2) {
-					return reject(
+					return Promise.reject(
 						"!DocDataModel.getNewDocID(): " +
 						"arg.companyID expected to be String of length == 2"
 					);
 				}
 
 				if (typeof docType != "string" || docType.length != 4) {
-					return reject(
+					return Promise.reject(
 						"DocDataModel.getNewDocID(): " +
 						"arg.docType expected to be not empty String of length == 2"
 					);
 				}
 
 				if (!docTypeGsRow) {
-					return reject(
+					return Promise.reject(
 						"DocDataModel.getNewDocID(): " +
 						"specified docType not found in GANDS"
 					);
 				}
 
-				dbawws.dbquery({
+				var query = "" +
+					"  SELECT docId FROM Docs" +
+					"; SELECT RIGHT(YEAR(DATE()), 1) AS _year";
+
+				return dbawws.query({
 					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.n-doc-id" }),
 
 					"dbworker": " ",
 
-					"query": "" +
-						"  SELECT docId FROM Docs" +
-						"; SELECT RIGHT(YEAR(DATE()), 1) AS _year",
-
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
-
-						resolve(dbres);
-					}
+					"query": query
 				});
 
 			}).then(function(dbres) {
