@@ -224,49 +224,55 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"load": function(arg) {
 			arg = arg || {};
 
-			var self = this,
-				db = self.getDBInstance(),
-				callback = arg.callback || emptyFn,
-				cond = ["firmId = " + (self.get("firmId") || "NULL")];
+			var self            = this;
+			var db              = self.getDBInstance();
+			var callback        = arg.callback || emptyFn;
+			var cond            = [];
 
-			["tel3", "tel2", "tel1", "tel", "email"].forEach(function(fld) {
-				self.get(fld) && cond.push("[" + fld + "] = " + "'" + self.get(fld) + "'")
+			["firmId", "tel3", "tel2", "tel1", "tel", "email"].forEach(function(fld) {
+				var fieldDecl   = self._firmsTableFldDecl.get(fld);
+				var val         = self.get(fld);
+
+				if (!fieldDecl)
+					return;
+
+				if (!val)
+					return;
+
+				cond.push(dbUtils.mkFld(fld) + " = " + dbUtils.mkVal(val, fieldDecl));
 			});
 
-			var _query = ""
-				+ " SELECT _fld_"
-				+ " FROM firms AS t_firms"
-				+ " WHERE " + cond.join(" OR ");
+			return Promise.resolve().then(function() {
+				if (!cond.length)
+					return Promise.reject("FirmDataModel.load(): !cond.length");
 
-			var query = ""
-				+ _query.replace("_fld_", "*")
-				+ " OR parent_id IN (" + _query.replace("_fld_", "firmId") + ")";
+				var _query = ""
+					+ " SELECT _fld_"
+					+ " FROM firms AS t_firms"
+					+ " WHERE " + cond.join(" OR ");
 
-			query += ";"
-				+ " SELECT"
-				+   " uid,"
-				+   " value,"
-				+   " extClass,"
-				+   " property,"
-				+   " extId"
-				+ " FROM Property"
-				+ " WHERE"
-				+   " extClass = 'FIRMS'"
-				+   " AND extId IN ("
-				+       _query.replace("_fld_", "CSTR(firmId)")
-				+   ")";
+				var query = ""
+					+ _query.replace("_fld_", "*")
+					+ " OR parent_id IN (" + _query.replace("_fld_", "firmId") + ")";
 
-			return new Promise(function(resolve, reject) {
-				db.dbquery({
+				query += ";"
+					+ " SELECT"
+					+   " uid,"
+					+   " value,"
+					+   " extClass,"
+					+   " property,"
+					+   " extId"
+					+ " FROM Property"
+					+ " WHERE"
+					+   " extClass = 'FIRMS'"
+					+   " AND extId IN ("
+					+       _query.replace("_fld_", "CSTR(firmId)")
+					+   ")";
+
+				return db.query({
 					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.load" }),
 					"dbworker": arg.dbworker,
-					"query": query,
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
-
-						resolve(dbres);
-					}
+					"query": query
 				});
 
 			}).then(function(dbres) {
