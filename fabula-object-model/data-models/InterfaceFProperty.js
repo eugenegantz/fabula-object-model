@@ -77,9 +77,6 @@ InterfaceFProperty.createUpsertDeleteQueryString = function(arg) {
 			if (!(mRow instanceof ObjectA))
 				mRow = new ObjectA(mRow);
 
-			if (!(mRow.get("property") && mRow.get("value")))
-				return arr;
-
 			arr.push(mRow);
 
 			return arr;
@@ -103,8 +100,9 @@ InterfaceFProperty.createUpsertDeleteQueryString = function(arg) {
 	// ---------------------------------
 	// Ссылки на свойства задачи
 	// ---------------------------------
-	nextProps.forEach(function(row) {
-		nextPropsByUId[row.get("uid")] = row;
+	nextProps.forEach(function(row, uid) {
+		if (uid = row.get("uid"))
+			nextPropsByUId[uid] = row;
 	});
 
 	// ---------------------------------
