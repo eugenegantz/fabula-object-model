@@ -67,6 +67,7 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 				return Promise.reject("TalksDataModel.postTalk(): !arg.mmid");
 
 			var msg = message.match(new RegExp(".{1," + (self.STR_LIMIT - 1) + "}(\\s|$)|.{1," + self.STR_LIMIT + "}", "g")) || [];
+			var keyRandStr = utils.string.random(20);
 
 			// Если сообщений нет, но необходимо записать смену фазы - записать пустую строку
 			!msg.length && nextMMFlag && msg.push("");
@@ -84,7 +85,7 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 						+   " ," + "[mmid]"
 						+   " ," + "[doc1]"
 						+   " ," + "FORMAT(TIME(),'HH:MM')"
-						+   " ," + "NOW() & ' " + utils.string.random(3) + "'"
+						+   " ," + "'" + keyRandStr + "'"
 						+   " ," + idx
 						+ " FROM Movement"
 						+ " WHERE"
@@ -101,7 +102,7 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 					+   " ," + "[mmid]"
 					+   " ," + "[doc1]"
 					+   " ," + "FORMAT(TIME(),'HH:MM')"
-					+   " ," + "NOW() & ' " + utils.string.random(3) + "'"
+					+   " ," + "'" + keyRandStr + "'"
 					+   " ," + idx
 					+ " FROM Movement"
 					+ " WHERE"
