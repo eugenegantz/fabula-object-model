@@ -45,34 +45,46 @@ DefaultPrintCalc.prototype.calcByApprox = function(arg) {
 	if (!(gsRow = gands.dataReferences.get(argGSID)))
 		throw new Error("Record with code \"" + argGSID + "\" was not found");
 
-	var c,
-		_cont,
-		loopPrice,
-		loopAmount,
-		cost = 0,
-		kol = 0;
+	var table = void 0;
+	var cost = 0;
+	var kol = 0;
 
 	gsRow.gandsExtRef.sort(function(a, b) {
 		return a.GSExSort - b.GSExSort;
 	});
 
-	for (c = 0; c < gsRow.gandsExtRef.length; c++) {
-		loopPrice = +gsRow.gandsExtRef[c].GSExNum;
-		loopAmount = +gsRow.gandsExtRef[c].GSExSort;
-
-		_cont = 0;
+	gsRow.gandsExtRef.some(function(gsExtRow) {
+		if ('property' != gsExtRow.GSExType)
+			return;
 
 		// Цена продажи
-		salePrice
-		&& /^\s*цена\s*продажи\s*$/ig.test(gsRow.gandsExtRef[c].GSExType)
-		&& (_cont = 1);
+		if (salePrice && /^\s*цена\s*продажи\s*$/ig.test(gsExtRow.GSExName))
+			return table = gsExtRow.GSExAttr1;
 
 		// Цена покупки
-		!salePrice
-		&& /^\s*цена\s*покупки\s*$/ig.test(gsRow.gandsExtRef[c].GSExType)
-		&& (_cont = 1);
+		if (!salePrice && /^\s*цена\s*покупки\s*$/ig.test(gsExtRow.GSExName))
+			return table = gsExtRow.GSExAttr1;
+	});
 
-		if (!_cont) continue;
+	if (!table) {
+		return {
+			"sum": 0,
+			"price": 0
+		};
+	}
+
+	table = table.trim().split(";");
+
+	table.some(function(row) {
+		row = row.trim().replace(/[\001\011]/ig, '');
+
+		if (!row)
+			return;
+
+		row = row.split(",");
+
+		var loopAmount = +row[0].trim();
+		var loopPrice = +row[1].trim();
 
 		if (argAmount >= loopAmount) {
 			cost = loopPrice;
@@ -90,9 +102,9 @@ DefaultPrintCalc.prototype.calcByApprox = function(arg) {
 				console.error(ex);
 			}
 
-			break;
+			return true;
 		}
-	}
+	});
 
 	return {
 		"sum": cost,
