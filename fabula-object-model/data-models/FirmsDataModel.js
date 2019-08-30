@@ -32,6 +32,9 @@ FirmsDataModel.prototype = {
 		this._instances.push(this);
 
 		this.state = 0;
+
+		self.dataRefByFirmId = {};
+		self.dataRefByINN = {};
 	},
 
 
@@ -56,67 +59,117 @@ FirmsDataModel.prototype = {
 	+       " extClass = 'firms'",
 
 
-	"load": function(arg) {
-		arg = arg || {};
+	/**
+	 * Обработать ответ от сервера. Основная таблица
+	 *
+	 * @param {Array} recs
+	 * */
+	"_processMainTableRecs": function(recs) {
+		var _this               = this;
+		var dataRefByFirmId     = new ObjectA();
+		var dataRefByINN        = new ObjectA();
 
-		var callback = arg.callback || function() {},
-			db = getContextDB.call(this),
-			self = this;
+		recs.forEach(function(row) {
+			var inn = ((row.INN || '') + '').trim();
 
-		return new Promise(function(resolve, reject) {
-			if (!db)
-				return reject('FirmsDataModel.load(): !db');
+			if (inn)
+				dataRefByINN.set(inn, row);
 
-			db.dbquery({
-				"query": self.sql,
-				"callback": function(dbres) {
-					resolve(dbres);
-				}
-			});
+			dataRefByFirmId.set(row.FirmID, row);
 
-		}).then(function(dbres) {
-			self.data = dbres[0].recs;
+			row.firmsPropertiesRef = [];
+		});
 
-			self.dataRefByFirmId = {};
+		_this.data              = recs;
+		_this.dataRefByFirmId   = dataRefByFirmId;
+		_this.dataRefByINN      = dataRefByINN;
+	},
 
-			self.data.forEach(function(row) {
-				self.dataRefByFirmId[row.FirmID] = row;
 
-				row.firmsPropertiesRef = [];
-			});
+	/**
+	 * Обработать ответ от сервера. Таблица Property
+	 *
+	 * @param {Array} recs
+	 * */
+	"_processPropsTableRecs": function(recs) {
+		var _this = this;
 
-			dbres[1].recs.forEach(function(row) {
-				var obj = self.dataRefByFirmId[row.extID];
+		recs.forEach(function(row) {
+			var obj;
+			var extId = (row.extID || "");
 
-				if (obj)
-					obj.firmsPropertiesRef.push(row);
-			});
-
-			self.dataRefByFirmId = new ObjectA(self.dataRefByFirmId);
-
-			self.state = 1;
-
-			callback(null, self);
+			if (obj = _this.dataRefByFirmId.get(extId))
+				obj.firmsPropertiesRef.push(row);
 		});
 	},
 
 
+	/**
+	 * Инициализировать всех контрагентов из БД
+	 *
+	 * @return {Promise}
+	 * */
+	"load": function(arg) {
+		arg = arg || {};
+
+		var _this           = this;
+		var callback        = arg.callback || voidFn;
+		var db              = getContextDB.call(_this);
+
+		return Promise.resolve().then(function() {
+			if (!db)
+				return Promise.reject('FirmsDataModel.load(): !db');
+
+			return db.query({ "query": _this.sql });
+
+		}).then(function(dbres) {
+			_this._processMainTableRecs(dbres[0].recs);
+			_this._processPropsTableRecs(dbres[1].recs);
+
+			_this.state = 1;
+
+			callback(null, _this);
+
+		}).catch(function(err) {
+			callback(err, _this);
+
+			return Promise.reject(err);
+		});
+	},
+
+
+	/**
+	 * Инициализировать конкретного контрагента из БД
+	 *
+	 * @param arg
+	 * */
 	"loadFirm": function(arg) {
 		arg = arg || {};
 
-		var callback = arg.callback || voidFn,
-			db = getContextDB.call(this),
-			self = this;
+		var callback    = arg.callback || voidFn;
+		var db          = getContextDB.call(this);
+		var self        = this;
 
-		return new Promise(function(resolve, reject) {
-			if (!arg.firmId)
-				return reject("FirmsDataModel().loadFirm(): arg.firmId is not specified");
+		return Promise.resolve().then(function() {
+			var firmId  = arg.firmId;
+			var where   = arg.where;
+			var _where  = [];
+
+			if (firmId)
+				_where.push("firmId = " + firmId);
+
+			_where = _where.join(" OR ");
+
+			if (where)
+				_where = where;
+
+			if (!_where)
+				return reject('FirmsDataModel().loadFirm(): "arg.firmId" and "arg.where" is not specified');
 
 			var query = ""
 				+ " SELECT *"
 				+ " FROM firms"
-				+ " WHERE"
-				+   " firmId = " + arg.firmId
+				+ " WHERE " + _where
 
 				+ "; SELECT"
 				+   "  pid"
@@ -124,19 +177,15 @@ FirmsDataModel.prototype = {
 				+   ", property"
 				+   ", [value]"
 				+ " FROM property"
-				+ " WHERE"
+				+ " WHERE "
 				+   " extClass = 'firms'"
-				+   " AND extId = '" + arg.firmId + "'";
+				+   " AND pid IN ("
+				+       " SELECT firmId"
+				+       " FROM firms"
+				+       " WHERE " + _where
+				+   ")";
 
-			db.dbquery({
-				"query": query,
-				"callback": function(dbres, err) {
-					if (err = dbUtils.fetchErrStrFromRes(dbres))
-						return reject(err);
-
-					resolve(dbres);
-				}
-			});
+			return db.query({ "query": query });
 
 		}).then(function(dbres) {
 			var prevFirmRow,
