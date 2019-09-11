@@ -14,6 +14,7 @@ var emptyFn                 = function() {},
 var utils = {
 	"common": require("./../utils/utils.js"),
 	"string": require("./../utils/string.js"),
+	"math": require("./../utils/math.js"),
 	"db": require("./../utils/dbUtils.js")
 };
 
@@ -174,6 +175,24 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		}),
 
 
+		_mDocNewIdLock: {},
+
+
+		isLockedDocId(id) {
+			return !!this._mDocNewIdLock[id];
+		},
+
+
+		lockDocId(id) {
+			this._mDocNewIdLock[id] = 1;
+		},
+
+
+		unlockDocId(id) {
+			delete this._mDocNewIdLock[id];
+		},
+
+
 		/**
 		 * Удалить заявку и все подчиненные ей записи из БД
 		 *
@@ -286,6 +305,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					"docType": docType,
 					"companyID": companyID
 				}).then(function(docId) {
+					_this.lockDocId(docId);
 					_this.set("docId", docId);
 				});
 			}
@@ -320,19 +340,20 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			_promise = _promise.then(function() {
 				var query;
-				var toDelete            = [];
-				var queries             = [];
+				var loopAttempts = 3;
+
+				if (!isNew)
+					return;
 
 				// ----------------------------------
 				// Docs
 				// ----------------------------------
+				// deprecated
+				// Прежде чем соберется запрос
+				// Чтобы иметь доступ к еще незаписанным полям
+				_this.trigger("before-insert");
 
-				if (isNew) {
-					// deprecated
-					// Прежде чем соберется запрос
-					// Чтобы иметь доступ к еще незаписанным полям
-					_this.trigger("before-insert");
-
+				function _loop() {
 					// Собрать запрос на вставку новой записи
 					query = utils.db.createInsertFieldsQueryString({
 						"nextFields"          : _this.serializeFieldsObject(),
@@ -340,7 +361,59 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						"tableName"           : _this.getTableName()
 					});
 
-				} else {
+					return db.query({
+						"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save-mov-1" }),
+
+						"dbworker": " ",
+
+						"query": query
+					}).catch(function(err) {
+						// На случай ошибки:
+						//      Error: Error Exec: Изменения не были успешно внесены из-за повторяющихся значений в индексе,
+						//      ключевых полях или связях.  Измените данные в поле или полях, содержащих повторяющиеся значения,
+						//      удалите индекс или переопределите его, чтобы разрешить повторяющиеся значения, и повторите попытку.(0);
+
+						// Ошибка, скорее всего, указывает на то, что полученный docId к моменту записи устарел
+						// Произвести повторуню выборку и запись
+
+						var _err = err + "";
+
+						if (
+							--loopAttempts
+							&& !!~_err.indexOf("Изменения не были успешно внесены из-за повторяющихся значений в индексе")
+						) {
+							return (
+								new Promise(function(resolve) {
+									var timeout = utils.math.getRandomIntInclusive(500, 5000);
+
+									setTimeout(function() {
+										resolve();
+									}, timeout);
+								})
+
+							).then(function() {
+								return initNewDocId();
+
+							}).then(function() {
+								return _loop();
+							});
+						}
+
+						return Promise.reject(err);
+					});
+				}
+
+				return _loop();
+
+			}).then(function() {
+				var query;
+				var toDelete            = [];
+				var queries             = [];
+
+				// ----------------------------------
+				// Docs
+				// ----------------------------------
+				if (!isNew) {
 					// deprecated
 					// Прежде чем соберется запрос
 					// Чтобы иметь доступ к еще незаписанным полям
@@ -636,6 +709,10 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					? _this.trigger("after-insert")
 					: _this.trigger("after-update");
 
+				setTimeout(function() {
+					_this.unlockDocId(_this.get("docId"));
+				}, 2500);
+
 				callback(null, _this);
 
 			}).catch(function(err) {
@@ -644,6 +721,10 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				isNew
 					? _this.trigger("insert-error")
 					: _this.trigger("update-error");
+
+				setTimeout(function() {
+					_this.unlockDocId(_this.get("docId"));
+				}, 2500);
 
 				return Promise.reject(err);
 			});
@@ -1036,13 +1117,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				);
 			}
 
-			var self            = this,
-				callback        = arg.callback || emptyFn,
-				dbawws          = self.getDBInstance(),
-				gands           = this.getGandsInstance(),
-				docType         = arg.docType,
-				companyID       = arg.companyID,
-				docTypeGsRow    = gands.dataRefByGSID.get("SYОП" + docType);
+			var _this           = this;
+			var callback        = arg.callback || emptyFn;
+			var dbawws          = _this.getDBInstance();
+			var gands           = this.getGandsInstance();
+			var docType         = arg.docType;
+			var companyID       = arg.companyID;
+			var docTypeGsRow    = gands.dataRefByGSID.get("SYОП" + docType);
 
 			return Promise.resolve().then(function() {
 				if (typeof companyID != "string" || companyID.length != 2) {
@@ -1071,7 +1152,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					"; SELECT RIGHT(YEAR(DATE()), 1) AS _year";
 
 				return dbawws.query({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.n-doc-id" }),
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.n-doc-id" }),
 
 					"dbworker": " ",
 
@@ -1079,77 +1160,97 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				});
 
 			}).then(function(dbres) {
-				var curr,
-					prev,
-					newDocID,
-					docIds,
-					prefix = docTypeGsRow.GSCodeNumber,
-					year = dbres[1].recs[0]._year;
+				var currIndex;
+				var prevIndex;
+				var docIndexList;
+				var newDocId = void 0;
+				var prefix = docTypeGsRow.GSCodeNumber;
+				var year = dbres[1].recs[0]._year;
 
 				if (!prefix)
 					return Promise.reject("!docTypePrefix");
 
-				var _excluded = [];
-
-				docIds = dbres[0]
-					.recs
-					.reduce(function(prev, row) {
-						if (10 != row.docId.length || year != row.docId[2]) {
-							_excluded.push(row.docId);
-
-							return prev;
-						}
-
-						var a = +row.docId.slice(5);
-
-						if (a)
-							prev.push(a);
-
+				// Собрать выборку сквозной нумерации
+				docIndexList = dbres[0].recs.reduce(function(prev, row) {
+					if (
+						   10 != row.docId.length
+						|| year != row.docId[2]
+					) {
 						return prev;
-
-					}, [])
-					.sort(function(a, b) {
-						// от меньшего к большему
-						return a < b ? -1 : 1;
-					});
-
-				// --------------
-
-				curr = docIds[0] || 1;
-				prev = curr;
-
-				docIds.some(function(a) {
-					curr = a;
-
-					if (Math.abs(curr - prev) > 1) {
-						curr = prev;
-
-						return true;
 					}
 
-					prev = a;
+					var a = +row.docId.slice(5); // либо число либо NaN
 
-					return false;
+					if (a)
+						prev.push(a);
+
+					return prev;
+				}, []);
+
+				// От меньшего к большему
+				docIndexList = docIndexList.sort(function(a, b) {
+					return a < b ? -1 : 1;
 				});
-
-				curr++;
 
 				// --------------
 
-				newDocID = new Array(5 - (curr + "").length + 1).join("0") + (curr + "");
+				function _createDocIdString(fields) {
+					var _index          = fields.index;
+					var _companyID      = fields.companyID || companyID;
+					var _year           = fields.year || year;
+					var _prefix         = fields.prefix || prefix;
 
-				var ret = ""
-					+ companyID
-					+ year
-					+ prefix
-					+ newDocID;
+					_index = _index + "";
+					_index = "0".repeat(5 - _index.length) + _index;
 
-				callback(null, self, ret);
+					return ""
+						+ _companyID
+						+ _year
+						+ _prefix
+						+ _index;
+				}
 
-				return Promise.resolve(ret);
+				// --------------
+
+				currIndex = prevIndex = docIndexList[0] || 1;
+
+				// --------------
+
+				docIndexList.some(function(a) {
+					currIndex = a;
+
+					if (Math.abs(currIndex - prevIndex) > 1) {
+						var _newDocId = _createDocIdString({ index: prevIndex + 1 });
+
+						if (!_this.isLockedDocId(_newDocId))
+							return newDocId = _newDocId;
+					}
+
+					prevIndex = currIndex;
+				});
+
+				// --------------
+
+				if (!newDocId) {
+					(function(_newDocId) {
+						do {
+							_newDocId = _createDocIdString({ index: ++currIndex });
+						}
+
+						while (_this.isLockedDocId(_newDocId));
+
+						newDocId = _newDocId;
+					})();
+				}
+
+				// --------------
+
+				callback(null, _this, newDocId);
+
+				return newDocId;
 
 			}).catch(function(err) {
-				callback(err, self);
+				callback(err, _this);
 
 				return Promise.reject(err);
 			});

@@ -1331,6 +1331,59 @@ describe("DocDataModel", function() {
 	});
 
 
+	describe("Проверка уникальности", function() {
+		var c;
+		var dbRecsDocs;
+		var docs = new Array(10).fill(1);
+		var sid = mkSID();
+
+		before(function() {
+			this.timeout(36000);
+
+			return Promise.all(
+				docs.map(function(a, c) {
+					docs[c] = mkDoc({ "sid": sid });
+					docs[c]._testUniqueId = Math.random().toString().replace("0.", "");
+
+					return docs[c].save().catch(function(err) {
+						console.log("test_case:", docs[c]._testUniqueId, err);
+
+						return Promise.reject(err);
+					});
+				})
+			).then(function() {
+				var docIds = docs.map(function(doc) {
+					return "'" + doc.get("docId") + "'";
+				});
+
+				var query = "SELECT docId FROM Docs WHERE docId IN (" + docIds + ")";
+
+				return db.query({
+					"dbworker": " ",
+
+					"dbcache": Math.random() + "",
+
+					"query": query
+				});
+
+			}).then(function(dbRes) {
+				dbRecsDocs = dbRes.recs;
+			});
+		});
+
+		after(function() {
+			this.timeout(6000);
+
+			return clearDoc({ "sid": sid });
+		});
+
+		it("10 уникальных записей без ошибок", function() {
+			assert.equal(dbRecsDocs.length, 10);
+		});
+
+	});
+
+
 	describe.skip("DocDataModel. Модель поля docId", function() {
 		this.timeout(6000);
 
