@@ -332,8 +332,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						if (!_this.get("id"))
 							_this.set("id", _dbDoc.get("id"), null, false);
 
-					}).catch(function() {
-						return initNewDocId(isNew = true);
+					}).catch(function(err) {
+						var _err = err + "";
+
+						if (!!~_err.indexOf("specified doc record have not found in DOCS table"))
+							return isNew = true;
+
+						return err;
 					});
 				});
 			}
