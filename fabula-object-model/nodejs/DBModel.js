@@ -6,6 +6,8 @@
 var modDBAwwS = require("eg-db-awws");
 var dbUtils = require("../utils/dbUtils.js");
 var voidFn = function() {};
+var Knex = require("knex");
+
 
 /**
  * @constructor
@@ -147,6 +149,48 @@ DBModel.prototype.getInstance = function(arg){
 		return this.instances[c];
 	}
 	return new DBModel(arg);
+};
+
+
+DBModel.prototype.getKnexInstance = function() {
+	var _knex;
+	var client  = this.dbAwwS.token.sqlType;
+
+	if (!client || "msaccess" == client)
+		client = require("knex-ms-access/src/dialects/msaccess/index.js");
+
+	_knex = Knex({ "client": client });
+
+	_knex.functionHelper = require("knex-ms-access/src/function-helper.js").create(_knex);
+
+	return _knex;
+};
+
+
+DBModel.prototype.auth = function() {
+	var _this   = this;
+	var _db     = this.dbAwwS;
+
+	if (_db.token)
+		return Promise.resolve();
+
+	return (
+		new Promise(function(resolve, reject) {
+			_db.auth({
+				login       : _this.login,
+				login2      : _this.login2,
+				loginhash   : _this.loginhash,
+				loginorigin : _this.loginorigin,
+
+				callback: function(err) {
+					if (err)
+						return reject(err);
+
+					resolve();
+				}
+			});
+		})
+	);
 };
 
 

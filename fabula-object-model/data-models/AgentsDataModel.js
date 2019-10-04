@@ -56,24 +56,49 @@ AgentsDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
 
 	/**
 	 * Инициализация данных из БД
+	 *
+	 * @param {Function=} arg.callback
+	 * @param {String | Object=} arg.dbcache
+	 *
+	 * @return {Promise}
 	 * */
 	"load": function(arg) {
 		arg = arg || {};
 
-		var callback = arg.callback || voidFn,
-			db = getContextDB.call(this),
-			self = this;
+		var _this       = this;
+		var callback    = arg.callback || voidFn;
+		var db          = getContextDB.call(this);
 
-		if (!db) return;
+		if (!db)
+			return;
 
-		db.dbquery({
-			"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-ag.load" }),
-			"query": "SELECT AgentID, FIO, NameShort, NameFull, User FROM Agents",
-			"callback": function(res) {
-				self.data = res.recs;
-				self.state = 1;
-				callback(null, self, self.data);
-			}
+		return Promise.resolve().then(function() {
+			return db.auth();
+
+		}).then(function() {
+			var knex = db.getKnexInstance();
+			var query = knex.queryBuilder();
+
+			query.select("AgentID", "FIO", "NameShort", "NameFull", "User");
+			query.from("Agents");
+
+			query = query.toString();
+
+			return db.dbquery({
+				"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-ag.load" }),
+				"query": query,
+			});
+
+		}).then(function(res) {
+			_this.data          = res.recs;
+			_this.state         = 1;
+
+			callback(null, _this, _this.data);
+
+		}).catch(function(err) {
+			callback(err);
+
+			return Promise.reject(err);
 		});
 	},
 

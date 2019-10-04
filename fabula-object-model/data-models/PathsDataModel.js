@@ -1,6 +1,7 @@
 "use strict";
 
 var stdUtils = require("./../utils/utils.js");
+var voidFn = function() {};
 
 // Для совместимости
 var getContextDB = function() {
@@ -38,22 +39,43 @@ PathsDataModel.prototype = {
 
 
 	"load": function(arg) {
-		if (typeof arg == "undefined") arg = Object.create(null);
+		arg = arg || {};
 
-		var callback = typeof arg.callback == "function" ? arg.callback : new Function(),
-			db = getContextDB.call(this),
-			self = this;
+		var _this       = this;
+		var callback    = arg.callback || voidFn;
+		var db          = getContextDB.call(this);
 
-		if (db) {
-			db.dbquery({
-				"query": "SELECT value, property FROM Property WHERE extClass = 'path' ",
-				"callback": function(res) {
-					self.data = res.recs;
-					self.state = 1;
-					callback(([res.info.errors] + '') || null, self.data);
-				}
+		if (!db)
+			return Promise.reject("PathsDataModel.load(): !db");
+
+		return Promise.resolve().then(function() {
+			return db.auth();
+
+		}).then(function() {
+			var knex    = db.getKnexInstance();
+			var query   = knex.queryBuilder();
+
+			query.select("value", "property");
+			query.from("Property");
+			query.where("extClass", "path");
+
+			query = query.toString();
+
+			return db.query({
+				"query": query,
 			});
-		}
+
+		}).then(function(res) {
+			_this.data = res.recs;
+			_this.state = 1;
+
+			callback(null, _this.data);
+
+		}).catch(function(err) {
+			callback(err);
+
+			return Promise.reject(err);
+		});
 	},
 
 

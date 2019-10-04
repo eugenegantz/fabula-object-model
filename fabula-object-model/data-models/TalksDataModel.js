@@ -51,23 +51,27 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 	"postTalk": function(arg) {
 		arg = arg || {};
 
-		var self            = this,
-			mmId            = arg.MMID,
-			message         = arg.message || "",
-			nextMMFlag      = arg.MMFlag || "",
-			agent           = arg.agent || 999,
-			callback        = arg.callback || voidFn,
-			db              = getContextDB.call(this);
+		var _this            = this;
+		var mmId            = arg.MMID;
+		var message         = arg.message || "";
+		var nextMMFlag      = arg.MMFlag || "";
+		var agent           = arg.agent || 999;
+		var callback        = arg.callback || voidFn;
+		var db              = getContextDB.call(this);
 
 		return Promise.resolve().then(function() {
+			return db.auth();
+
+		}).then(function() {
 			if (!db)
 				return Promise.reject("TalksDataModel.postTalk(): !db");
 
 			if (!mmId)
 				return Promise.reject("TalksDataModel.postTalk(): !arg.mmid");
 
-			var msg = message.match(new RegExp(".{1," + (self.STR_LIMIT - 1) + "}(\\s|$)|.{1," + self.STR_LIMIT + "}", "g")) || [];
-			var keyRandStr = utils.string.random(20);
+			var knex            = db.getKnexInstance();
+			var msg             = message.match(new RegExp(".{1," + (_this.STR_LIMIT - 1) + "}(\\s|$)|.{1," + _this.STR_LIMIT + "}", "g")) || [];
+			var keyRandStr      = utils.string.random(20);
 
 			// Если сообщений нет, но необходимо записать смену фазы - записать пустую строку
 			!msg.length && nextMMFlag && msg.push("");
@@ -75,39 +79,47 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 			var query = msg.reduce(function(str, msg, idx) {
 				msg = utils.db.secureStr(msg).replace("'", "\\'");
 
+				var query = knex.queryBuilder();
+
 				if (!idx && nextMMFlag) {
-					return str + ""
-						+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
-						+ " SELECT"
-						+   " NOW()"
-						+   " ," + "'Фаза: ' & mmFlag & ' &rArr; " + nextMMFlag + (msg ? "<br>" + msg : "") + "'"
-						+   " ," + agent
-						+   " ," + "[mmid]"
-						+   " ," + "[doc1]"
-						+   " ," + "FORMAT(TIME(),'HH:MM')"
-						+   " ," + "'" + keyRandStr + "'"
-						+   " ," + idx
-						+ " FROM Movement"
-						+ " WHERE"
-						+   " mmId = " + mmId
-						+ ";";
+					query.into(knex.functionHelper.insertInto('Talk', ['dt', 'txt', 'agent', 'mm', 'doc', 'tm', 'key', 'part']));
+
+					query.insert(function() {
+						this.from("Movement");
+						this.select(
+							  knex.functionHelper.now()
+							, knex.functionHelper.concat("Фаза: ", knex.functionHelper.columnize('mmFlag'), " &rArr; ", nextMMFlag, (msg ? "<br>" + msg : ""))
+							, agent
+							, 'mmid'
+							, 'doc1'
+							, knex.functionHelper.format(knex.functionHelper.now(), "hh:mm")
+							, keyRandStr
+							, idx
+						);
+						this.where("mmId", mmId);
+					});
+
+					return query.toString();
 				}
 
-				return str + ""
-					+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
-					+ " SELECT "
-					+   " NOW()"
-					+   " ," + "'" + msg + "'"
-					+   " ," + agent
-					+   " ," + "[mmid]"
-					+   " ," + "[doc1]"
-					+   " ," + "FORMAT(TIME(),'HH:MM')"
-					+   " ," + "'" + keyRandStr + "'"
-					+   " ," + idx
-					+ " FROM Movement"
-					+ " WHERE"
-					+   " mmId = " + mmId
-					+ ";"
+				query.into(knex.functionHelper.insertInto('Talk', ['dt', 'txt', 'agent', 'mm', 'doc', 'tm', 'key', 'part']));
+
+				query.insert(function() {
+					this.from("Movement");
+					this.select(
+						knex.functionHelper.now()
+						, msg
+						, agent
+						, 'mmid'
+						, 'doc1'
+						, knex.functionHelper.format(knex.functionHelper.now(), "hh:mm")
+						, keyRandStr
+						, idx
+					);
+					this.where("mmId", mmId);
+				});
+
+				return query.toString();
 			}, "");
 
 			if (!query)
@@ -117,15 +129,15 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 				db.query({
 					"dbworker": " ",
 					"query": query,
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-talk.post" }),
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-talk.post" }),
 				})
 			);
 
 		}).then(function() {
-			callback(null, self);
+			callback(null, _this);
 
 		}).catch(function(err) {
-			callback(err, self);
+			callback(err, _this);
 		});
 	},
 

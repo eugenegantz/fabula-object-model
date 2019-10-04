@@ -210,6 +210,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			var callback    = arg.callback || emptyFn;
 			var id          = _this.get("id");
 			var docId       = _this.get("docId");
+			var knex        = db.getKnexInstance();
 
 			return Promise.resolve().then(function() {
 				if (!docId && !id)
@@ -217,24 +218,53 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			}).then(function() {
 				var query;
-				var _subQuery;
-				var _where      = [];
+				var queryMain;
+				var queryProps;
+				var queryMovs;
+				var queryTalk;
+				var subQuery = knex.queryBuilder();
+
+				subQuery.from("Docs");
 
 				if (docId)
-					_where.push("docId = '" + _this.get("docId") + "'");
+					subQuery.where("docId", _this.get("docId"));
 
 				if (id)
-					_where.push("id = " + id);
+					subQuery.orWhere("id", id);
 
-				_where = _where.join(" OR ");
+				// ----------------------------------------
 
-				_subQuery = "SELECT docId FROM Docs WHERE " + _where;
+				queryMain = subQuery.clone().del();
+
+				// ----------------------------------------
+
+				queryTalk = knex.queryBuilder();
+				queryTalk.del();
+				queryTalk.from("Talk");
+				queryTalk.where("doc", "in", subQuery);
+
+				// ----------------------------------------
+
+				queryProps = knex.queryBuilder();
+				queryProps.del();
+				queryProps.from("Property");
+				queryProps.where("extId", "in", subQuery);
+				queryProps.andWhere("extClass", "DOCS");
+
+				// ----------------------------------------
+
+				queryMovs = knex.queryBuilder();
+				queryMovs.del();
+				queryMovs.from("Movement");
+				queryMovs.where("doc1", "in", subQuery);
+
+				// ----------------------------------------
 
 				query = ""
-					+ "  DELETE FROM Talk WHERE doc IN (" + _subQuery + ")"
-					+ "; DELETE FROM Property WHERE extClass = 'DOCS' AND extId IN (" + _subQuery + ")"
-					+ "; DELETE FROM Movement WHERE doc1 IN (" + _subQuery + ")"
-					+ "; DELETE FROM Docs WHERE " + _where;
+					       + queryTalk.toString()
+					+ "; " + queryProps.toString()
+					+ "; " + queryMovs.toString()
+					+ "; " + queryMain.toString();
 
 				return db.query({
 					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.rm-d" }),
@@ -687,7 +717,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				// записать свойства
 				// Собрать запрос на обновление, удаление, вставку свойств
-				query = InterfaceFProperty.createUpsertDeleteQueryString({
+				query = _this.createUpsertDeleteQueryString({
 					"prevProps": prevProps,
 					"nextProps": nextProps
 				});
@@ -871,12 +901,17 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"load": function(arg) {
 			arg = Object.assign({}, arg);
 
+			var queryMain;
+			var queryProps;
+			var queryMovs;
+			var subQuery;
 			var _this               = this;
-			var dbawws              = _this.getDBInstance();
+			var db                  = _this.getDBInstance();
+			var knex                = db.getKnexInstance();
 			var callback            = arg.callback || emptyFn;
 			var where               = arg.where;
 			var docId               = _this.get("docId", null, !1);
-			var id                  = _this.get("id", null, !1);
+			var id                  = +_this.get("id", null, !1);
 
 			return Promise.resolve().then(function() {
 				if (
@@ -887,55 +922,62 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					return Promise.reject('DocDataModel.load(): "docId" and "id" and "args.where" field is not assigned');
 				}
 
-				var _where = [];
+				subQuery = knex.queryBuilder();
+				subQuery.from("Docs");
+				subQuery.select("docId");
 
-				if (docId)
-					_where.push("docId = '" + docId + "'");
+				if (where) {
+					subQuery.where(knex.raw(where));
 
-				if (id)
-					_where.push("id = " + id);
+				} else {
+					if (docId)
+						subQuery.andWhere("docId", docId);
 
-				_where = _where.join(" OR ");
+					if (id)
+						subQuery.andWhere("id", id);
+				}
 
-				if (where)
-					_where = where;
+				// -------------------------------------------
+
+				queryMain = subQuery.clone();
+				queryMain.clearSelect();
+				queryMain.select();
+				queryMain.column(
+					_this.getTableScheme.getKeys().concat(
+						knex.functionHelper.asColumn(knex.functionHelper.format("RegDate", "yyyy-MM-dd hh:mm:ss"), "RegDate")
+					)
+				);
+
+				// -------------------------------------------
+
+				queryMovs = knex.queryBuilder();
+				queryMovs.from("Movement");
+				queryMovs.select();
+				queryMovs.column(
+					MovDataModel.getTableScheme().getKeys().concat(
+						knex.functionHelper.asColumn(knex.functionHelper.format("gsDate", "yyyy-MM-dd hh:mm:ss"), "gsDate"),
+						knex.functionHelper.asColumn(knex.functionHelper.format("gsDate2", "yyyy-MM-dd hh:mm:ss"), "gsDate2")
+					)
+				);
+				queryMovs.where("doc1", "in", subQuery);
+
+				// -------------------------------------------
+
+				queryProps = knex.queryBuilder();
+				queryProps.from("Property");
+				queryProps.select();
+				queryProps.column(["uid", "extClass", "extID", "property", "value", "pid"]);
+				queryProps.where("extClass", "DOCS");
+				queryProps.andWhere("extId", "in", subQuery);
+
+				// -------------------------------------------
 
 				var query = ""
-					+ " SELECT"
-					+   "  *"
-					+   ", Format(RegDate,'yyyy-mm-dd Hh:Nn:Ss') AS RegDate"
-					+ " FROM DOCS"
-					+ " WHERE " + _where
+					       + queryMain.toString()
+					+ "; " + queryMovs.toString()
+					+ "; " + queryProps.toString();
 
-					+ "; SELECT"
-					+   "  *"
-					+   ", Format(gsDate,'yyyy-mm-dd Hh:Nn:Ss') AS gsDate"
-					+   ", Format(gsDate2,'yyyy-mm-dd Hh:Nn:Ss') AS gsDate2"
-					+ " FROM Movement"
-					+ " WHERE"
-					+   " doc1 IN ("
-					+       " SELECT docId"
-					+       " FROM Docs"
-					+       " WHERE " + _where
-					+   ")"
-
-					+ "; SELECT"
-					+   "  uid"
-					+   ", extClass"
-					+   ", extID"
-					+   ", property"
-					+   ", value"
-					+   ", pid"
-					+ " FROM Property"
-					+ " WHERE"
-					+   "     extClass = 'DOCS'"
-					+   " AND extId IN ("
-					+       " SELECT docId"
-					+       " FROM Docs"
-					+       " WHERE " + _where
-					+   ")";
-
-				return dbawws.query({
+				return db.query({
 					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.load" }),
 
 					"dbworker": arg.dbworker,
@@ -1122,9 +1164,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				);
 			}
 
+			var queryDocs;
+			var queryYear;
 			var _this           = this;
 			var callback        = arg.callback || emptyFn;
-			var dbawws          = _this.getDBInstance();
+			var db              = _this.getDBInstance();
+			var knex            = db.getKnexInstance();
 			var gands           = this.getGandsInstance();
 			var docType         = arg.docType;
 			var companyID       = arg.companyID;
@@ -1152,11 +1197,36 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					);
 				}
 
-				var query = "" +
-					"  SELECT docId FROM Docs" +
-					"; SELECT RIGHT(YEAR(DATE()), 1) AS _year";
+				// --------------------------
 
-				return dbawws.query({
+				queryDocs = knex.queryBuilder();
+
+				queryDocs.select("docId");
+				queryDocs.from("Docs");
+
+				// --------------------------
+
+				queryYear = (
+					knex.queryBuilder().select(
+						knex.functionHelper.asColumn(
+							knex.functionHelper.right(
+								knex.functionHelper.format(
+									knex.functionHelper.now(),
+									"yyyy"
+								),
+								1
+							)
+						)
+					)
+				);
+
+				// --------------------------
+
+				var query = queryDocs + "; " + queryYear.toString();
+
+				// --------------------------
+
+				return db.query({
 					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.n-doc-id" }),
 
 					"dbworker": " ",

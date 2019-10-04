@@ -3,20 +3,20 @@
 // ------------------------------------------------------
 // Номенклатура
 
-var IFabModule = require("./IFabModule.js");
-var IEvents = require("./InterfaceEvents");
-var ObjectA = require("./ObjectA");
-var _utils = require("./../utils/utils");
-var dbUtils = require("./../utils/dbUtils");
+var voidFn          = function() {};
+var IFabModule      = require("./IFabModule.js");
+var IEvents         = require("./InterfaceEvents");
+var ObjectA         = require("./ObjectA");
+var _utils          = require("./../utils/utils");
 
 // Для совместимости
-var getContextDB = function(){
+var getContextDB = function() {
 	var FabulaObjectModel = require("./../_FabulaObjectModel.js");
 	var DBModel = FabulaObjectModel.prototype._getModule("DBModel");
 
-	if (  this._fabulaInstance ){
+	if (this._fabulaInstance)
 		return this._fabulaInstance.getDBInstance();
-	}
+
 	return DBModel.prototype.getInstance();
 };
 
@@ -24,7 +24,7 @@ var getContextDB = function(){
 /**
  * @constructor
  * */
-var GandsDataModel = function(){
+var GandsDataModel = function() {
 	IFabModule.call(this);
 
 	this.init();
@@ -89,135 +89,193 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 	 * @param {Object} arg
 	 * @param {Function} arg.callback
 	 * */
-	"load" : function(arg){
-		if (typeof arg == "undefined") arg = Object.create(null);
-		var useCache = typeof arg.useCache == "undefined" ? true : Boolean(arg.useCache);
-		var callback = typeof arg.callback == "function" ? arg.callback : function(){};
-		var self = this;
+	"load" : function(arg) {
+		arg = arg || {};
 
-		var db = getContextDB.call(this);
-		var configRow = {"GSID": "ТСFM", "GSName": "Настройки FOM", "GSKindName":"", "GSCOP":""};
-		var configRowProps = [];
+		var knex;
+		var useCache            = typeof arg.useCache == "undefined" ? true : Boolean(arg.useCache);
+		var callback            = typeof arg.callback == "function" ? arg.callback : voidFn;
+		var _this               = this;
+
+		var _promise            = Promise.resolve();
+		var db                  = getContextDB.call(this);
+		var configRow           = { "GSID": "ТСFM", "GSName": "Настройки FOM", "GSKindName":"", "GSCOP":"" };
+		var configRowProps      = [];
 
 		/*#if browser,node*/
 		// Номеклатура
-		db.dbquery({
-			"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-gs.load-0" }),
-			"query": "SELECT pid, extID, property, value FROM Property WHERE ExtID IN(SELECT [value] FROM Property WHERE extClass = 'config' AND property = 'fom-config-entry-gsid')",
-			"callback": function(dbres, err){
-				if (err = dbUtils.fetchErrStrFromRes(dbres))
-					return callback(err);
+		_promise = _promise.then(function() {
+			return db.auth();
 
-				// Конфиг по-умолчанию
-				var dbq = [
-					"SELECT * FROM Gands " 		+
-					"WHERE "							+
-					"GSCOP LIKE '87%' "			+
-					"OR GSCOP LIKE '17%' "		+
-					"OR GSCOP LIKE '27%' "		+
-					"OR GSCOP LIKE '07%' "		+
-					"OR GSID LIKE 'ТСПо%' "
-				];
+		}).then(function() {
+			knex                = db.getKnexInstance();
 
-				if (dbres.recs.length){
-					for(var c=0; c<dbres.recs.length; c++){
-						// Запрос из конфига
-						if (dbres.recs[c].property == "запрос-номенклатура"){
-							dbq[0] = "SELECT * FROM Gands WHERE " + dbres.recs[c].value;
-						}
-						configRowProps.push(dbres.recs[c]);
-					}
-				}
+			var queryProps      = knex.queryBuilder();
+			var queryConfig     = knex.queryBuilder();
 
-				// На случай если необходимо переопределить запрос на уровне проекта
-				if (self.sql) dbq[0] = self.sql;
+			// SELECT [value] FROM Property WHERE extClass = 'config' AND property = 'fom-config-entry-gsid'
+			queryConfig
+				.select("value")
+				.from("Property")
+				.where("extClass", "config")
+				.andWhere("property", "fom-config-entry-gsid");
 
-				// Расширение номенклатуры
-				dbq.push(
-					"SELECT * FROM GandsExt "				+
-					"WHERE "										+
-					"GSExID IN ("									+
-					dbq[0].replace(/[*]/gi, "GSID")			+
-					")"
-				);
+			// SELECT pid, extID, property, value FROM Property WHERE ExtID IN ...
+			queryProps
+				.select("pid", "extID", "property", "value")
+				.from("Property")
+				.where("ExtID", "IN", queryConfig);
 
-				// Свойства номенклатуры
-				dbq.push(
-					"SELECT pid, extID, property, value FROM Property "	+
-					"WHERE "																+
-					"ExtID IN ("															+
-					dbq[0].replace(/[*]/gi, "GSID")									+
-					")"
-				);
+			queryProps = queryProps.toString();
 
-				if (db){
-					db.dbquery({
-						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-gs.load-1" }),
-						"query" : dbq.join("; "),
-						"callback" : function(res, err){
-							if (err = dbUtils.fetchErrStrFromRes(res))
-								return callback(err);
+			return db.query({
+				"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-gs.load-0" }),
+				"query": queryProps,
+			});
 
-							self._afterLoad(
-								{
-									"data": res[0].recs.concat(configRow),
-									"ext": res[1].recs,
-									"props": res[2].recs.concat(configRowProps)
-								},
-								callback
-							);
-							self._init_timestamp = Date.now();
-						}
-					});
-				}
+		}).then(function(dbRes) {
+			var queryMain;
+			var queryProps;
+			var queryExt;
+			var query;
 
 
-			}
+			// ---------------------
+			// Основная таблица
+			// ---------------------
+			queryMain = knex.queryBuilder();
+
+			dbRes.recs.forEach(function(row) {
+				// Запрос из конфига
+				// if ("запрос-номенклатура" == row.property)
+					// queries[0] = "SELECT * FROM Gands WHERE " + dbRes.recs[c].value;
+
+				configRowProps.push(row);
+			});
+
+			queryMain.select(
+				  "ID",         "Sort",         "Sort4",        "GSID"
+				, "GSID4",      "Tick",         "GSCOP",        "GSKindName"
+				, "GSName",     "GSCodeNumber", "GSUnit",       "GSUnit2"
+				, "GSCostSale", "GSCost",       "GSStock",      "CheckStock"
+				, "ExtID",      "ImportName",   "FirmDefault",  "GSGraf"
+				, "GSFlag",     "DateNew",      "UserNew",      "DateEdit"
+				, "UserEdit"
+			);
+			queryMain.from("Gands");
+
+			// На случай если необходимо переопределить запрос на уровне проекта
+			if (_this.query)
+				queryMain = _this.query;
+
+
+			// ---------------------
+			// Расширение номенклатуры
+			// ---------------------
+			queryExt = knex.queryBuilder();
+
+			queryExt.select(
+				  "GEIDC",      "GSExType",     "GSExID",       "GSExSort"
+				, "GSExExtID",  "GSExName",     "GSExNum",      "GSExFlag"
+				, "GSExAttr1",  "GSExAttr2",    "Tick"
+			);
+			queryExt.from("gandsExt");
+			queryExt.where("GSExID", "IN", queryMain.clone().clearSelect().select('GSID'));
+
+
+			// ---------------------
+			// Свойства номенклатуры
+			// ---------------------
+			queryProps = knex.queryBuilder();
+			queryProps.select("pid", "extID", "property", "value");
+			queryProps.from("Property");
+			queryProps.where("extID", "IN", queryMain.clone().clearSelect().select('GSID'));
+
+			if (!db)
+				return Promise.reject("GandsDataModel.load(): !db");
+
+			query = ""
+				       + queryMain.toString()
+				+ "; " + queryExt.toString()
+				+ "; " + queryProps.toString();
+
+			return db.query({
+				"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-gs.load-1" }),
+				"query" : query,
+			});
+
+		}).then(function(res) {
+			_this._afterLoad({
+				"data": res[0].recs.concat(configRow),
+				"ext": res[1].recs,
+				"props": res[2].recs.concat(configRowProps)
+			});
+
+			_this._init_timestamp = Date.now();
 		});
 		/*#end*/
 
 		/*  #if browser-s */
-		if (  _utils.isBrowser()  ){
+		if (_utils.isBrowser()) {
 			var Ajax = require("./../browser/Ajax");
-			Ajax.req({
-				"url": self._fabulaInstance.url,
-				"method": "POST",
-				"data": {
-					model: "GandsDataModel",
-					"argument": {
-						"useCache": useCache
-					}
-				},
-				"callback": function(err, http){
-					if (err){
-						callback(err);
-						return;
-					}
-					self._afterLoad(JSON.parse(http.responseText), callback);
-				}
+
+			_promise = _promise.then(function() {
+				return new Promise(function(resolve, reject) {
+					Ajax.req({
+						"url": _this._fabulaInstance.url,
+						"method": "POST",
+						"data": {
+							model: "GandsDataModel",
+							"argument": {
+								"useCache": useCache
+							}
+						},
+						"callback": function(err, http) {
+							if (err)
+								return reject(err);
+
+							_this._afterLoad(JSON.parse(http.responseText), function() {
+								resolve();
+							});
+						}
+					});
+				});
 			});
 		}
 		/*#end*/
+
+		return _promise.then(function() {
+			callback(null, _this);
+
+		}).catch(function(err) {
+			callback(err);
+		})
 	},
 
 
 	/**
 	 * @ignore
 	 * */
-	"_afterLoad": function(dbres, callback){
-		var c, L, v, gsid, gslv,
-			lvs = [2, 4, 6],
-			self = this,
-			gandsRef = Object.create(null),
-			dataRefByGSIDGroup = Object.create(null);
+	"_afterLoad": function(dbres, callback) {
+		callback = callback || voidFn;
 
-		self.data = dbres.data;
-		self.state = 1;
+		var c;
+		var L;
+		var v;
+		var gsid;
+		var gslv;
+		var lvs                     = [2, 4, 6];
+		var _this                   = this;
+		var gandsRef                = Object.create(null);
+		var dataRefByGSIDGroup      = Object.create(null);
 
-		for(c=0; c<self.data.length; c++){
-			gandsRef[self.data[c].GSID] = self.data[c];
-			if (!self.data[c].gandsExtRef) self.data[c].gandsExtRef = [];
-			if (!self.data[c].gandsPropertiesRef) self.data[c].gandsPropertiesRef = [];
+		_this.data = dbres.data;
+		_this.state = 1;
+
+		for(c=0; c<_this.data.length; c++){
+			gandsRef[_this.data[c].GSID] = _this.data[c];
+			if (!_this.data[c].gandsExtRef) _this.data[c].gandsExtRef = [];
+			if (!_this.data[c].gandsPropertiesRef) _this.data[c].gandsPropertiesRef = [];
 		}
 
 		var gandsExt = dbres.ext;
@@ -234,11 +292,11 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 			gandsRef[gandsProps[c].extID].gandsPropertiesRef.push(gandsProps[c]);
 		}
 
-		for (c = 0, L = self.data.length; c < L; c++) {
-			if (typeof self.GSUnits[self.data[c].GSID] == "undefined")
-				self.GSUnits[self.data[c].GSID] = self.data[c].GSUnit;
+		for (c = 0, L = _this.data.length; c < L; c++) {
+			if (typeof _this.GSUnits[_this.data[c].GSID] == "undefined")
+				_this.GSUnits[_this.data[c].GSID] = _this.data[c].GSUnit;
 
-			gsid = self.data[c].GSID;
+			gsid = _this.data[c].GSID;
 
 			for (v = 0; v < lvs.length; v++) {
 				gslv = gsid.substr(0, lvs[v]);
@@ -246,26 +304,26 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 				if (gslv.length == lvs[v]) {
 					if (!dataRefByGSIDGroup[gslv]) dataRefByGSIDGroup[gslv] = [];
 
-					dataRefByGSIDGroup[gslv].push(self.data[c]);
+					dataRefByGSIDGroup[gslv].push(_this.data[c]);
 				}
 			}
 		}
 
-		self.dataReferences = new ObjectA(gandsRef);
-		self.dataRefByGSID = self.dataReferences;
-		self.dataRefByGSIDGroup = new ObjectA(dataRefByGSIDGroup);
+		_this.dataReferences = new ObjectA(gandsRef);
+		_this.dataRefByGSID = _this.dataReferences;
+		_this.dataRefByGSIDGroup = new ObjectA(dataRefByGSIDGroup);
 
 		// -------------------------------------------------------------------------------------
 
-		var proto = Object.getPrototypeOf(self);
+		var proto = Object.getPrototypeOf(_this);
 		proto._matcherPatterns = [];
 
-		var configRow = self.dataReferences.get("ТСFM");
+		var configRow = _this.dataReferences.get("ТСFM");
 
 		if (configRow){
 			// Заполнение недостающих полей в configRow
-			if (self.data.length){
-				var tmp = self.data[0];
+			if (_this.data.length){
+				var tmp = _this.data[0];
 				for(var prop in tmp){
 					if (!Object.prototype.hasOwnProperty.call(tmp, prop)) continue;
 					if (  configRow[prop] === void 0  ) configRow[prop] = "";
@@ -281,9 +339,9 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 
 		// -------------------------------------------------------------------------------------
 
-		self._buildIndexData();
+		_this._buildIndexData();
 
-		callback(null, self);
+		callback(null, _this);
 	},
 
 

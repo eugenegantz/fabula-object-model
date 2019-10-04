@@ -62,153 +62,6 @@ var InterfaceFProperty = function() {
 };
 
 
-/**
- * @param arg.nextProps
- * @param arg.prevProps
- *
- * @return {String}
- * */
-InterfaceFProperty.createUpsertDeleteQueryString = function(arg) {
-	function _filter(arr) {
-		return arr.reduce(function(arr, mRow) {
-			if (!mRow)
-				return arr;
-
-			if (!(mRow instanceof ObjectA))
-				mRow = new ObjectA(mRow);
-
-			arr.push(mRow);
-
-			return arr;
-		}, []);
-	}
-
-	arg = arg || {};
-
-	var prevProps               = [].concat(arg.prevProps || []);
-	var nextProps               = [].concat(arg.nextProps || []);
-
-	prevProps                   = _filter(prevProps);
-	nextProps                   = _filter(nextProps);
-
-	var tableScheme             = this.getTableScheme();
-	var queries                 = [];
-	var nextPropsByUId          = {};
-	var prevPropsByUId          = {};
-	var deletedPropsUId         = [];
-
-	// ---------------------------------
-	// Ссылки на свойства задачи
-	// ---------------------------------
-	nextProps.forEach(function(row, uid) {
-		if (uid = row.get("uid"))
-			nextPropsByUId[uid] = row;
-	});
-
-	// ---------------------------------
-	// Создание ссылок на свойства в базе.
-	// Создание списка удаленных, добавленных и обновленных свойств
-	// ---------------------------------
-	prevProps.forEach(function(row) {
-		var sets        = [];
-		var uid         = row.get("uid");
-		var nextRow     = nextPropsByUId[uid];
-
-		prevPropsByUId[uid] = row;
-
-		if (!nextRow)
-			return deletedPropsUId.push(uid);
-
-		row.getKeys().forEach(function(key) {
-			var fieldDecl = tableScheme.get(key);
-
-			if (!fieldDecl || fieldDecl.spec)
-				return;
-
-			if (nextRow.get(key) != row.get(key))
-				sets.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(nextRow.get(key), fieldDecl));
-		});
-
-		if (!sets.length)
-			return;
-
-		queries.push(""
-			+ " UPDATE Property"
-			+ " SET " + sets.join(", ")
-			+ " WHERE"
-			+   " [uid] = " + uid
-		);
-	});
-
-	// ---------------------------------
-	// Запись новых свойств
-	// ---------------------------------
-	nextProps.forEach(function(row) {
-		if (prevPropsByUId[row.get("uid")])
-			return;
-
-		queries.push.apply(queries, [].concat(InterfaceFProperty.mkDBInsertStr(row) || []));
-	});
-
-	// ---------------------------------
-
-	if (deletedPropsUId.length)
-		queries.push("DELETE FROM Property WHERE uid IN (" + deletedPropsUId.join(",") + ")");
-
-	return queries.join("; ");
-};
-
-
-InterfaceFProperty.mkDBInsertStr = function(argProp) {
-	argProp = [].concat(argProp || []);
-
-	var propDecl = InterfaceFProperty.prototype._interfaceFPropertyFields;
-
-	var inserts = argProp.reduce(function(prev, row) {
-		var fields = [],
-			values = [];
-
-		if (utils.isEmpty(row) || typeof row != "object")
-			return prev;
-
-		if (utils.isEmpty(row.get("property")))
-			return prev;
-
-		if (utils.isEmpty(row.get("value")))
-			return prev;
-
-		row.getKeys().forEach(function(colKey) {
-			var colVal = row.get(colKey),
-				fldDecl = propDecl.get(colKey);
-
-			// Если значение свойства пустое - не записывать
-			if (utils.isEmpty(colVal))
-				return prev;
-
-			// Если такого поля не существует или поле специальное - пропустить
-			if (
-				!fldDecl
-				|| fldDecl.spec
-			) {
-				return prev;
-			}
-
-			fields.push(dbUtils.mkFld(colKey));
-			values.push(dbUtils.mkVal(colVal, fldDecl));
-		});
-
-		if (!fields.length || !values.length)
-			return prev;
-
-		prev.push("INSERT INTO Property (" + fields.join(",") + ") VALUES (" + values.join(",") + ")");
-
-		return prev;
-	}, []);
-
-	return inserts.join("; ");
-};
-
-
 InterfaceFProperty.getTableScheme = function() {
 	return InterfaceFProperty.prototype._interfaceFPropertyFields;
 };
@@ -548,20 +401,210 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		"mkDBInsertStr": function(argProp) {
+			argProp = [].concat(argProp || []);
+
+			var _this       = this;
+			var db          = _this.getDBInstance();
+			var knex        = db.getKnexInstance();
+
+			var propDecl    = InterfaceFProperty.prototype._interfaceFPropertyFields;
+
+			var inserts = argProp.reduce(function(prev, row) {
+				var _insert = {};
+
+				if (utils.isEmpty(row) || typeof row != "object")
+					return prev;
+
+				if (utils.isEmpty(row.get("property")))
+					return prev;
+
+				if (utils.isEmpty(row.get("value")))
+					return prev;
+
+				row.getKeys().forEach(function(colKey) {
+					var colVal = row.get(colKey);
+					var fldDecl = propDecl.get(colKey);
+
+					// Если значение свойства пустое - не записывать
+					if (utils.isEmpty(colVal))
+						return prev;
+
+					// Если такого поля не существует или поле специальное - пропустить
+					if (
+						!fldDecl
+						|| fldDecl.spec
+					) {
+						return prev;
+					}
+
+					_insert[colKey] = colVal;
+				});
+
+				if (!Object.keys(_insert).length)
+					return prev;
+
+				prev.push(_insert);
+
+				return prev;
+			}, []);
+
+			if ('msaccess' === knex.driverName) {
+				inserts = inserts.map(function(insert) {
+					return (
+						knex
+							.queryBuilder()
+							.insert(insert)
+							.into("Property")
+							.toString()
+					);
+				});
+
+			} else {
+				inserts = [].concat(
+					knex
+						.queryBuilder()
+						.insert(inserts)
+						.into("Property")
+						.toString()
+				)
+			}
+
+			return inserts.join("; ");
+		},
+
+
+		/**
+		 * @param arg.nextProps
+		 * @param arg.prevProps
+		 *
+		 * @return {String}
+		 * */
+		"createUpsertDeleteQueryString": function(arg) {
+			function _filter(arr) {
+				return arr.reduce(function(arr, mRow) {
+					if (!mRow)
+						return arr;
+
+					if (!(mRow instanceof ObjectA))
+						mRow = new ObjectA(mRow);
+
+					arr.push(mRow);
+
+					return arr;
+				}, []);
+			}
+
+			arg = arg || {};
+
+			var query;
+			var _this                   = this;
+			var db                      = _this.getDBInstance();
+			var knex                    = db.getKnexInstance();
+			var prevProps               = [].concat(arg.prevProps || []);
+			var nextProps               = [].concat(arg.nextProps || []);
+
+			prevProps                   = _filter(prevProps);
+			nextProps                   = _filter(nextProps);
+
+			var tableScheme             = InterfaceFProperty.getTableScheme();
+			var queries                 = [];
+			var nextPropsByUId          = {};
+			var prevPropsByUId          = {};
+			var deletedPropsUId         = [];
+
+			// ---------------------------------
+			// Ссылки на свойства задачи
+			// ---------------------------------
+			nextProps.forEach(function(row, uid) {
+				if (uid = row.get("uid"))
+					nextPropsByUId[uid] = row;
+			});
+
+			// ---------------------------------
+			// Создание ссылок на свойства в базе.
+			// Создание списка удаленных, добавленных и обновленных свойств
+			// ---------------------------------
+			prevProps.forEach(function(row) {
+				var query;
+				var updateSets  = {};
+				var uid         = row.get("uid");
+				var nextRow     = nextPropsByUId[uid];
+
+				prevPropsByUId[uid] = row;
+
+				if (!nextRow)
+					return deletedPropsUId.push(+uid || -1);
+
+				row.getKeys().forEach(function(key) {
+					var fieldDecl = tableScheme.get(key);
+
+					if (!fieldDecl || fieldDecl.spec)
+						return;
+
+					if (nextRow.get(key) != row.get(key))
+						updateSets[key] = nextRow.get(key);
+				});
+
+				if (!Object.keys(updateSets).length)
+					return;
+
+				query = knex.queryBuilder();
+
+				query.into("Property");
+				query.update(updateSets);
+				query.where("uid", uid);
+
+				query = query.toString();
+
+				queries.push(query);
+			});
+
+			// ---------------------------------
+			// Запись новых свойств
+			// ---------------------------------
+			nextProps.forEach(function(row) {
+				if (prevPropsByUId[row.get("uid")])
+					return;
+
+				queries.push.apply(queries, [].concat(_this.mkDBInsertStr(row) || []));
+			});
+
+			// ---------------------------------
+
+			if (deletedPropsUId.length) {
+				query = knex.queryBuilder();
+
+				query.del();
+				query.from("Property");
+				query.where("uid", "in", deletedPropsUId);
+
+				query = query.toString();
+
+				queries.push(query);
+			}
+
+			return queries.join("; ");
+		},
+
+
 		"getUpsertOrDelFPropsQueryStrByDBRes": function(dbPropsRecs, insProperty) {
-			var self                    = this,
-				dbq                     = [],
-				selfFPropsRefByUId      = {},
-				deletedPropsUId         = [],
-				dbPropsRecsRefByUId     = {};
+			var query;
+			var _this                   = this;
+			var db                      = _this.getDBInstance();
+			var knex                    = db.getKnexInstance();
+			var queries                 = [];
+			var selfFPropsRefByUId      = {};
+			var deletedPropsUId         = [];
+			var dbPropsRecsRefByUId     = {};
 
 			insProperty = new ObjectA(insProperty);
 
 			// ---------------------------------
 			// Ссылки на свойства задачи
 			// ---------------------------------
-			self.setFProperty(
-				self.getFPropertyA().filter(function(row) {
+			_this.setFProperty(
+				_this.getFPropertyA().filter(function(row) {
 					if (!(row instanceof ObjectA))
 						return false;
 
@@ -589,52 +632,66 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			dbPropsRecs.forEach(function(row) {
 				row = new ObjectA(row);
 
-				var sets = [],
-					uid = row.get("uid"),
-					selfRow = selfFPropsRefByUId[uid];
+				var query;
+				var uid         = row.get("uid");
+				var selfRow     = selfFPropsRefByUId[uid];
+				var setFields   = {};
 
 				dbPropsRecsRefByUId[uid] = row;
 
 				if (!selfRow)
-					return deletedPropsUId.push(uid);
+					return deletedPropsUId.push(+uid || -1);
 
 				row.getKeys().forEach(function(k) {
-					var fldDecl = self._interfaceFPropertyFields.get(k);
+					var fldDecl = _this._interfaceFPropertyFields.get(k);
 
+					// Поля в таблице нет, или служебное
 					if (!fldDecl || fldDecl.spec)
 						return;
 
 					if (selfRow.get(k) != row.get(k))
-						sets.push(dbUtils.mkFld(k) + " = " + dbUtils.mkVal(selfRow.get(k), fldDecl));
+						setFields[k] = selfRow.get(k);
 				});
 
-				if (!sets.length)
+				// Нет обновленных полей
+				if (!Object.keys(setFields).length)
 					return;
 
-				dbq.push(""
-					+ "UPDATE Property"
-					+ " SET " + sets.join(", ")
-					+ " WHERE"
-					+   " [uid] = " + uid
-				);
+				query = knex.queryBuilder();
+
+				query.into("Property");
+				query.update(setFields);
+				query.where("uid", uid);
+
+				query = query.toString().replace(";select @@rowcount", "");
+
+				queries.push(query);
 			});
 
 			// ---------------------------------
 			// Запись новых свойств
 			// ---------------------------------
-			self.getFPropertyA().forEach(function(row) {
+			_this.getFPropertyA().forEach(function(row) {
 				if (dbPropsRecsRefByUId[row.get("uid")])
 					return;
 
-				dbq.push.apply(dbq, [].concat(InterfaceFProperty.mkDBInsertStr(row) || []));
+				queries.push.apply(queries, [].concat(_this.mkDBInsertStr(row) || []));
 			});
 
 			// ---------------------------------
 
-			if (deletedPropsUId.length)
-				dbq.push("DELETE FROM Property WHERE uid IN (" + deletedPropsUId.join(",") + ")");
+			if (deletedPropsUId.length) {
+				query = knex.queryBuilder();
 
-			return dbq.join("; ");
+				query.del();
+				query.from("Property");
+				query.where("uid", "in", deletedPropsUId);
+				query = query.toString();
+
+				queries.push(query);
+			}
+
+			return queries.join("; ");
 		}
 
 	}

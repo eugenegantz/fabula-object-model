@@ -15,6 +15,9 @@ var getContextDB = function() {
 };
 
 
+var voidFn = function() {};
+
+
 /**
  * Модель данных из базы о собственных филиалах
  * @constructor
@@ -53,21 +56,41 @@ CompanesDataModel.prototype = {
 	 * Инициализация данных из БД
 	 * */
 	"load": function(arg) {
-		if (typeof arg == "undefined") arg = Object.create(null);
+		arg = arg || {};
 
-		var callback = typeof arg.callback == "function" ? arg.callback : new Function(),
-			db = getContextDB.call(this),
-			self = this;
+		var _this       = this;
+		var callback    = arg.callback || voidFn;
+		var db          = getContextDB.call(this);
 
-		if (!db) return;
+		if (!db)
+			return Promise.reject("CompanesDataModel.load: !db");
 
-		db.dbquery({
-			"query": "SELECT CompanyID, CompanyName FROM Companes",
-			"callback": function(res) {
-				self.data = res.recs;
-				self.state = 1;
-				callback(self.data);
-			}
+		return Promise.resolve().then(function() {
+			return db.auth();
+
+		}).then(function() {
+			var knex = db.getKnexInstance();
+			var query = knex.queryBuilder();
+
+			query.select("CompanyID", "CompanyName ");
+			query.from("Companes");
+
+			query = query.toString();
+
+			return db.query({
+				"query": query,
+			});
+
+		}).then(function(res) {
+			_this.data = res.recs;
+			_this.state = 1;
+
+			callback(_this.data);
+
+		}).catch(function(err) {
+			callback(err);
+
+			return Promise.reject(err);
 		});
 	},
 

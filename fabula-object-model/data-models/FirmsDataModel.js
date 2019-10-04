@@ -14,15 +14,18 @@ var getContextDB = function() {
 	return DBModel.prototype.getInstance();
 };
 
-var dbUtils = require("./../utils/dbUtils"),
-	ObjectA = require("./ObjectA.js"),
-	voidFn = function() {};
+var _utils          = require("./../utils/utils");
+var dbUtils         = require("./../utils/dbUtils");
+var ObjectA         = require("./ObjectA.js");
+var IFabModule      = require("./IFabModule.js");
+var voidFn          = function() {};
 
 var FirmsDataModel = function() {
+	IFabModule.call(this);
 	this.init();
 };
 
-FirmsDataModel.prototype = {
+FirmsDataModel.prototype = _utils.createProtoChain(IFabModule.prototype, {
 
 	"init": function() {
 		this.dbModel = null;
@@ -43,60 +46,89 @@ FirmsDataModel.prototype = {
 	},
 
 
-	"sql": "SELECT * FROM firms"
-
-	+ ";"
-	+ " SELECT"
-	+       " pid,"
-	+       " extID,"
-	+       " property,"
-	+       " [value]"
-	+ " FROM property"
-	+ " WHERE"
-	+       " extClass = 'firms'",
+	"query": null,
 
 
 	"load": function(arg) {
 		arg = arg || {};
 
-		var callback = arg.callback || function() {},
-			db = getContextDB.call(this),
-			self = this;
+		var callback    = arg.callback || voidFn;
+		var db          = getContextDB.call(this);
+		var _this       = this;
 
-		return new Promise(function(resolve, reject) {
-			if (!db)
-				return reject('FirmsDataModel.load(): !db');
+		if (!db)
+			return reject('FirmsDataModel.load(): !db');
 
-			db.dbquery({
-				"query": self.sql,
-				"callback": function(dbres) {
-					resolve(dbres);
-				}
+		return Promise.resolve().then(function() {
+			return db.auth();
+
+		}).then(function() {
+			var query;
+			var knex = db.getKnexInstance();
+			var queryMain = knex.queryBuilder();
+			var queryProps = knex.queryBuilder();
+
+			// -----------------------------
+			// Основная таблица
+			// -----------------------------
+			queryMain.select(
+				  "FirmID",         "Tick",     "NDS",              "Parent_ID"
+				, "isFict",         "Type",     "Name",             "FullName"
+				, "UrName",         "City_ID",  "Selo_ID",          "Street_ID"
+				, "House",          "Flat",     "Build_ID",         "PostIndex"
+				, "PostAddress",    "Addr",     "EditPA",           "UrAddress"
+				, "Tel",            "Fax",      "Email",            "ChiefPosition"
+				, "ChiefName",      "ChiefSex", "ContactPosition",  "ContactName"
+				, "LastEdit",       "User",     "INN",              "OKPO"
+				, "KPP",            "Svid",     "Deleted",          "IsAgency"
+				, "Tags",           "Tel1",     "Tel2",             "Tel3"
+				, "DateNew",        "UserNew",  "DateEdit",         "UserEdit"
+				, "sha1"
+			);
+
+			queryMain.from("Firms");
+
+			// -----------------------------
+			// Свойства
+			// -----------------------------
+
+			queryProps.select("pid", "extID", "property", "value");
+			queryProps.from("Property");
+			queryProps.where("extClass", "firms");
+
+			// -----------------------------
+
+			query = queryMain.toString() + "; " + queryProps.toString();
+
+			// -----------------------------
+
+			return db.query({
+				"query": query
 			});
 
-		}).then(function(dbres) {
-			self.data = dbres[0].recs;
+		}).then(function(dbRes) {
+			_this.data = dbRes[0].recs;
 
-			self.dataRefByFirmId = {};
+			_this.dataRefByFirmId = {};
 
-			self.data.forEach(function(row) {
-				self.dataRefByFirmId[row.FirmID] = row;
+			_this.data.forEach(function(row) {
+				_this.dataRefByFirmId[row.FirmID] = row;
 
 				row.firmsPropertiesRef = [];
 			});
 
-			dbres[1].recs.forEach(function(row) {
-				var obj = self.dataRefByFirmId[row.extID];
+			dbRes[1].recs.forEach(function(row) {
+				var obj = _this.dataRefByFirmId[row.extID];
 
 				if (obj)
 					obj.firmsPropertiesRef.push(row);
 			});
 
-			self.dataRefByFirmId = new ObjectA(self.dataRefByFirmId);
+			_this.dataRefByFirmId = new ObjectA(_this.dataRefByFirmId);
 
-			self.state = 1;
+			_this.state = 1;
 
-			callback(null, self);
+			callback(null, _this);
 		});
 	},
 
@@ -104,62 +136,83 @@ FirmsDataModel.prototype = {
 	"loadFirm": function(arg) {
 		arg = arg || {};
 
-		var callback = arg.callback || voidFn,
-			db = getContextDB.call(this),
-			self = this;
+		var query;
+		var _this       = this;
+		var callback    = arg.callback || voidFn;
+		var db          = getContextDB.call(this);
 
-		return new Promise(function(resolve, reject) {
-			if (!arg.firmId)
-				return reject("FirmsDataModel().loadFirm(): arg.firmId is not specified");
+		if (!arg.firmId)
+			return Promise.reject("FirmsDataModel().loadFirm(): arg.firmId is not specified");
 
-			var query = ""
-				+ " SELECT *"
-				+ " FROM firms"
-				+ " WHERE"
-				+   " firmId = " + arg.firmId
+		// -----------------------------
 
-				+ "; SELECT"
-				+   "  pid"
-				+   ", extID"
-				+   ", property"
-				+   ", [value]"
-				+ " FROM property"
-				+ " WHERE"
-				+   " extClass = 'firms'"
-				+   " AND extId = '" + arg.firmId + "'";
+		return Promise.resolve().then(function() {
+			return db.auth();
 
-			db.dbquery({
-				"query": query,
-				"callback": function(dbres, err) {
-					if (err = dbUtils.fetchErrStrFromRes(dbres))
-						return reject(err);
+		}).then(function() {
+			var knex        = db.getKnexInstance();
+			var queryMain   = knex.queryBuilder();
+			var queryProps  = knex.queryBuilder();
 
-					resolve(dbres);
-				}
-			});
+			// -----------------------------
+			// Основная таблица
+			// -----------------------------
+			queryMain.select(
+				"FirmID",         "Tick",     "NDS",              "Parent_ID"
+				, "isFict",         "Type",     "Name",             "FullName"
+				, "UrName",         "City_ID",  "Selo_ID",          "Street_ID"
+				, "House",          "Flat",     "Build_ID",         "PostIndex"
+				, "PostAddress",    "Addr",     "EditPA",           "UrAddress"
+				, "Tel",            "Fax",      "Email",            "ChiefPosition"
+				, "ChiefName",      "ChiefSex", "ContactPosition",  "ContactName"
+				, "LastEdit",       "User",     "INN",              "OKPO"
+				, "KPP",            "Svid",     "Deleted",          "IsAgency"
+				, "Tags",           "Tel1",     "Tel2",             "Tel3"
+				, "DateNew",        "UserNew",  "DateEdit",         "UserEdit"
+				, "sha1"
+			);
 
-		}).then(function(dbres) {
-			var prevFirmRow,
-				firmRow = dbres[0].recs[0];
+			queryMain.from("Firms");
+			queryMain.where("firmId", +arg.firmId);
+
+
+			// -----------------------------
+			// Свойства
+			// -----------------------------
+
+			queryProps.select("pid", "extID", "property", "value");
+			queryProps.from("Property");
+			queryProps.where("extClass", "firms");
+			queryProps.andWhere("extId", arg.firmId + "");
+
+			// -----------------------------
+
+			query = queryMain.toString() + "; " + queryProps.toString();
+
+			return db.query({ "query": query });
+
+		}).then(function(dbRes) {
+			var prevFirmRow;
+			var firmRow = dbRes[0].recs[0];
 
 			if (!firmRow)
 				return;
 
 			firmRow.firmsPropertiesRef = [];
 
-			dbres[1].recs.forEach(function(row) {
+			dbRes[1].recs.forEach(function(row) {
 				firmRow.firmsPropertiesRef.push(row);
 			});
 
-			if (prevFirmRow = self.dataRefByFirmId.get(firmRow.FirmID + '')) {
+			if (prevFirmRow = _this.dataRefByFirmId.get(firmRow.FirmID + '')) {
 				Object.assign(prevFirmRow, firmRow);
 
 			} else {
-				self.data.push(firmRow);
-				self.dataRefByFirmId.set(firmRow.FirmID + '', firmRow);
+				_this.data.push(firmRow);
+				_this.dataRefByFirmId.set(firmRow.FirmID + '', firmRow);
 			}
 
-			callback(null, self);
+			callback(null, _this);
 
 		}).catch(function(err) {
 			callback(err);
@@ -173,6 +226,6 @@ FirmsDataModel.prototype = {
 		return this.data;
 	}
 
-};
+});
 
 module.exports = FirmsDataModel;

@@ -400,26 +400,26 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"insert": function(arg) {
 			arg = arg || {};
 
-			var self = this,
-				callback = arg.callback || emptyFn;
+			var _this       = this;
+			var callback    = arg.callback || emptyFn;
 
-			self.trigger("before-insert");
+			_this.trigger("before-insert");
 
-			return self.exists().then(function(isEx) {
+			return _this.exists().then(function(isEx) {
 				if (isEx)
 					return Promise.reject("FirmDataModel.insert(): firm already exists");
 
 			}).then(function() {
-				return self._promiseInsertUsr();
+				return _this._promiseInsertUsr();
 
 			}).then(function() {
-				return self._promiseGetInsertedId();
+				return _this._promiseGetInsertedId();
 
 			}).then(function() {
 				return new Promise(function(resolve, reject) {
-					var firmId = self.get("firmId", null, !1);
+					var firmId = _this.get("firmId", null, !1);
 
-					var query = self.getUpsertOrDelFPropsQueryStrByDBRes([], {
+					var query = _this.getUpsertOrDelFPropsQueryStrByDBRes([], {
 						"pid": firmId,
 						"extClass": "FIRMS",
 						"extId": firmId
@@ -428,9 +428,9 @@ FirmDataModel.prototype = utils.createProtoChain(
 					if (!query)
 						return resolve();
 
-					self.getDBInstance().dbquery({
+					_this.getDBInstance().dbquery({
 						"dbworker": " ",
-						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins-prop" }),
+						"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins-prop" }),
 						"query": query,
 						"callback": function(dbres, err) {
 							if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -443,22 +443,22 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 			}).then(function() {
 				return Promise.all(
-					self.getBranch().map(function(firm) {
-						firm.set("parent_id", self.get("FirmId"));
+					_this.getBranch().map(function(firm) {
+						firm.set("parent_id", _this.get("FirmId"));
 
 						return firm.save();
 					})
 				);
 
 			}).then(function() {
-				self.clearChanged();
+				_this.clearChanged();
 
-				self.trigger("after-insert");
+				_this.trigger("after-insert");
 
-				callback(self, null);
+				callback(_this, null);
 
 			}).catch(function(err) {
-				callback(self, err);
+				callback(_this, err);
 
 				return Promise.reject(err);
 			});
@@ -475,84 +475,78 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"update": function(arg) {
 			arg = arg || {};
 
-			var self = this,
-				db = this.getDBInstance(),
-				callback = arg.callback || emptyFn;
+			var _this       = this;
+			var db          = this.getDBInstance();
+			var knex        = db.getKnexInstance();
+			var callback    = arg.callback || emptyFn;
 
-			self.trigger("before-update");
+			_this.trigger("before-update");
 
-			return self.exists().then(function(isEx) {
+			return _this.exists().then(function(isEx) {
 				if (!isEx)
 					return Promise.reject("FirmDataModel.update(): firm do not exists");
 
 			}).then(function() {
-				return self._promiseUpdateUsr()
+				return _this._promiseUpdateUsr()
 
 			}).then(function() {
-				return new Promise(function(resolve, reject) {
-					db.dbquery({
-						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.upd0" }),
-						"dbworker": " ",
-						"query": ""
-						+ " SELECT uid, [value], property, extClass, extId"
-						+ " FROM Property"
-						+ " WHERE"
-						+   " extClass = 'FIRMS'"
-						+   " AND extId = '" + self.get('firmId') + "'",
-						"callback": function(dbres, err) {
-							if (err = dbUtils.fetchErrStrFromRes(dbres))
-								return reject(err);
+				var query = knex.queryBuilder();
 
-							resolve(dbres);
-						}
-					});
+				query.select("uid", "value", "property", "extClass", "extId");
+				query.from("Property");
+				query.where("extClass", "FIRMS");
+				query.andWhere("extId", _this.get("firmId") + "");
 
+				query = query.toString();
+
+				return db.query({
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.upd0" }),
+					"dbworker": " ",
+					"query": query
 				});
 
 			}).then(function(dbres) {
-				return new Promise(function(resolve, reject) {
-					var firmId = self.get("firmId", null, !1);
+				var firmId = _this.get("firmId", null, !1);
 
-					var query = self.getUpsertOrDelFPropsQueryStrByDBRes(dbres.recs, {
-						"pid": firmId,
-						"extClass": "FIRMS",
-						"extId": firmId
-					});
+				var query = _this.getUpsertOrDelFPropsQueryStrByDBRes(dbres.recs, {
+					"pid": firmId,
+					"extClass": "FIRMS",
+					"extId": firmId
+				});
 
-					if (!query)
-						return resolve();
+				if (!query)
+					return resolve();
 
-					self.getDBInstance().dbquery({
-						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.upd1" }),
-						"dbworker": " ",
-						"query": query,
-						"callback": function(dbres, err) {
-							if (err = dbUtils.fetchErrStrFromRes(dbres))
-								return reject(err);
+				_this.getDBInstance().dbquery({
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.upd1" }),
+					"dbworker": " ",
+					"query": query,
+					"callback": function(dbres, err) {
+						if (err = dbUtils.fetchErrStrFromRes(dbres))
+							return reject(err);
 
-							resolve();
-						}
-					});
+						resolve();
+					}
 				});
 
 			}).then(function() {
 				return Promise.all(
-					self.getBranch().map(function(firm) {
-						firm.set("parent_id", self.get("FirmId"));
+					_this.getBranch().map(function(firm) {
+						firm.set("parent_id", _this.get("FirmId"));
 
 						return firm.save();
 					})
 				);
 
 			}).then(function() {
-				self.clearChanged();
+				_this.clearChanged();
 
-				self.trigger("after-update");
+				_this.trigger("after-update");
 
-				callback(self, null);
+				callback(_this, null);
 
 			}).catch(function(err) {
-				callback(self, err);
+				callback(_this, err);
 
 				return Promise.reject(err);
 			});
@@ -569,38 +563,44 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"rm": function(arg) {
 			arg = arg || {};
 
-			var self = this,
-				callback = arg.callback || emptyFn;
+			var _this       = this;
+			var callback    = arg.callback || emptyFn;
 
-			return new Promise(function(resolve, reject) {
-				var db = self.getDBInstance(),
-					id = self.get("firmId");
+			return Promise.resolve().then(function() {
+				var query;
+				var db              = _this.getDBInstance();
+				var id              = _this.get("firmId");
+				var knex            = db.getKnexInstance();
+				var queryProps      = knex.queryBuilder();
+				var queryMain       = knex.queryBuilder();
 
 				if (!id)
-					return reject("FirmDataModel.rm(): !usrId");
+					return Promise.reject("FirmDataModel.rm(): !usrId");
 
-				db.dbquery({
+				queryProps.del();
+				queryMain.from("Property");
+				queryProps.where("extClass", "FIRMS");
+				queryProps.andWhere("extId", id + "");
+
+				queryMain.del();
+				queryMain.from("Firms");
+				queryMain.where("firmId", id);
+
+				query = queryProps.toString() + "; " + queryMain.toString();
+
+				return db.query({
 					"dbworker": " ",
 
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.rm" }),
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.rm" }),
 
-					"query": ""
-					+ "DELETE FROM Property WHERE extClass = 'FIRMS' AND extId = '" + id+ "" + "'"
-					+ "; DELETE FROM firms WHERE firmId = " + id,
-
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
-
-						resolve();
-					}
+					"query": query,
 				});
 
 			}).then(function() {
-				callback(self, null)
+				callback(_this, null)
 
-			}).catch(function(err) {
-				callback(self, err);
+			}).catch(function() {
+				callback(_this, err);
 
 				return Promise.reject(err);
 			});
@@ -617,34 +617,38 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"exists": function(arg) {
 			arg = arg || {};
 
-			var self = this,
-				callback = arg.callback || emptyFn,
-				id = self.get("firmId"),
-				db = self.getDBInstance();
+			var _this       = this;
+			var callback    = arg.callback || emptyFn;
+			var id          = _this.get("firmId");
+			var db          = _this.getDBInstance();
 
-			return new Promise(function(resolve, reject) {
+			return Promise.resolve().then(function() {
 				if (utils.isEmpty(db))
-					return reject("FirmDataModel.exists(): firmId is empty");
+					return Promise.reject("FirmDataModel.exists(): firmId is empty");
 
-				db.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.exs" }),
-					"query": ""
-					+ " SELECT email"
-					+ " FROM firms"
-					+ " WHERE"
-					+   " firmId = " + id,
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres)) {
-							callback(err);
+				var knex    = db.getKnexInstance();
+				var query   = knex.queryBuilder();
 
-							return reject(err);
-						}
+				query.select("email");
+				query.from("Firms");
+				query.where("firmId", id);
 
-						callback(self, null, !!dbres.recs.length);
+				query = query.toString();
 
-						resolve(!!dbres.recs.length);
-					}
+				return db.query({
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.exs" }),
+					"query": query,
 				});
+
+			}).then(function(dbres) {
+				callback(_this, null, !!dbres.recs.length);
+
+				return !!dbres.recs.length;
+
+			}).catch(function(err) {
+				callback(_this, err);
+
+				return Promise.reject(err);
 			});
 		}
 
