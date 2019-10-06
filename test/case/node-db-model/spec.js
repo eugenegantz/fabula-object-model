@@ -12,7 +12,7 @@ describe("DBModel", function() {
 
 	it("DBModel.dbquery / SELECT NOW();", function(done) {
 		db.dbquery({
-			"query": "SELECT NOW();",
+			"query": "SELECT CURRENT_TIMESTAMP;",
 			"callback": (dbres)=> {
 				if (dbres.recs.length != 1) {
 					throw new Error("dbres.recs.length != 1");

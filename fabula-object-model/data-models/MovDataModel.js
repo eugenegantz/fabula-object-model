@@ -358,7 +358,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				var query = ""
 					// Записи движения ТиУ
-					+ " SELECT *, Format(GSDate,'yyyy-mm-dd Hh:Nn:Ss') AS GSDate"
+					+ " SELECT *, Format(GSDate,'yyyy-MM-dd hh:mm:ss') AS GSDate"
 					+ " FROM Movement "
 					+ " WHERE"
 					+   "    mmid = " + mmid
@@ -508,7 +508,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				values = [],
 				fields = [];
 
-			movFieldsDecl.get("gsdate").value = "NOW()";
+			movFieldsDecl.get("gsdate").value = "CURRENT_TIMESTAMP";
 
 			movFieldsDecl.getKeys().forEach(function(key) {
 				var val,
@@ -551,7 +551,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				// сравнить результаты округления
 				if (dbUtils.numberTypes[fldDecl.type]) {
 					return cond.push(
-						"-INT(-" + dbUtils.mkFld(key) + ")"
+						"CAST(" + dbUtils.mkFld(key) + " AS INT)"
 						+ " = "
 						+ dbUtils.mkVal(Math.ceil(val), fldDecl)
 					);

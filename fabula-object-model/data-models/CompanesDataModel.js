@@ -59,10 +59,20 @@ CompanesDataModel.prototype = {
 			db = getContextDB.call(this),
 			self = this;
 
-		if (!db) return;
+		if (!db)
+			return;
+
+		var query = ""
+			+ " SELECT"
+			+   "   RIGHT(gsId, 2) AS CompanyID"
+			+   " , gsName AS CompanyName"
+			+   " FROM Gands"
+			+   " WHERE"
+			+       "     LEFT(gsId, 6) = 'SYСПФи'"
+			+       " AND LEN(gsId) > 6";
 
 		db.dbquery({
-			"query": "SELECT CompanyID, CompanyName FROM Companes",
+			"query": query,
 			"callback": function(res) {
 				self.data = res.recs;
 				self.state = 1;

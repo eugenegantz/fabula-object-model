@@ -178,17 +178,17 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		_mDocNewIdLock: {},
 
 
-		isLockedDocId(id) {
+		isLockedDocId: function(id) {
 			return !!this._mDocNewIdLock[id];
 		},
 
 
-		lockDocId(id) {
+		lockDocId: function(id) {
 			this._mDocNewIdLock[id] = 1;
 		},
 
 
-		unlockDocId(id) {
+		unlockDocId: function(id) {
 			delete this._mDocNewIdLock[id];
 		},
 
@@ -633,13 +633,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						query = ""
 							+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
 							+ " VALUES ("
-							+   " NOW()"
+							+   " CURRENT_TIMESTAMP"
 							+   " ," + "'Фаза: " + (prevFlag || "") + " &rArr; " + nextFlag + "'"
 							+   " ," + 999
 							+   " ," + id
 							+   " ," + "'" + mov.get("doc1") + "'"
-							+   " ," + "FORMAT(TIME(),'HH:MM')"
-							+   " ," + "NOW() & ' " + utils.string.random(3) + "'"
+							+   " ," + "FORMAT(CURRENT_TIMESTAMP, 'hh:mm')"
+							+   " ," + "CONCAT(CURRENT_TIMESTAMP, '" + utils.string.random(3) + "')"
 							+   " ," + 0
 							+ " )";
 
@@ -903,14 +903,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var query = ""
 					+ " SELECT"
 					+   "  *"
-					+   ", Format(RegDate,'yyyy-mm-dd Hh:Nn:Ss') AS RegDate"
+					+   ", Format(RegDate,'yyyy-MM-dd hh:mm:ss') AS RegDate"
 					+ " FROM DOCS"
 					+ " WHERE " + _where
 
 					+ "; SELECT"
 					+   "  *"
-					+   ", Format(gsDate,'yyyy-mm-dd Hh:Nn:Ss') AS gsDate"
-					+   ", Format(gsDate2,'yyyy-mm-dd Hh:Nn:Ss') AS gsDate2"
+					+   ", Format(gsDate,'yyyy-MM-dd hh:mm:ss') AS gsDate"
+					+   ", Format(gsDate2,'yyyy-MM-dd hh:mm:ss') AS gsDate2"
 					+ " FROM Movement"
 					+ " WHERE"
 					+   " doc1 IN ("
@@ -1154,7 +1154,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				var query = "" +
 					"  SELECT docId FROM Docs" +
-					"; SELECT RIGHT(YEAR(DATE()), 1) AS _year";
+					"; SELECT RIGHT(FORMAT(CURRENT_TIMESTAMP, 'yyyy'), 1) AS _year";
 
 				return dbawws.query({
 					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.n-doc-id" }),
@@ -1351,7 +1351,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				"Status":           { "type": "S" },
 				"DocType":          { "type": "S" },
 				"User":             { "type": "S" },
-				"RegDate":          { "type": "D", "value": "NOW()" },
+				"RegDate":          { "type": "D", "value": "CURRENT_TIMESTAMP" },
 				"DateAVR":          { "type": "D" },
 				"DateAcc":          { "type": "D" },
 				"TxtAcc":           { "type": "S" },
@@ -1385,7 +1385,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				"IsDeleted":        { "type": "N" },
 				"DateNew":          { "type": "D" },
 				"UserNew":          { "type": "S" },
-				"DateEdit":         { "type": "D", "value": "NOW()" },
+				"DateEdit":         { "type": "D", "value": "CURRENT_TIMESTAMP" },
 				"UserEdit":         { "type": "S" },
 				"TextAVR":          { "type": "S" },
 				"Addr":             { "type": "S" },

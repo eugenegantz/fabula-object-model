@@ -16,7 +16,7 @@ describe("FirmsDataModel", function() {
 			var isPromiseDone = false,
 				isCallbackDone = false,
 
-				done = () => {
+				done = function() {
 					isCallbackDone && isPromiseDone && d();
 				};
 

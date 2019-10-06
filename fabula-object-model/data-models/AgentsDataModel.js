@@ -66,14 +66,27 @@ AgentsDataModel.prototype = utils.createProtoChain(IFabModule.prototype, {
 
 		if (!db) return;
 
-		db.dbquery({
+		var query = ""
+			+ " SELECT"
+			+   "   gsCodeNumber   AS AgentID"
+			+   " , importName     AS FIO"
+			+   " , gsName         AS NameShort"
+			+   " , importName     AS NameFull"
+			+   " , gsCop          AS [User]"
+			+ " FROM Gands"
+			+ " WHERE"
+			+   " LEFT(GSID, 4) = 'SYСо'";
+
+		return db.query({
 			"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-ag.load" }),
-			"query": "SELECT AgentID, FIO, NameShort, NameFull, User FROM Agents",
-			"callback": function(res) {
-				self.data = res.recs;
-				self.state = 1;
-				callback(null, self, self.data);
-			}
+			"query": query
+		}).then(function(res) {
+			self.data = res.recs;
+			self.state = 1;
+			callback(null, self, self.data);
+
+		}).catch(function(err) {
+			callback(err, self)
 		});
 	},
 

@@ -79,12 +79,12 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 					return str + ""
 						+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
 						+ " SELECT"
-						+   " NOW()"
-						+   " ," + "'Фаза: ' & mmFlag & ' &rArr; " + nextMMFlag + (msg ? "<br>" + msg : "") + "'"
+						+   " CURRENT_TIMESTAMP"
+						+   " ," + "CONCAT('Фаза: ', mmFlag, ' &rArr; ', '" + nextMMFlag + "', '" + (msg ? "<br>" + msg : "") + "')"
 						+   " ," + agent
 						+   " ," + "[mmid]"
 						+   " ," + "[doc1]"
-						+   " ," + "FORMAT(TIME(),'HH:MM')"
+						+   " ," + "FORMAT(CURRENT_TIMESTAMP,'hh:mm')"
 						+   " ," + "'" + keyRandStr + "'"
 						+   " ," + idx
 						+ " FROM Movement"
@@ -96,12 +96,12 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 				return str + ""
 					+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
 					+ " SELECT "
-					+   " NOW()"
+					+   " CURRENT_TIMESTAMP"
 					+   " ," + "'" + msg + "'"
 					+   " ," + agent
 					+   " ," + "[mmid]"
 					+   " ," + "[doc1]"
-					+   " ," + "FORMAT(TIME(),'HH:MM')"
+					+   " ," + "FORMAT(CURRENT_TIMESTAMP,'hh:mm')"
 					+   " ," + "'" + keyRandStr + "'"
 					+   " ," + idx
 					+ " FROM Movement"

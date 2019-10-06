@@ -266,7 +266,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					+ " WHERE"
 					+   " extClass = 'FIRMS'"
 					+   " AND extId IN ("
-					+       _query.replace("_fld_", "CSTR(firmId)")
+					+       _query.replace("_fld_", "CAST(firmId AS VARCHAR)")
 					+   ")";
 
 				return db.query({

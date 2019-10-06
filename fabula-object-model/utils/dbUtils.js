@@ -38,16 +38,16 @@ module.exports = {
 
 		// Если поле допускает запись пустых строк
 		if ("" === val && fldDecl.emptyString)
-			return "\"\"";
+			return "''";
 
 		if (utils.isEmpty(val))
 			return "NULL";
 
 		if (this.stringTypes[type])
-			return "\"" + this.secureStr(val).slice(0, len || 255) + "\"";
+			return "'" + this.secureStr(val).slice(0, len || 255) + "'";
 
 		if (this.dateTypes[type])
-			return "CDate(\"" + this.secureDate(val) + "\")";
+			return "CAST('" + this.secureDate(val) + "' AS DATETIME)";
 
 		if (this.booleanTypes[type])
 			return val ? "-1" : "0";
