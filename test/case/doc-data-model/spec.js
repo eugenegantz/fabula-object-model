@@ -1,8 +1,9 @@
-describe("DocDataModel", function() {
+describe.only("DocDataModel", function() {
 	var fom;
 	var stand;
 	var db;
 	var gands;
+	var knex;
 
 		// 2015/01/01 - 1 янв. 2015
 	var timestamp = 1420056000000;
@@ -111,26 +112,22 @@ describe("DocDataModel", function() {
 	}
 
 
-	before(function(done) {
+	before(function() {
 		this.timeout(5000);
 
 		fom = globTestUtils.getFabulaObjectModel();
 		gands = fom.create("GandsDataModel");
 		db = fom.create("DBModel");
 
-		if (!gands.state) {
-			gands.sql = 'SELECT * FROM gands';
+		return db.auth().then(function() {
+			knex = db.getKnexInstance();
 
-			gands.load({
-				callback: function() {
-					done();
-				}
-			});
+			if (!gands.state) {
+				gands.query = knex("Gands").select("*");
 
-			return;
-		}
-
-		done();
+				return gands.load();
+			}
+		});
 	});
 
 
@@ -398,7 +395,7 @@ describe("DocDataModel", function() {
 	});
 
 
-	describe(".update()", function() {
+	describe.only(".update()", function() {
 
 		describe("Изменились только поля заявки", function() {
 			this.timeout(10000);
@@ -579,7 +576,7 @@ describe("DocDataModel", function() {
 			});
 		});
 
-		describe("Изменились поля заявки и подч. задачи (поле doc)", function() {
+		describe.only("Изменились поля заявки и подч. задачи (поле doc)", function() {
 			this.timeout(6000);
 
 			var doc;

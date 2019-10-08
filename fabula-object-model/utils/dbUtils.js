@@ -32,7 +32,7 @@ module.exports = {
 	},
 
 
-	"mkVal": function(val, fldDecl) {
+	"_mkValOld": function(val, fldDecl) {
 		var type = fldDecl.type,
 			len = fldDecl.length;
 
@@ -51,6 +51,42 @@ module.exports = {
 
 		if (this.booleanTypes[type])
 			return val ? "-1" : "0";
+
+		return val + "";
+	},
+
+
+	"mkVal": function(val, fldDecl, arg) {
+		var db = arg.db;
+		var knex = db.getKnexInstance();
+		var type = fldDecl.type;
+		var len = fldDecl.length;
+
+		// Если поле допускает запись пустых строк
+		if ("" === val && fldDecl.emptyString)
+			return "";
+
+		if (utils.isEmpty(val))
+			return null;
+
+		if (this.stringTypes[type])
+			return this.secureStr(val).slice(0, len || 255);
+
+		if (this.dateTypes[type]) {
+			return knex.functionHelper.cast(knex.functionHelper.stringify(this.secureDate(val)), "datetime");
+		}
+
+		if (this.booleanTypes[type])
+			return val ? knex.functionHelper.true() : knex.functionHelper.false();
+
+		if (this.numberTypes[type]) {
+			val = +val;
+
+			if (isNaN(val))
+				return null;
+
+			return val;
+		}
 
 		return val + "";
 	},
@@ -161,9 +197,13 @@ module.exports = {
 	"createDeleteQueryString": function(arg) {
 		arg = arg || {};
 
+		var query;
+		var db              = arg.db;
+		var knex            = db.getKnexInstance();
 		var _this           = this;
 		var fields          = arg.fields;
 		var tableScheme     = arg.tableScheme;
+		var tableName       = arg.tableName;
 		var toDelete        = [];
 		var primaryDecl     = _this.getTablePrimaryFieldDecl(tableScheme);
 
@@ -181,7 +221,14 @@ module.exports = {
 		if (!toDelete.length)
 			return "";
 
-		return _this.mkFld(primaryDecl.key) + " IN (" + toDelete + ")"
+		query = knex.queryBuilder();
+		query.del();
+		query.from(tableName);
+		query.where(primaryDecl.key, "in", toDelete);
+
+		return query.toString();
+
+		// return _this.mkFld(primaryDecl.key) + " IN (" + toDelete + ")"
 	},
 
 
@@ -198,13 +245,15 @@ module.exports = {
 	"createUpdateFieldsQueryString" : function(arg) {
 		var _this           = this;
 
+		var _update         = {};
+		var db              = arg.db;
+		var knex            = db.getKnexInstance();
 		var tableName       = arg.tableName;
 		var tableScheme     = arg.tableScheme;
 		var prevFields      = ObjectA.create(arg.prevFields || {});
 		var nextFields      = ObjectA.create(arg.nextFields || {});
 
 		var primaryKey      = _this.getTablePrimaryFieldDecl(tableScheme).key;
-		var diff            = [];
 
 		nextFields.getKeys().forEach(function(key) {
 			var type;
@@ -222,16 +271,21 @@ module.exports = {
 			if (!_this._isChanged(prevFields.get(key), nextFields.get(key), fieldDecl))
 				return;
 
-			diff.push(
-				_this.mkFld(key) + " = " +
-				_this.mkVal(nextFields.get(key), fieldDecl)
-			);
+			_update[key] = _this.mkVal(nextFields.get(key), fieldDecl, { "db": db });
 		});
 
-		if (!diff.length)
+		if (!Object.keys(_update).length)
 			return "";
 
-		return "UPDATE " + tableName + " SET " + diff.join(", ") + " WHERE [" + primaryKey + "] = " + nextFields.get(primaryKey);
+		var query = knex.queryBuilder();
+
+		query.into(tableName);
+		query.update(_update);
+		query.where(primaryKey, nextFields.get(primaryKey));
+
+		return query.toString();
+
+		// return "UPDATE " + tableName + " SET " + diff.join(", ") + " WHERE [" + primaryKey + "] = " + nextFields.get(primaryKey);
 	},
 
 
@@ -247,12 +301,14 @@ module.exports = {
 	"createInsertFieldsQueryString": function(arg) {
 		var nextFields  = ObjectA.create(arg.nextFields || {});
 
+		var query;
 		var _this       = this;
+		var db          = arg.db;
+		var knex        = db.getKnexInstance();
 		var tableScheme = arg.tableScheme;
 		var tableName   = arg.tableName;
 		var primaryKey  = this.getTablePrimaryFieldDecl(tableScheme).key;
-		var keys        = [];
-		var values      = [];
+		var _insert     = {};
 
 		nextFields.getKeys().forEach(function(key) {
 			var fieldDecl = tableScheme.get(key);
@@ -263,14 +319,19 @@ module.exports = {
 			if (primaryKey == key)
 				return;
 
-			keys.push(_this.mkFld(key));
-			values.push(_this.mkVal(nextFields.get(key), fieldDecl));
+			_insert[key] = _this.mkVal(nextFields.get(key), fieldDecl, { "db": db });
 		});
 
-		if (!values.length)
+		if (!Object.keys(_insert).length)
 			return "";
 
-		return "INSERT INTO " + tableName + " (" + keys.join(", ") + ") VALUES (" + values.join(", ") + ")";
+		query = knex.queryBuilder();
+		query.insert(_insert);
+		query.into(tableName);
+
+		return query.toString();
+
+		// return "INSERT INTO " + tableName + " (" + keys.join(", ") + ") VALUES (" + values.join(", ") + ")";
 	},
 
 

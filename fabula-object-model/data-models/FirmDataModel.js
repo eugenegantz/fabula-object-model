@@ -82,34 +82,34 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"_promiseInsertUsr": function(arg) {
 			arg = arg || {};
 
-			var self = this;
+			var _this = this;
 
-			return new Promise(function(resolve, reject) {
-				var db = self.getDBInstance(),
-					values = [],
-					fields = [];
+			return Promise.resolve().then(function() {
+				var query;
+				var db          = _this.getDBInstance();
+				var knex        = db.getKnexInstance();
+				var _insert     = {};
 
-				self.getChanged().forEach(function(key) {
-					var fldDecl = self._firmsTableFldDecl.get(key || ""),
-						val = self.get(key, null, !1);
+				_this.getChanged().forEach(function(key) {
+					var fldDecl = _this._firmsTableFldDecl.get(key || ""),
+						val = _this.get(key, null, !1);
 
 					if (!fldDecl || utils.isEmpty(val))
 						return;
 
-					fields.push(dbUtils.mkFld(key));
-					values.push(dbUtils.mkVal(val, fldDecl));
+					_insert[key] = val;
 				});
 
-				db.dbquery({
-					"dbworker": " ",
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins" }),
-					"query": "INSERT INTO firms (" + fields.join(",") + ") VALUES (" + values.join(",") + ")",
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
+				query = knex.queryBuilder();
+				query.insert(_insert);
+				query.into("Firms");
 
-						resolve();
-					}
+				query = query.toString();
+
+				return db.query({
+					"dbworker": " ",
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins" }),
+					"query": query
 				});
 			});
 		},
@@ -125,40 +125,42 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"_promiseGetInsertedId": function(arg) {
 			arg = arg || {};
 
-			var self = this;
+			var _this = this;
 
-			return new Promise(function(resolve, reject) {
-				var db = self.getDBInstance(),
-					changed = self.getChanged(),
-					cond = [];
+			return Promise.resolve().then(function() {
+				var db          = _this.getDBInstance();
+				var knex        = db.getKnexInstance();
+				var changed     = _this.getChanged();
+
+				var query = knex.queryBuilder();
+				query.from("Firms");
+				query.select("firmId");
 
 				changed.forEach(function(key) {
-					var fldDecl = self._firmsTableFldDecl.get(key || ""),
-						val = self.get(key, null, !1);
+					var fldDecl = _this._firmsTableFldDecl.get(key || ""),
+						val = _this.get(key, null, !1);
 
 					if (!fldDecl || utils.isEmpty(val))
 						return;
 
-					cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl));
+					query.andWhere(key, val);
 				});
 
-				db.dbquery({
+				query = query.toString();
+
+				return db.query({
 					"dbworker": " ",
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins-id" }),
-					"query": "SELECT firmId FROM firms WHERE " + cond.join(" AND "),
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins-id" }),
+					"query": query,
+				}).then(function(dbres) {
+					if (!dbres.recs.length)
+						return Promise.reject('FirmDataModel._promiseGetInsertedId(): failed to get new "firmId"');
 
-						if (!dbres.recs.length)
-							return reject('FirmDataModel._promiseGetInsertedId(): failed to get new "firmId"');
+					var id = dbres.recs[0].firmId;
 
-						var id = dbres.recs[0].firmId;
+					_this.set("firmId", id);
 
-						self.set("firmId", id);
-
-						resolve(id);
-					}
+					return id;
 				});
 			});
 		},
@@ -174,40 +176,44 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"_promiseUpdateUsr": function(arg) {
 			arg = arg || {};
 
-			var self = this;
+			var _this = this;
 
-			return new Promise(function(resolve, reject) {
-				var sealedFLd = new ObjectA({ "firmId": 1 }),
-					db = self.getDBInstance(),
-					changed = self.getChanged(),
-					values = [];
+			return Promise.resolve().then(function() {
+				var sealedFields    = new ObjectA({ "firmId": 1 });
+				var db              = _this.getDBInstance();
+				var knex            = db.getKnexInstance();
+				var changed         = _this.getChanged();
+				var _update         = {};
 
 				if (!changed.length)
-					return resolve();
+					return Promise.resolve();
+
+				var query = knex.queryBuilder();
+
+				query.into("Firms");
+				query.where("firmId", +_this.get("firmId"));
 
 				changed.forEach(function(key) {
-					var dbFldDecl = self._firmsTableFldDecl.get(key || ""),
-						val = self.get(key, null, !1);
+					var dbFldDecl = _this._firmsTableFldDecl.get(key || ""),
+						val = _this.get(key, null, !1);
 
-					if (!dbFldDecl || utils.isEmpty(val) || sealedFLd.get(key))
+					if (!dbFldDecl || utils.isEmpty(val) || sealedFields.get(key))
 						return;
 
-					values.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, dbFldDecl));
+					_update[key] = val;
 				});
 
-				if (!values.length)
-					return resolve();
+				if (!Object.keys(_update).length)
+					return Promise.resolve();
 
-				db.dbquery({
+				query.update(_update);
+
+				query = query.toString();
+
+				return db.query({
 					"dbworker": " ",
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.upd" }),
-					"query": "UPDATE firms SET " + values.join(", ") + " WHERE firmId = " + self.get("firmId"),
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
-
-						resolve();
-					}
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.upd" }),
+					"query": query,
 				});
 			});
 		},
@@ -224,14 +230,22 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"load": function(arg) {
 			arg = arg || {};
 
-			var self            = this;
-			var db              = self.getDBInstance();
+			var subQuery;
+			var queryProps;
+			var queryMain;
+			var _this           = this;
+			var db              = _this.getDBInstance();
+			var knex            = db.getKnexInstance();
 			var callback        = arg.callback || emptyFn;
-			var cond            = [];
+			var hasCond         = false;
+
+			subQuery = knex.queryBuilder();
+			subQuery.select("firmId");
+			subQuery.from("Firms");
 
 			["firmId", "tel3", "tel2", "tel1", "tel", "email"].forEach(function(fld) {
-				var fieldDecl   = self._firmsTableFldDecl.get(fld);
-				var val         = self.get(fld);
+				var fieldDecl   = _this._firmsTableFldDecl.get(fld);
+				var val         = _this.get(fld);
 
 				if (!fieldDecl)
 					return;
@@ -239,57 +253,51 @@ FirmDataModel.prototype = utils.createProtoChain(
 				if (!val)
 					return;
 
-				cond.push(dbUtils.mkFld(fld) + " = " + dbUtils.mkVal(val, fieldDecl));
+				hasCond = true;
+
+				subQuery.andWhere(fld, val);
 			});
 
 			return Promise.resolve().then(function() {
-				if (!cond.length)
+				if (!hasCond)
 					return Promise.reject("FirmDataModel.load(): !cond.length");
 
-				var _query = ""
-					+ " SELECT _fld_"
-					+ " FROM firms AS t_firms"
-					+ " WHERE " + cond.join(" OR ");
+				queryMain = subQuery.clone();
+				queryMain.clearSelect();
+				queryMain.select("*");
+				queryMain.orWhere("parent_id", "in", subQuery);
 
-				var query = ""
-					+ _query.replace("_fld_", "*")
-					+ " OR parent_id IN (" + _query.replace("_fld_", "firmId") + ")";
+				queryProps = knex.queryBuilder();
+				queryProps.select("uid", "value", "extClass", "property", "extId");
+				queryProps.from("Property");
+				queryProps.where("extClass", "FIRMS");
+				queryProps.andWhere("extId", "in",
+					subQuery.clone().clearSelect().select(knex.functionHelper.cast(knex.functionHelper.columnize("firmId"), "varchar"))
+				);
 
-				query += ";"
-					+ " SELECT"
-					+   " uid,"
-					+   " value,"
-					+   " extClass,"
-					+   " property,"
-					+   " extId"
-					+ " FROM Property"
-					+ " WHERE"
-					+   " extClass = 'FIRMS'"
-					+   " AND extId IN ("
-					+       _query.replace("_fld_", "CSTR(firmId)")
-					+   ")";
+				var query = queryMain.toString() + "; " + queryProps.toString();
 
 				return db.query({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.load" }),
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.load" }),
 					"dbworker": arg.dbworker,
 					"query": query
 				});
 
 			}).then(function(dbres) {
-				var parentFirmRow,
-					firmsTable = dbres[0].recs,
-					propsTable = dbres[1].recs;
+				var parentFirmRow;
+				var firmsTable = dbres[0].recs;
+				var propsTable = dbres[1].recs;
 
 				if (!firmsTable.length)
 					return Promise.reject("FirmDataModel.load(): !dbres.recs.length");
 
-				self._mFirmBranches = [];
+				_this._mFirmBranches = [];
 
 				firmsTable.forEach(function(row) {
 					var _row = new ObjectA(row),
 
 						isParent = ["firmId", "tel3", "tel2", "tel1", "tel", "email"].some(function(key) {
-							return self.get(key) == _row.get(key);
+							return _this.get(key) == _row.get(key);
 						});
 
 					if (isParent) {
@@ -300,7 +308,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 						firm.set('firmId', _row.get('firmId'));
 
-						self.addBranch(firm);
+						_this.addBranch(firm);
 					}
 				});
 
@@ -309,33 +317,33 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 				// ------------
 
-				self.getKeys().forEach(function(k) {
-					self.set(k, void 0, null, !1);
+				_this.getKeys().forEach(function(k) {
+					_this.set(k, void 0, null, !1);
 				});
 
-				self.deleteFProperty();
+				_this.deleteFProperty();
 
 				// ------------
 
-				self.set(parentFirmRow);
+				_this.set(parentFirmRow);
 
-				self.addFProperty(propsTable.filter(function(row) {
-					return self.get("firmId", null, !1) == row.extId;
+				_this.addFProperty(propsTable.filter(function(row) {
+					return _this.get("firmId", null, !1) == row.extId;
 				}));
 
 				return Promise.all(
-					self.getBranch().map(function(firm) {
+					_this.getBranch().map(function(firm) {
 						return firm.load();
 					})
 				);
 
 			}).then(function() {
-				self.clearChanged();
+				_this.clearChanged();
 
-				callback(self, null);
+				callback(_this, null);
 
 			}).catch(function(err) {
-				callback(self, err);
+				callback(_this, err);
 
 				return Promise.reject(err);
 			});

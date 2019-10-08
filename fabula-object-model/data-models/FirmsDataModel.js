@@ -158,7 +158,7 @@ FirmsDataModel.prototype = _utils.createProtoChain(IFabModule.prototype, {
 			// Основная таблица
 			// -----------------------------
 			queryMain.select(
-				"FirmID",         "Tick",     "NDS",              "Parent_ID"
+				  "FirmID",         "Tick",     "NDS",              "Parent_ID"
 				, "isFict",         "Type",     "Name",             "FullName"
 				, "UrName",         "City_ID",  "Selo_ID",          "Street_ID"
 				, "House",          "Flat",     "Build_ID",         "PostIndex"

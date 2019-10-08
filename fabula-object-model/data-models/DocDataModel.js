@@ -301,6 +301,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			var _this                   = this;
 			var db                      = _this.getDBInstance();
+			var knex                    = db.getKnexInstance();
 			var _promise                = Promise.resolve();
 			var dbMovsRowsById          = {};
 			var nextMovsById            = {};
@@ -393,7 +394,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					query = utils.db.createInsertFieldsQueryString({
 						"nextFields"          : _this.serializeFieldsObject(),
 						"tableScheme"         : _this.getTableScheme(),
-						"tableName"           : _this.getTableName()
+						"tableName"           : _this.getTableName(),
+						"db"                  : db
 					});
 
 					return db.query({
@@ -459,7 +461,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						"nextFields"          : _this.serializeFieldsObject(),
 						"prevFields"          : _dbDoc.serializeFieldsObject(),
 						"tableScheme"         : _this.getTableScheme(),
-						"tableName"           : _this.getTableName()
+						"tableName"           : _this.getTableName(),
+						"db"                  : db
 					});
 				}
 
@@ -493,7 +496,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 							"prevFields"    : prevFields,
 							"nextFields"    : nextFields,
 							"tableScheme"   : mov.getTableScheme(),
-							"tableName"     : mov.getTableName()
+							"tableName"     : mov.getTableName(),
+							"db"            : db
 						});
 
 						if (query) {
@@ -526,7 +530,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						query = utils.db.createInsertFieldsQueryString({
 							"nextFields"    : nextFields,
 							"tableScheme"   : mov.getTableScheme(),
-							"tableName"     : mov.getTableName()
+							"tableName"     : mov.getTableName(),
+							"db"            : db
 						});
 
 						if (query) {
@@ -553,8 +558,17 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				// Собирать запрос на удаление задач
 				if (toDelete.length) {
-					queries.push("DELETE FROM Movement WHERE mmId IN (" + toDelete + ")");
-					queries.push("DELETE FROM Talk WHERE mm IN (" + toDelete + ")");
+					query = knex.queryBuilder();
+					query.del();
+					query.from("Movement");
+					query.where("mmId", "in", toDelete);
+					queries.push(query.toString());
+
+					query = knex.queryBuilder();
+					query.del();
+					query.from("Talk");
+					query.where("mm", "in", toDelete);
+					queries.push(query.toString());
 				}
 
 				if (!queries.length)
@@ -575,11 +589,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				// Movement.mmpid
 				// ----------------------------------
 
-				var query = ""
-					+ " SELECT mmid, mattr1, mattr2, mattr3, mattr4, gs, gsspec"
-					+ " FROM Movement"
-					+ " WHERE"
-					+   " doc1 = '" + _this.get("docId") + "'";
+				var query = knex.queryBuilder();
+
+				query.select("mmid", "mattr1", "mattr2", "mattr3", "mattr4", "gs", "gsspec");
+				query.from("Movement");
+				query.where("doc1", _this.get("docId"));
+
+				query = query.toString();
 
 				return db.query({
 					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save-load-mov" }),
@@ -643,7 +659,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 								"mmpid": pMov.get("mmid")
 							},
 							"tableScheme": MovDataModel.getTableScheme(),
-							"tableName": MovDataModel.getTableName()
+							"tableName": MovDataModel.getTableName(),
+							"db": db
 						});
 
 						mov.set("mmpid", pMov.get("mmid"));
@@ -660,20 +677,19 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						   mov.get("mmid")
 						&& prevFlag != nextFlag
 					) {
-						query = ""
-							+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
-							+ " VALUES ("
-							+   " NOW()"
-							+   " ," + "'Фаза: " + (prevFlag || "") + " &rArr; " + nextFlag + "'"
-							+   " ," + 999
-							+   " ," + id
-							+   " ," + "'" + mov.get("doc1") + "'"
-							+   " ," + "FORMAT(TIME(),'HH:MM')"
-							+   " ," + "NOW() & ' " + utils.string.random(3) + "'"
-							+   " ," + 0
-							+ " )";
-
-						queries.push(query);
+						query = knex.queryBuilder();
+						query.into("Talk");
+						query.insert({
+							  "dt": knex.functionHelper.now()
+							, "txt": knex.functionHelper.concat("Фаза: ", (prevFlag || ""), " &rArr; ", nextFlag || "")
+							, "agent": 999
+							, "mm": id
+							, "doc": mov.get("doc1")
+							, "tm": knex.functionHelper.format(knex.functionHelper.now(), "hh:mm")
+							, "key": utils.string.random(8)
+							, "part": 0
+						});
+						queries.push(query.toString());
 					}
 				});
 
@@ -943,9 +959,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				queryMain.clearSelect();
 				queryMain.select();
 				queryMain.column(
-					_this.getTableScheme.getKeys().concat(
-						knex.functionHelper.asColumn(knex.functionHelper.format("RegDate", "yyyy-MM-dd hh:mm:ss"), "RegDate")
-					)
+					"*",
+					knex.functionHelper.asColumn(knex.functionHelper.format("RegDate", "yyyy-MM-dd hh:mm:ss"), "RegDate")
 				);
 
 				// -------------------------------------------
@@ -954,10 +969,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				queryMovs.from("Movement");
 				queryMovs.select();
 				queryMovs.column(
-					MovDataModel.getTableScheme().getKeys().concat(
-						knex.functionHelper.asColumn(knex.functionHelper.format("gsDate", "yyyy-MM-dd hh:mm:ss"), "gsDate"),
-						knex.functionHelper.asColumn(knex.functionHelper.format("gsDate2", "yyyy-MM-dd hh:mm:ss"), "gsDate2")
-					)
+					"*",
+					knex.functionHelper.asColumn(knex.functionHelper.format("gsDate", "yyyy-MM-dd hh:mm:ss"), "gsDate"),
+					knex.functionHelper.asColumn(knex.functionHelper.format("gsDate2", "yyyy-MM-dd hh:mm:ss"), "gsDate2")
 				);
 				queryMovs.where("doc1", "in", subQuery);
 
@@ -1215,7 +1229,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 									"yyyy"
 								),
 								1
-							)
+							),
+							"_year"
 						)
 					)
 				);

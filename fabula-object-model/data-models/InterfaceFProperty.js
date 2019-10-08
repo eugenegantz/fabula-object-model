@@ -438,7 +438,7 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						return prev;
 					}
 
-					_insert[colKey] = colVal;
+					_insert[colKey] = dbUtils.mkVal(colVal, fldDecl, { "db": db });
 				});
 
 				if (!Object.keys(_insert).length)
@@ -543,7 +543,7 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						return;
 
 					if (nextRow.get(key) != row.get(key))
-						updateSets[key] = nextRow.get(key);
+						updateSets[key] = dbUtils.mkVal(nextRow.get(key), fieldDecl, { "db": db }) ;
 				});
 
 				if (!Object.keys(updateSets).length)
@@ -650,7 +650,7 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						return;
 
 					if (selfRow.get(k) != row.get(k))
-						setFields[k] = selfRow.get(k);
+						setFields[k] = dbUtils.mkVal(selfRow.get(k), fldDecl, { "db": db }) ;
 				});
 
 				// Нет обновленных полей

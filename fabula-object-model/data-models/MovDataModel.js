@@ -207,55 +207,52 @@ MovDataModel.prototype = _utils.createProtoChain(
 		"rm": function(arg) {
 			arg = arg || {};
 
-			var self        = this,
-				db          = this.getDBInstance(),
-				callback    = arg.callback || emptyFn,
-				mmid        = this.get("mmid", null, !1);
+			var _this       = this;
+			var db          = this.getDBInstance();
+			var knex        = db.getKnexInstance();
+			var callback    = arg.callback || emptyFn;
+			var mmid        = this.get("mmid", null, !1);
 
 			return Promise.resolve().then(function() {
-				if (self.state == self.STATE_MOV_READY)
+				if (_this.state == _this.STATE_MOV_READY)
 					return Promise.resolve();
 
 				// Если модель не инициализирована - инициализировать и получить подчиненные
-				return self.load({
+				return _this.load({
 					"dbworker": " ",
 					"dbcache": arg.dbcache
 				});
 
 			}).then(function() {
+				var queryMov = knex.queryBuilder();
+				queryMov.del();
+				queryMov.from("Movement");
+				queryMov.where("mmId", +mmid);
+
+				var queryProps = knex.queryBuilder();
+				queryMov.del();
+				queryMov.from("Property");
+				queryMov.where("pid", +mmid);
+
+				var queryTalk = knex.queryBuilder();
+				queryTalk.del();
+				queryTalk.from("Talk");
+				queryTalk.where("mm", +mmid);
+
+				var query = ""
+					+ " " + queryMov.toString()
+					+ ";" + queryProps.toString()
+					+ ";" + queryTalk.toString();
+
 				var promises = [
-					new Promise(function(resolve, reject) {
-						db.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.rm-d" }),
-							"dbworker": " ",
-							"query": ""
-							+ "DELETE FROM Movement WHERE MMID = " + mmid
-
-							+ "; DELETE"
-							+ " FROM Property"
-							+ " WHERE"
-							+   "     extClass = 'DOCS'"
-							+   " AND pid = " + mmid
-
-							+ "; DELETE"
-							+ " FROM Ps_property"
-							+ " WHERE"
-							+   "     extClass = 'DOCS'"
-							+   " AND pid = " + mmid
-
-							+ "; DELETE FROM talk WHERE mm = " + mmid,
-
-							"callback": function(dbres, err) {
-								if (err = dbUtils.fetchErrStrFromRes(dbres))
-									return reject(err);
-
-								resolve();
-							}
-						});
+					db.query({
+						"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.rm-d" }),
+						"dbworker": " ",
+						"query": query
 					})
 				];
 
-				self.getMov().reduce(
+				_this.getMov().reduce(
 					function(prev, mov) {
 						if (!mov || !mov.get("mmid", null, !1))
 							return prev;
@@ -274,7 +271,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				return Promise.all(promises);
 
 			}).then(function() {
-				self.state = self.STATE_MOV_REMOVED;
+				_this.state = _this.STATE_MOV_REMOVED;
 
 				callback(null);
 
@@ -347,45 +344,45 @@ MovDataModel.prototype = _utils.createProtoChain(
 		"load": function(arg) {
 			arg = arg || {};
 
-			var mmid,
-				_this = this,
-				callback = arg.callback || emptyFn,
-				dbawws = _this.getDBInstance();
+			var mmid;
+			var _this       = this;
+			var callback    = arg.callback || emptyFn;
+			var db          = _this.getDBInstance();
+			var knex        = db.getKnexInstance();
 
-			return new Promise(function(resolve, reject) {
+			return Promise.resolve().then(function() {
 				if (!(mmid = +_this.get("mmid")))
-					return reject("!mmid");
+					return Promise.reject("!mmid");
 
-				var query = ""
-					// Записи движения ТиУ
-					+ " SELECT *, Format(GSDate,'yyyy-mm-dd Hh:Nn:Ss') AS GSDate"
-					+ " FROM Movement "
-					+ " WHERE"
-					+   "    mmid = " + mmid
-					+   " OR mmpid = " + mmid
 
-					// Свойства записи
-					+ "; SELECT"
-					+   "  uid"
-					+   ", pid"
-					+   ", ExtClass"
-					+   ", ExtID"
-					+   ", property"
-					+   ", value"
-					+ " FROM Property"
-					+ " WHERE"
-					+   " pid = " + mmid;
+				var queryMain = knex.queryBuilder();
 
-				dbawws.dbquery({
+				queryMain.from("Movement");
+				queryMain.where("mmid", +mmid);
+				queryMain.orWhere("mmpid", +mmid);
+				queryMain.select(
+					this.getTableScheme().getKeys().concat(
+						knex.functionHelper.asColumn(
+							knex.functionHelper.format("GSDate", "yyyy-MM-dd hh:nn:ss"), "GSDate"
+						)
+					)
+				);
+
+
+				var queryProps = knex.queryBuilder();
+
+				queryProps.from("Property");
+				queryProps.select("uid", "pid", "ExtClass", "ExtID", "property", "value");
+				queryProps.where("extClass", "DOCS");
+				queryProps.andWhere("pid", +mmid);
+
+
+				var query = queryMain.toString() + "; " + queryProps.toString();
+
+				return db.query({
 					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.load" }),
 					"dbworker": arg.dbworker,
-					"query": query,
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							reject(err);
-
-						resolve(dbres);
-					}
+					"query": query
 				});
 
 			}).then(function(dbres) {
@@ -467,32 +464,24 @@ MovDataModel.prototype = _utils.createProtoChain(
 		 * @return {Promise} - Promise.Resolve(mmId)
 		 * */
 		"_reqInsertMov": function(arg) {
-			var self = this;
-
 			arg = arg || {};
 
-			return new Promise(function(resolve, reject) {
-				var dbawws = self.getDBInstance(),
-					query = ""
-						       + self._mkQueryInsertMov()
-						+ "; " + self._mkQueryGetInsertedMovMMId();
+			var _this   = this;
+			var db      = _this.getDBInstance();
 
-				dbawws.dbquery({
-					"dbworker": " ",
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.ins-0" }),
-					"query": query,
-					"callback": function(dbres) {
-						var err = dbUtils.fetchErrStrFromRes(dbres);
+			var query = ""
+				+ " " + _this._mkQueryInsertMov()
+				+ ";" + _this._mkQueryGetInsertedMovMMId();
 
-						if (err)
-							return reject(err);
+			return db.query({
+				"dbworker": " ",
+				"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.ins-0" }),
+				"query": query,
+			}).then(function(dbres) {
+				if (!dbres[1].recs[0])
+					return Promise.reject("MovDataModel._reqInsertMov(): could not get a new MMId");
 
-						if (!dbres[1].recs[0])
-							return reject("MovDataModel._reqInsertMov(): could not get a new MMId");
-
-						resolve(dbres[1].recs[0].mmid);
-					}
-				});
+				return dbres[1].recs[0].mmid;
 			});
 		},
 
@@ -503,30 +492,35 @@ MovDataModel.prototype = _utils.createProtoChain(
 		 * @return {String}
 		 * */
 		"_mkQueryInsertMov": function() {
-			var self = this,
-				movFieldsDecl = this.__movDataModelDefaultFields,
-				values = [],
-				fields = [];
+			var _this           = this;
+			var db              = this.getDBInstance();
+			var knex            = db.getKnexInstance();
+			var movFieldsDecl   = this.__movDataModelDefaultFields;
+			var _insert         = {};
 
-			movFieldsDecl.get("gsdate").value = "NOW()";
+			movFieldsDecl.get("gsdate").value = knex.functionHelper.now();
 
 			movFieldsDecl.getKeys().forEach(function(key) {
-				var val,
-					fldDecl = movFieldsDecl.get(key);
+				var val;
+				var fldDecl = movFieldsDecl.get(key);
 
 				// если поле пустое (кроме чисел) - пропустить
 				if (
-					_utils.isEmpty(val = self.get(key, null, !1))
+					   _utils.isEmpty(val = _this.get(key, null, !1))
 					&& _utils.isEmpty(val = fldDecl.value)
 				) {
 					return;
 				}
 
-				values.push(dbUtils.mkVal(val, fldDecl));
-				fields.push(dbUtils.mkFld(key));
+				_insert[key] = val;
 			});
 
-			return "INSERT INTO Movement (" + fields.join(",") + ") VALUES (" + values.join(",") + ")";
+			var query = knex.quieryBuilder();
+
+			query.insert(_insert);
+			query.into("Movement");
+
+			return query.toString();
 		},
 
 
@@ -536,13 +530,19 @@ MovDataModel.prototype = _utils.createProtoChain(
 		 * @return {String}
 		 * */
 		"_mkQueryGetInsertedMovMMId": function() {
-			var self = this,
-				cond = [],
-				movFieldsDecl = this.__movDataModelDefaultFields;
+			var _this           = this;
+			var db              = _this.getDBInstance();
+			var knex            = db.getKnexInstance();
+			var movFieldsDecl   = this.__movDataModelDefaultFields;
+
+			var query = knex.queryBuilder();
+
+			query.select("mmid");
+			query.from("Movement");
 
 			movFieldsDecl.getKeys().forEach(function(key) {
-				var fldDecl = movFieldsDecl.get(key),
-					val = self.get(key, null, !1) || fldDecl.value || null;
+				var fldDecl     = movFieldsDecl.get(key);
+				var val         = _this.get(key, null, !1) || fldDecl.value || null;
 
 				if (!val)
 					return;
@@ -550,17 +550,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 				// БД отрезает дробную часть - прямое сравнение не работает
 				// сравнить результаты округления
 				if (dbUtils.numberTypes[fldDecl.type]) {
-					return cond.push(
-						"-INT(-" + dbUtils.mkFld(key) + ")"
-						+ " = "
-						+ dbUtils.mkVal(Math.ceil(val), fldDecl)
+					query.andWhere(
+						knex.functionHelper.cast(knex.functionHelper.columnize(key), "int"),
+						Math.ceil(val)
 					);
 				}
 
-				cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl));
+				query.andWhere(key, val);
 			});
 
-			return "SELECT mmid FROM Movement WHERE " + cond.join(" AND ");
+			return query.toString();
 		},
 
 
@@ -573,35 +572,33 @@ MovDataModel.prototype = _utils.createProtoChain(
 		 * @return {Promise}
 		 * */
 		"_insertProps": function(arg) {
-			var self = this;
+			var _this = this;
 
 			arg = arg || {};
 
-			return new Promise(function(resolve, reject) {
-				var db = self.getDBInstance(),
-					query = ""
-						+ " DELETE"
-						+ " FROM Property"
-						+ " WHERE"
-						+   "     ExtClass = 'DOCS'"
-						+   " AND pid = " + self.get("mmid", null, !1) + ";";
+			return Promise.resolve().then(function() {
+				var query               = "";
+				var db                  = _this.getDBInstance();
+				var knex                = db.getKnexInstance();
+				var queryDeleteProps    = knex.queryBuilder();
 
-				query += self.getUpsertOrDelFPropsQueryStrByDBRes([], {
-					"pid": self.get("mmid", null, !1),
-					"extClass": "DOCS",
-					"extId": self.get("Doc1", null, !1)
+				queryDeleteProps.del();
+				queryDeleteProps.from("Property");
+				queryDeleteProps.where("ExtClass", "DOCS");
+				queryDeleteProps.andWhere("pid", +_this.get("mmid", null, !1));
+
+				query += queryDeleteProps.toString() + ";";
+
+				query += _this.getUpsertOrDelFPropsQueryStrByDBRes([], {
+					"pid"               : _this.get("mmid", null, !1),
+					"extClass"          : "DOCS",
+					"extId"             : _this.get("Doc1", null, !1)
 				});
 
-				db.dbquery({
+				return db.query({
 					"dbworker": " ",
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.ins-p" }),
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.ins-p" }),
 					"query": query,
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
-
-						resolve();
-					}
 				});
 			});
 		},
@@ -619,21 +616,21 @@ MovDataModel.prototype = _utils.createProtoChain(
 		"insert": function(arg) {
 			arg = arg || {};
 
-			var self = this,
-				mAttrRnd = (Math.random() * Math.pow(10, 16) + "").slice(0, 16),
-				callback = arg.callback || emptyFn;
+			var _this       = this;
+			var mAttrRnd    = (Math.random() * Math.pow(10, 16) + "").slice(0, 16);
+			var callback    = arg.callback || emptyFn;
 
 			// -----------------------------------------------------------------
 
-			self.trigger("before-insert");
+			_this.trigger("before-insert");
 
 			// -----------------------------------------------------------------
 			// Если MAttr[n] не занято, записать в него случайное число
 			// для повышения уникальности записи
 			// -----------------------------------------------------------------
 			["mAttr1", "mAttr2", "mAttr3", "mAttr4"].some(function(key) {
-				if (!self.get(key, null, !1)) {
-					self.set(key, mAttrRnd);
+				if (!_this.get(key, null, !1)) {
+					_this.set(key, mAttrRnd);
 
 					return true;
 				}
@@ -642,13 +639,13 @@ MovDataModel.prototype = _utils.createProtoChain(
 			// -----------------------------------------------------------------
 
 			return this._reqInsertMov(arg).then(function(mmid) {
-				self.set("mmid", mmid, null, !1);
+				_this.set("mmid", mmid, null, !1);
 
-				return self._insertProps(arg);
+				return _this._insertProps(arg);
 
 			}).then(function() {
-				var promises = self.getMov().map(function(mov) {
-					mov.set("MMPID", self.get("MMID", null, false));
+				var promises = _this.getMov().map(function(mov) {
+					mov.set("MMPID", _this.get("MMID", null, false));
 
 					return mov.save({
 						"dbcache": arg.dbcache
@@ -657,12 +654,12 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				promises.push(
 					new Promise(function(resolve, reject) {
-						var docDataObj = self.get("DocDataObject"),
+						var docDataObj = _this.get("DocDataObject"),
 							talksInstance = TalksDataModel.prototype.getInstance();
 
 						talksInstance.postTalk({
-							"MMID": self.get("MMID", null, !1),
-							"MMFlag": self.get("MMFlag", null, !1),
+							"MMID": _this.get("MMID", null, !1),
+							"MMFlag": _this.get("MMFlag", null, !1),
 							"agent": !docDataObj ? "999" : (docDataObj.get("agent", null, !1) || 999),
 							"dbcache": arg.dbcache,
 							"callback": function(err) {
@@ -678,16 +675,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 				return Promise.all(promises);
 
 			}).then(function() {
-				self._mMovClsHistory();
+				_this._mMovClsHistory();
 
-				callback(null, self);
+				callback(null, _this);
 
-				self.trigger("after-insert");
+				_this.trigger("after-insert");
 
 			}).catch(function(err) {
-				callback(err, self);
+				callback(err, _this);
 
-				self.trigger("insert-error");
+				_this.trigger("insert-error");
 
 				return Promise.reject(err);
 			});
@@ -732,60 +729,55 @@ MovDataModel.prototype = _utils.createProtoChain(
 		"update": function(arg) {
 			arg = arg || {};
 
-			var self = this,
-				dbawws          = this.getDBInstance(),
-				callback        = arg.callback || emptyFn,
-				MMID            = self.get("mmId", null, false);
+			var _this           = this;
+			var db              = this.getDBInstance();
+			var knex            = db.getKnexInstance();
+			var callback        = arg.callback || emptyFn;
+			var MMID            = _this.get("mmId", null, false);
 
 			arg.saveOpt = this._getSaveOpt(arg.saveOpt);
 
 			// ------------------------------------------------------------------------------
 
-			self.trigger("before-update");
+			_this.trigger("before-update");
 
 			// ------------------------------------------------------------------------------
 
-			return new Promise(function(resolve, reject) {
-				dbawws.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.upd-s" }),
+			var queryMain = knex.queryBuilder();
+			queryMain.select("MMID");
+			queryMain.from("Movement");
+			queryMain.where("MMID", +MMID);
+			queryMain.andWhere("MMPID", +MMID);
+
+			var queryProps = knex.queryBuilder();
+			queryProps.select("uid", "pid", "ExtClass", "ExtID", "property", "value");
+			queryProps.from("Property");
+			queryProps.where("pid", +MMID);
+
+			var query = queryMain.toString() + ";" + queryProps.toString();
+
+			return Promise.resolve().then(function() {
+				return db.query({
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.upd-s" }),
 
 					"dbworker": " ",
 
-					"query": ""
-					// Получение записи движения ТиУ
-					+ " SELECT MMID"
-					+ " FROM Movement"
-					+ " WHERE"
-					+   "    MMID = " + MMID
-					+   " OR MMPID = " + MMID
-
-					// Получение свойств записи
-					+ "; SELECT uid, pid, ExtClass, ExtID, property, [value]"
-					+ " FROM Property"
-					+ " WHERE"
-					+   " pid = " + MMID,
-
-					"callback": function(dbres) {
-						var err = dbUtils.fetchErrStrFromRes(dbres);
-
-						if (err)
-							return reject(err);
-
-						resolve(dbres);
-					}
+					"query": query
 				});
 
 			}).then(function(dbres) {
-				var values,
-					dbq                         = [],
-					changedFields               = self.getChanged(),
-					disabledFields              = new ObjectA({ "mmid": 1 }),
-					movFieldsDecl               = self.__movDataModelDefaultFields,
-					dbCMovsRecs                 = dbres[0].recs,
-					dbPropsRecs                 = dbres[1].recs,
-					dbMovRec                    = void 0,
-					dbCMovsRefByMMId            = {},
-					selfCMovsRefByMMId          = {};
+				var query;
+				var values;
+				var _update                     = {};
+				var dbq                         = [];
+				var changedFields               = _this.getChanged();
+				var disabledFields              = new ObjectA({ "mmid": 1 });
+				var movFieldsDecl               = _this.__movDataModelDefaultFields;
+				var dbCMovsRecs                 = dbres[0].recs;
+				var dbPropsRecs                 = dbres[1].recs;
+				var dbMovRec                    = void 0;
+				var dbCMovsRefByMMId            = {};
+				var selfCMovsRefByMMId          = {};
 
 				// Оставить только подчиненные задачи
 				dbCMovsRecs = dbCMovsRecs.filter(function(row) {
@@ -806,7 +798,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 				// -----------------------------------------------------------------
 				// Ссылки на подчиненные задачи по MMID
 				// -----------------------------------------------------------------
-				self.getMov().forEach(function(mov) {
+				_this.getMov().forEach(function(mov) {
 					selfCMovsRefByMMId[mov.get("mmId", null, !1)] = mov;
 				});
 
@@ -824,10 +816,10 @@ MovDataModel.prototype = _utils.createProtoChain(
 				) {
 					dbq.push.apply(
 						dbq,
-						[].concat(self.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
-							"pid": self.get("MMID", null, false),
+						[].concat(_this.getUpsertOrDelFPropsQueryStrByDBRes(dbPropsRecs, {
+							"pid": _this.get("MMID", null, false),
 							"extClass": "DOCS",
-							"extId": self.get("Doc1", null, false)
+							"extId": _this.get("Doc1", null, false)
 						}) || [])
 					);
 				}
@@ -836,23 +828,32 @@ MovDataModel.prototype = _utils.createProtoChain(
 				// Обновление полей в строке
 				// -----------------------------------------------------------------
 				if (arg.saveOpt.fields.update) {
-					values = changedFields.reduce(function(prev, fldKey) {
+					changedFields.reduce(function(prev, fldKey) {
 						if (!movFieldsDecl.get(fldKey))
 							return prev;
 
 						if (disabledFields.get(fldKey))
 							return prev;
 
-						var value = self.get(fldKey, null, !1),
-							fldDecl = movFieldsDecl.get(fldKey);
+						var value = _this.get(fldKey, null, !1);
+						var fldDecl = movFieldsDecl.get(fldKey);
 
-						prev.push(dbUtils.mkFld(fldKey) + " = " + dbUtils.mkVal(value, fldDecl));
+						_update[fldKey] = value;
 
 						return prev;
 					}, []);
 
-					if (values.length)
-						dbq.push("UPDATE Movement SET " + values.join(", ") + " WHERE MMID = " + MMID);
+					if (Object.keys(_update).length) {
+						(function() {
+							var query = knex.queryBuilder();
+
+							query.update(_update);
+							query.into("Movement");
+							query.where("MMID", +MMID);
+
+							dbq.push(query.toString());
+						})();
+					}
 				}
 
 				// -----------------------------------------------------------------
@@ -866,8 +867,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 				// -----------------------------------------------------------------
 				var promises = [
 					new Promise(function(resolve, reject) {
-						dbawws.dbquery({
-							"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.upd-0" }),
+						db.dbquery({
+							"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.upd-0" }),
 							"dbworker": " ",
 							"query": dbq.join("; "),
 							"callback": function(dbres, err) {
@@ -902,8 +903,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				// -----------------------------------------------------------------
 
-				self.getMov().forEach(function(mov) {
-					var selfMMID = self.get("MMID", null, false),
+				_this.getMov().forEach(function(mov) {
+					var selfMMID = _this.get("MMID", null, false),
 						eachMMID = mov.get("MMID", null, false);
 
 					// Если в списке исключений, игнорировать любые изменения
@@ -935,18 +936,18 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				if (
 					arg.saveOpt.talk.update
-					&& self.get("MMFlag", null, !1)
-					&& self.get("MMID", null, !1)
+					&& _this.get("MMFlag", null, !1)
+					&& _this.get("MMID", null, !1)
 					&& !!~changedFields.indexOf("mmflag")
 				) {
 					promises.push(
 						new Promise(function(resolve, reject) {
-							var docDataObj = self.get("DocDataObject"),
+							var docDataObj = _this.get("DocDataObject"),
 								talksInstance = TalksDataModel.prototype.getInstance();
 
 							talksInstance.postTalk({
-								"MMID": self.get("MMID", null, !1),
-								"MMFlag": self.get("MMFlag", null, !1),
+								"MMID": _this.get("MMID", null, !1),
+								"MMFlag": _this.get("MMFlag", null, !1),
 								"agent": !docDataObj ? "999" : (docDataObj.get("agent", null, !1) || 999),
 								"callback": function(err) {
 									if (err)
@@ -964,16 +965,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 				return Promise.all(promises);
 
 			}).then(function() {
-				self._mMovClsHistory();
+				_this._mMovClsHistory();
 
-				callback(null, self);
+				callback(null, _this);
 
-				self.trigger("after-update");
+				_this.trigger("after-update");
 
 			}).catch(function(err) {
-				callback(err, self);
+				callback(err, _this);
 
-				self.trigger("update-error");
+				_this.trigger("update-error");
 
 				return Promise.reject(err);
 			});
@@ -1235,7 +1236,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 			var _this       = this;
 			var mmid        = this.get("MMID", null, !1);
 			var callback    = arg.callback || emptyFn;
-			var dbawws      = _this.getDBInstance();
+			var db          = _this.getDBInstance();
+			var knex        = db.getKnexInstance();
 
 			delete arg.callback;
 
@@ -1243,11 +1245,19 @@ MovDataModel.prototype = _utils.createProtoChain(
 				promise = _this.insert(arg);
 
 			} else {
+				var query = knex.queryBuilder();
+
+				query.select("mmid");
+				query.from("Movement");
+				query.where("mmid", +mmid);
+
+				query = query.toString();
+
 				promise = (
-					dbawws.query({
+					db.query({
 						"dbworker": " ",
 						"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-mov.save" }),
-						"query": "SELECT mmid FROM Movement WHERE mmid = " + mmid
+						"query": query
 					})
 				).then(function(dbres) {
 					if (!dbres.recs.length)
