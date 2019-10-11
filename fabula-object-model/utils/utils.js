@@ -618,4 +618,74 @@ _utils.createProtoChain = function() {
 };
 
 
+/**
+ * @param {String} str
+ *
+ * @return {Object}
+ * */
+_utils.parseMMFlagRule = function(str) {
+	if (typeof str != "string")
+		throw new Error("1st argument expected to be type String");
+
+	var _patterns = _utils.parseMMFlagRule._patterns;
+
+	var getFlagsInsideTagsRegEx = new RegExp(""
+		+ _patterns.tag.open.source
+		+ _patterns.body.source
+		+ _patterns.tag.close.source,
+		"ig"
+	);
+
+	var rmTagsRegEx = new RegExp(_patterns.tag.open.source + "|" + _patterns.tag.close.source, "ig");
+
+	str = [].concat((str + "").match(getFlagsInsideTagsRegEx)).join("");
+
+	return str
+		.replace(rmTagsRegEx, "")
+		.split(/;\s*/ig)
+		.reduce(function(prev, curr) {
+			var tmp1, left, label, flag, attr;
+
+			curr = curr.trim();
+
+			if (!curr)
+				return prev;
+
+			tmp1        = curr.split(/\s*-\s*/ig);
+			left        = tmp1[0];
+			label       = tmp1[1] || "";
+
+			tmp1        = left.split(/[)(]/ig);
+			flag        = tmp1[0];
+			attr        = tmp1[1];
+
+			if (!flag)
+				return prev;
+
+			attr = attr.split("").reduce((obj, a) => {
+				obj[a] = true;
+
+				return obj;
+			}, {});
+
+			prev[flag] = {
+				  flag
+				, label
+				, attr
+			};
+
+			return prev;
+		}, {});
+};
+
+
+_utils.parseMMFlagRule._patterns = {
+	body: /.+/ig,
+	tag: {
+		open: /\[fl\s*[0-9a-zа-я="'\|\/]*\]/ig,
+		close: /\[\/fl\]/ig,
+	},
+};
+
+
 module.exports =_utils;
