@@ -27,6 +27,55 @@ var TalksDataModel = function() {
 	this.instances.push(this);
 };
 
+
+/**
+ * @param {Object} talk
+ * @param {String} talk.txt
+ *
+ * @return {Object}
+ * */
+TalksDataModel.parseTalk = function(talk) {
+	var flagRegEx   = /[а-яa-z0-9]{0,4}/ig;
+	var arrowRegEx  = /&rArr;/i;
+	var labelRegEx  = /Фаза:/i;
+	var regEx       = new RegExp(labelRegEx.source + "\\s*" + flagRegEx.source + "\\s" + arrowRegEx.source + "\\s" + flagRegEx.source, "ig");
+	var flagTxt     = [].concat(talk.txt.match(regEx) || []).join('').replace(labelRegEx, "");
+	var bodyTxt     = talk.txt.replace(regEx, "").trim();
+
+	var tmp         = flagTxt.split('&rArr;');
+	var prevmmflag  = tmp[0] || "";
+	var mmflag      = tmp[1] || "";
+
+	prevmmflag      = prevmmflag.trim();
+	mmflag          = mmflag.trim();
+
+	return {
+		  "prevmmflag"      : prevmmflag
+		, "mmflag"          : mmflag
+		, "txt"             : bodyTxt
+		, "mmid"            : talk.mm
+		, "talkid"          : talk.talkid
+		, "agent"           : talk.agent
+		, "docid"           : talk.doc
+		, "date"            : talk.date
+	}
+};
+
+
+/**
+ * Является ли запись информации о смене фазы
+ *
+ * @param {Object} talk
+ *
+ * @return {Boolean}
+ * */
+TalksDataModel.isMMFlagChangeTalk = function(talk) {
+	var parsed = this.parseTalk(talk);
+
+	return !!parsed.mmflag
+};
+
+
 TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 
 	"instances": [],
