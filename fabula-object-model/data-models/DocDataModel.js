@@ -278,7 +278,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			var docType                 = _this.get("docType", null, !1);
 			var companyID               = _this.get("company", null, !1);
 			var isNew                   = !this.get('id') && !this.get('docId');
-			var mAttrList               = ["mAttr1", "mAttr2", "mAttr3", "mAttr4"];
+			var randFields              = ["mmidold", "gsspec"];
 			var _dbDoc                  = new DocDataModel();
 			var updatedMovs             = [];
 			var insertedMovs            = [];
@@ -287,7 +287,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			function createMovKey(mov) {
 				var movKey      = "";
-				var keys        = ["mmid", "mattr1", "mattr2", "mattr3", "mattr4", "gs", "gsspec"];
+				var keys        = ["mmid", "gs", "gsspec", "mmidold"];
 
 				if (mov instanceof MovDataModel)
 					mov = mov.serializeFieldsObject();
@@ -448,7 +448,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					var query;
 					var nextFields;
 					var prevFields;
-					var mAttrRand;
+					var randFieldValue;
 					var id = mov.get("mmId");
 
 					if (id)
@@ -477,14 +477,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					} else {
 						// -----------------------------------------------------------------
-						// Если MAttr[n] не занято, записать в него случайное число
+						// Если field[n] не занято, записать в него случайное число
 						// для повышения уникальности записи
 						// -----------------------------------------------------------------
-						mAttrRand   = Math.random().toString().slice(-16);
+						randFieldValue = +Math.random().toString().slice(-8);
 
-						mAttrList.some(function(key) {
+						randFields.some(function(key) {
 							if (!mov.get(key, null, !1)) {
-								mov.set(key, mAttrRand);
+								mov.set(key, randFieldValue);
 
 								return true;
 							}
@@ -546,7 +546,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				// ----------------------------------
 
 				var query = ""
-					+ " SELECT mmid, mattr1, mattr2, mattr3, mattr4, gs, gsspec"
+					+ " SELECT mmid, mmidold, gs, gsspec"
 					+ " FROM Movement"
 					+ " WHERE"
 					+   " doc1 = '" + _this.get("docId") + "'";
@@ -1363,9 +1363,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				"FirmCustomer":     { "type": "N" },
 				"PayType":          { "type": "S" },
 				"Discount":         { "type": "N" },
-				"Disc_Text":        { "type": "S" },
+				// "Disc_Text":        { "type": "S" },
 				"Margin":           { "type": "N" },
-				"Marg_Text":        { "type": "S" },
+				// "Marg_Text":        { "type": "S" },
 				"CurRate":          { "type": "N" },
 				"Currency":         { "type": "S" },
 				"Sum1":             { "type": "N" },
@@ -1379,14 +1379,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				"RateSpecTax":      { "type": "N" },
 				"SumNDS":           { "type": "N" },
 				"SumSpecTax":       { "type": "N" },
-				"Notice":           { "type": "S" },
-				"DocFlag":          { "type": "S" },
-				"FilterGS":         { "type": "S" },
+				// "Notice":           { "type": "S" },
+				// "DocFlag":          { "type": "S" },
+				// "FilterGS":         { "type": "S" },
 				"IsDeleted":        { "type": "N" },
-				"DateNew":          { "type": "D" },
-				"UserNew":          { "type": "S" },
+				// "DateNew":          { "type": "D" },
+				// "UserNew":          { "type": "S" },
 				"DateEdit":         { "type": "D", "value": "CURRENT_TIMESTAMP" },
-				"UserEdit":         { "type": "S" },
+				// "UserEdit":         { "type": "S" },
 				"TextAVR":          { "type": "S" },
 				"Addr":             { "type": "S" },
 				"Debt2":            { "type": "N" },

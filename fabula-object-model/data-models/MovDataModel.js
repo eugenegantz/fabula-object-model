@@ -619,21 +619,21 @@ MovDataModel.prototype = _utils.createProtoChain(
 		"insert": function(arg) {
 			arg = arg || {};
 
-			var self = this,
-				mAttrRnd = (Math.random() * Math.pow(10, 16) + "").slice(0, 16),
-				callback = arg.callback || emptyFn;
+			var _this           = this;
+			var randFieldValue  = +Math.random().toString().slice(-8);
+			var callback        = arg.callback || emptyFn;
 
 			// -----------------------------------------------------------------
 
-			self.trigger("before-insert");
+			_this.trigger("before-insert");
 
 			// -----------------------------------------------------------------
-			// Если MAttr[n] не занято, записать в него случайное число
+			// Если randFields[n] не занято, записать в него случайное число
 			// для повышения уникальности записи
 			// -----------------------------------------------------------------
-			["mAttr1", "mAttr2", "mAttr3", "mAttr4"].some(function(key) {
-				if (!self.get(key, null, !1)) {
-					self.set(key, mAttrRnd);
+			["mmidold", "gsspec"].some(function(key) {
+				if (!_this.get(key, null, !1)) {
+					_this.set(key, randFieldValue);
 
 					return true;
 				}
@@ -642,13 +642,13 @@ MovDataModel.prototype = _utils.createProtoChain(
 			// -----------------------------------------------------------------
 
 			return this._reqInsertMov(arg).then(function(mmid) {
-				self.set("mmid", mmid, null, !1);
+				_this.set("mmid", mmid, null, !1);
 
-				return self._insertProps(arg);
+				return _this._insertProps(arg);
 
 			}).then(function() {
-				var promises = self.getMov().map(function(mov) {
-					mov.set("MMPID", self.get("MMID", null, false));
+				var promises = _this.getMov().map(function(mov) {
+					mov.set("MMPID", _this.get("MMID", null, false));
 
 					return mov.save({
 						"dbcache": arg.dbcache
@@ -657,12 +657,12 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				promises.push(
 					new Promise(function(resolve, reject) {
-						var docDataObj = self.get("DocDataObject"),
+						var docDataObj = _this.get("DocDataObject"),
 							talksInstance = TalksDataModel.prototype.getInstance();
 
 						talksInstance.postTalk({
-							"MMID": self.get("MMID", null, !1),
-							"MMFlag": self.get("MMFlag", null, !1),
+							"MMID": _this.get("MMID", null, !1),
+							"MMFlag": _this.get("MMFlag", null, !1),
 							"agent": !docDataObj ? "999" : (docDataObj.get("agent", null, !1) || 999),
 							"dbcache": arg.dbcache,
 							"callback": function(err) {
@@ -678,16 +678,16 @@ MovDataModel.prototype = _utils.createProtoChain(
 				return Promise.all(promises);
 
 			}).then(function() {
-				self._mMovClsHistory();
+				_this._mMovClsHistory();
 
-				callback(null, self);
+				callback(null, _this);
 
-				self.trigger("after-insert");
+				_this.trigger("after-insert");
 
 			}).catch(function(err) {
-				callback(err, self);
+				callback(err, _this);
 
-				self.trigger("insert-error");
+				_this.trigger("insert-error");
 
 				return Promise.reject(err);
 			});
@@ -1012,6 +1012,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 			var fields = new ObjectA({
 				"MMID":         { "type": "integer", "primary": 1 },
 				"MMPID":        { "type": "integer" },
+				"MMIDold":      { "type": "integer" },
 				"IsDraft":      { "type": "integer" },
 				"Tick":         { "type": "integer" },
 				"Doc":          { "type": "string" },
@@ -1024,12 +1025,12 @@ MovDataModel.prototype = _utils.createProtoChain(
 				"Mark":         { "type": "boolean" },
 				"CodeOp":       { "type": "string" },
 				"CodeDc":       { "type": "string" },
-				"ExtCode":      { "type": "string" },
+				// "ExtCode":      { "type": "string" },
 				"Storage":      { "type": "string" },
 				"GS":           { "type": "string" },
 				"GSSpec":       { "type": "string", "length": 120 },
-				"GSExt":        { "type": "integer" },
-				"Consigment":   { "type": "integer" },
+				// "GSExt":        { "type": "integer" },
+				// "Consigment":   { "type": "integer" },
 				"K2":           { "type": "integer" },
 				"Amount":       { "type": "float" },
 				"Rest":         { "type": "float" },
@@ -1038,11 +1039,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 				"PrimeCost":    { "type": "float" },
 				"Sum":          { "type": "float" },
 				"Sum2":         { "type": "float" },
-				"MAttr1":       { "type": "string" },
-				"MAttr2":       { "type": "string" },
-				"MAttr3":       { "type": "string" },
-				"MAttr4":       { "type": "string" },
-				"FirmProduct":  { "type": "integer" },
+				// "MAttr1":       { "type": "string" },
+				// "MAttr2":       { "type": "string" },
+				// "MAttr3":       { "type": "string" },
+				// "MAttr4":       { "type": "string" },
+				// "FirmProduct":  { "type": "integer" },
 				"Remark":       { "type": "string" },
 				"NameAVR":      { "type": "string" },
 				"Agent2":       { "type": "string" },
