@@ -633,7 +633,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						query = ""
 							+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
 							+ " VALUES ("
-							+   " CURRENT_TIMESTAMP"
+							+   " CAST(CONCAT(FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd'), 'T', FORMAT(CURRENT_TIMESTAMP, 'HH:mm:ss'), '.000') AS DATETIME)"
 							+   " ," + "'Фаза: " + (prevFlag || "") + " &rArr; " + nextFlag + "'"
 							+   " ," + 999
 							+   " ," + id

@@ -128,7 +128,7 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 					return str + ""
 						+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
 						+ " SELECT"
-						+   " CURRENT_TIMESTAMP"
+						+   " CAST(CONCAT(FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd'), 'T', FORMAT(CURRENT_TIMESTAMP, 'HH:mm:ss'), '.000') AS DATETIME)"
 						+   " ," + "CONCAT('Фаза: ', mmFlag, ' &rArr; ', '" + nextMMFlag + "', '" + (msg ? "<br>" + msg : "") + "')"
 						+   " ," + agent
 						+   " ," + "[mmid]"
@@ -145,7 +145,7 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 				return str + ""
 					+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
 					+ " SELECT "
-					+   " CURRENT_TIMESTAMP"
+					+   " CAST(CONCAT(FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd'), 'T', FORMAT(CURRENT_TIMESTAMP, 'HH:mm:ss'), '.000') AS DATETIME)"
 					+   " ," + "'" + msg + "'"
 					+   " ," + agent
 					+   " ," + "[mmid]"
