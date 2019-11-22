@@ -288,8 +288,14 @@ FirmDataModel.prototype = utils.createProtoChain(
 				firmsTable.forEach(function(row) {
 					var _row = new ObjectA(row),
 
-						isParent = ["firmId", "tel3", "tel2", "tel1", "tel", "email"].some(function(key) {
-							return self.get(key) == _row.get(key);
+						isParent = ["firmId", "tel", "email", "tel3", "tel2", "tel1"].some(function(key) {
+							var value0 = (self.get(key) + "").toLowerCase();
+							var value1 = (_row.get(key) + "").toLowerCase();
+
+							if (!value0 || !value1)
+								return;
+
+							return value0 == value1;
 						});
 
 					if (isParent) {
