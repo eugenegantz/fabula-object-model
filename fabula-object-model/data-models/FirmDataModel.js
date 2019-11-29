@@ -306,7 +306,9 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 						firm.set('firmId', _row.get('firmId'));
 
-						self.addBranch(firm);
+						// Не записывать корневую фирму (не создавать рекурсию)
+						if (firm.get('parent_id'))
+							self.addBranch(firm);
 					}
 				});
 
@@ -544,6 +546,9 @@ FirmDataModel.prototype = utils.createProtoChain(
 			}).then(function() {
 				return Promise.all(
 					self.getBranch().map(function(firm) {
+						if (firm.get("firmId") == self.get("firmId"))
+							return;
+
 						firm.set("parent_id", self.get("FirmId"));
 
 						return firm.save();
