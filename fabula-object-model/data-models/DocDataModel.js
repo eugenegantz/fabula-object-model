@@ -1104,6 +1104,74 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		"_getNewDocIDMethodINCREMENT": function(arg) {
+			var _this           = this;
+			var db              = _this.getDBInstance();
+			var gands           = _this.getGandsInstance();
+			var docType         = arg.docType;
+			var companyID       = arg.companyID;
+			var docTypeGsRow    = gands.dataRefByGSID.get("SYОП" + docType);
+			var prefix          = docTypeGsRow.GSCodeNumber;
+
+			return Promise.resolve().then(function() {
+				var query = ""
+					+ " SELECT TOP 1"
+					+   "   docid"
+					+   " , RIGHT(FORMAT(CURRENT_TIMESTAMP, 'yyyy'), 1) AS current_year"
+					+   " FROM Docs"
+					+   " WHERE"
+					+       " SUBSTRING(docid, 3, 1) = RIGHT(FORMAT(CURRENT_TIMESTAMP, 'yyyy'), 1)"
+					+   " ORDER BY"
+					+       " SUBSTRING(docid, 6, 5)"
+					+           " DESC";
+
+				return db.query({
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.n-doc-id" }),
+
+					"dbworker": " ",
+
+					"query": query
+				});
+
+			}).then(function(dbres) {
+				var _while          = 100;
+				var nextDocId       = void 0;
+				var lastDocId       = dbres.recs[0].docid;
+				var year            = dbres.recs[0].current_year;
+				var nextIndex       = (+((lastDocId || "").slice(-5) || 0)) + 1;
+
+				function _createDocIdString(fields) {
+					var _index          = fields.index;
+					var _companyID      = fields.companyID || companyID;
+					var _year           = fields.year || year;
+					var _prefix         = fields.prefix || prefix;
+
+					_index = _index + "";
+					_index = "0".repeat(5 - _index.length) + _index;
+
+					return ""
+						+ _companyID
+						+ _year
+						+ _prefix
+						+ _index;
+				}
+
+				while (_while--) {
+					nextDocId = _createDocIdString({ index: nextIndex });
+
+					if (_this.isLockedDocId(nextDocId)) {
+						nextIndex++;
+						continue;
+					}
+
+					break;
+				}
+
+				return nextDocId;
+			});
+		},
+
+
 		/**
 		 * Получить новый код номенклатуры
 		 *
@@ -1114,49 +1182,21 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		 *
 		 * @return {Promise}
 		 * */
-		"getNewDocID": function(arg) {
-			if (typeof arg != "object") {
-				throw new Error(
-					"DocDataModel.getNewDocID(): " +
-					"1st argument expected to be Object. " + (typeof arg) + " is given"
-				);
-			}
-
+		"_getNewDocIDMethodUSED": function(arg) {
 			var _this           = this;
-			var callback        = arg.callback || emptyFn;
-			var dbawws          = _this.getDBInstance();
-			var gands           = this.getGandsInstance();
+			var db              = _this.getDBInstance();
+			var gands           = _this.getGandsInstance();
 			var docType         = arg.docType;
 			var companyID       = arg.companyID;
 			var docTypeGsRow    = gands.dataRefByGSID.get("SYОП" + docType);
+			var prefix          = docTypeGsRow.GSCodeNumber;
 
 			return Promise.resolve().then(function() {
-				if (typeof companyID != "string" || companyID.length != 2) {
-					return Promise.reject(
-						"!DocDataModel.getNewDocID(): " +
-						"arg.companyID expected to be String of length == 2"
-					);
-				}
-
-				if (typeof docType != "string" || docType.length != 4) {
-					return Promise.reject(
-						"DocDataModel.getNewDocID(): " +
-						"arg.docType expected to be not empty String of length == 2"
-					);
-				}
-
-				if (!docTypeGsRow) {
-					return Promise.reject(
-						"DocDataModel.getNewDocID(): " +
-						"specified docType not found in GANDS"
-					);
-				}
-
 				var query = "" +
 					"  SELECT docId FROM Docs" +
 					"; SELECT RIGHT(FORMAT(CURRENT_TIMESTAMP, 'yyyy'), 1) AS _year";
 
-				return dbawws.query({
+				return db.query({
 					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.n-doc-id" }),
 
 					"dbworker": " ",
@@ -1169,11 +1209,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var prevIndex;
 				var docIndexList;
 				var newDocId = void 0;
-				var prefix = docTypeGsRow.GSCodeNumber;
 				var year = dbres[1].recs[0]._year;
-
-				if (!prefix)
-					return Promise.reject("!docTypePrefix");
 
 				// Собрать выборку сквозной нумерации
 				docIndexList = dbres[0].recs.reduce(function(prev, row) {
@@ -1250,14 +1286,65 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				// --------------
 
-				callback(null, _this, newDocId);
-
 				return newDocId;
+			});
+		},
 
-			}).catch(function(err) {
-				callback(err, _this);
 
-				return Promise.reject(err);
+		/**
+		 * @param {Object} arg
+		 * @param {Object=} arg.method
+		 * @param {String} arg.docType
+		 * @param {String} arg.companyID
+		 *
+		 * @return {Promise}
+		 * */
+		"getNewDocID": function(arg) {
+			arg = arg || {};
+
+			var method = (arg.method || "INCREMENT").toUpperCase();
+
+			if (typeof arg != "object") {
+				throw new Error(
+					"DocDataModel.getNewDocID(): " +
+					"1st argument expected to be Object. " + (typeof arg) + " is given"
+				);
+			}
+
+			var _this           = this;
+			var gands           = _this.getGandsInstance();
+			var docType         = arg.docType;
+			var companyID       = arg.companyID;
+			var docTypeGsRow    = gands.dataRefByGSID.get("SYОП" + docType);
+			var prefix          = docTypeGsRow.GSCodeNumber;
+
+			return Promise.resolve().then(function() {
+				if (typeof companyID != "string" || companyID.length != 2) {
+					return Promise.reject(
+						"!DocDataModel.getNewDocID(): " +
+						"arg.companyID expected to be String of length == 2"
+					);
+				}
+
+				if (!prefix)
+					return Promise.reject("!docTypePrefix");
+
+				if (typeof docType != "string" || docType.length != 4) {
+					return Promise.reject(
+						"DocDataModel.getNewDocID(): " +
+						"arg.docType expected to be not empty String of length == 2"
+					);
+				}
+
+				if (!docTypeGsRow) {
+					return Promise.reject(
+						"DocDataModel.getNewDocID(): " +
+						"specified docType not found in GANDS"
+					);
+				}
+
+			}).then(function() {
+				return (_this["_getNewDocIDMethod" + method] || _this["_getNewDocIDMethodUSED"]).call(_this, arg);
 			});
 		},
 
