@@ -833,6 +833,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"serializeObject": function(arg) {
 			arg = Object.assign(arg || {});
 
+			var walker = arg.walker;
 			var obj = {
 				"className": "DocDataModel",
 			};
@@ -844,6 +845,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			obj.movs = this.getMov().map(function(mov) {
 				return mov.serializeObject(arg);
 			});
+
+			walker && walker(this, obj);
 
 			return obj;
 		},

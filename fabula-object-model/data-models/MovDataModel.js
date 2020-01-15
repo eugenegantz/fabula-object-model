@@ -309,6 +309,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 		"serializeObject": function(arg) {
 			arg = Object.assign(arg || {});
 
+			var walker = arg.walker;
 			var obj = {
 				"className": "MovDataModel",
 			};
@@ -320,6 +321,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 			obj.movs = this.getMov().map(function(mov) {
 				return mov.serializeObject(arg);
 			});
+
+			walker && walker(this, obj);
 
 			return obj;
 		},
