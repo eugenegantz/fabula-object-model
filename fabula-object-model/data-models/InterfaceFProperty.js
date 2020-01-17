@@ -478,7 +478,7 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			if (argObj instanceof ObjectA) {
 				this._iFPropsData = this._iFPropsData.filter(function(row) {
-					return row === argObj && (this._iFPropsHasChanged = true)
+					return row !== argObj && (this._iFPropsHasChanged = true)
 				}, this);
 
 				return;
