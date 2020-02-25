@@ -585,6 +585,21 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				});
 
 			}).then(function() {
+				var query = ""
+					+ " UPDATE Movement"
+					+ " SET [mmidold] = NULL"
+					+ " WHERE"
+					+   " doc1 = '" + _this.get("docId") + "'";
+
+				return db.query({
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-doc.save-rm-mmold" }),
+
+					"dbworker": " ",
+
+					"query": query
+				});
+
+			}).then(function() {
 				var queries = [];
 
 				_this.getNestedMovs().forEach(function(mov) {
