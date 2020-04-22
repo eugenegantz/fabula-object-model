@@ -43,7 +43,21 @@ FirmsDataModel.prototype = {
 	},
 
 
-	"sql": "SELECT * FROM firms"
+	"sql": ""
+	+ " SELECT "
+	+   "  [FirmID], [Tick], [ID], [NDS]"
+	+   ", [Parent_ID], [IsFict], [Type], [Name]"
+	+   ", [FullName], [UrName], [City_ID], [Selo_ID]"
+	+   ", [Street_ID], [House], [Flat], [Build_ID]"
+	+   ", [PostIndex], [PostAddress], [Addr], [EditPA]"
+	+   ", [UrAddress], [Tel], [Fax], [Email]"
+	+   ", [ChiefPosition], [ChiefName], [ChiefSex], [ContactPosition]"
+	+   ", [ContactName], [LastEdit], [User], [INN]"
+	+   ", [OKPO], [KPP], [Svid], [Deleted]"
+	+   ", [IsAgency], [Tags], [Tel1], [Tel2]"
+	+   ", [Tel3], [DateNew], [UserNew], [DateEdit]"
+	+   ", [UserEdit], [sha1]"
+	+ " FROM firms"
 
 	+ ";"
 	+ " SELECT"
@@ -113,7 +127,19 @@ FirmsDataModel.prototype = {
 				return reject("FirmsDataModel().loadFirm(): arg.firmId is not specified");
 
 			var query = ""
-				+ " SELECT *"
+				+ " SELECT"
+				+   "  [FirmID], [Tick], [ID], [NDS]"
+				+   ", [Parent_ID], [IsFict], [Type], [Name]"
+				+   ", [FullName], [UrName], [City_ID], [Selo_ID]"
+				+   ", [Street_ID], [House], [Flat], [Build_ID]"
+				+   ", [PostIndex], [PostAddress], [Addr], [EditPA]"
+				+   ", [UrAddress], [Tel], [Fax], [Email]"
+				+   ", [ChiefPosition], [ChiefName], [ChiefSex], [ContactPosition]"
+				+   ", [ContactName], [LastEdit], [User], [INN]"
+				+   ", [OKPO], [KPP], [Svid], [Deleted]"
+				+   ", [IsAgency], [Tags], [Tel1], [Tel2]"
+				+   ", [Tel3], [DateNew], [UserNew], [DateEdit]"
+				+   ", [UserEdit], [sha1]"
 				+ " FROM firms"
 				+ " WHERE"
 				+   " firmId = " + arg.firmId

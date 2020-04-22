@@ -166,6 +166,7 @@ DefaultPrintCalc.prototype.calc = function(arg) {
 
 	var tmp,
 		gsRow,
+		_this = this,
 		argGSID = arg.GSID,
 		gands = GandsDataModel.prototype.getInstance(),
 		methodsMap = {
@@ -190,12 +191,13 @@ DefaultPrintCalc.prototype.calc = function(arg) {
 	if ((tmp = gands.getProperty(gsRow, "способ наценки")[0]))
 		methods = tmp.value.split(/[;,]\s*/ig);
 
-	methods.some(method => {
+	methods.some(function(method) {
 		method = method.toLowerCase();
 
-		if (!methodsMap[method]) return;
+		if (!methodsMap[method])
+			return;
 
-		ret = methodsMap[method].call(this, arg);
+		ret = methodsMap[method].call(_this, arg);
 
 		return ret.price;
 	});

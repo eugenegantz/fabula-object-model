@@ -89,11 +89,11 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 	 * @param {Object} arg
 	 * @param {Function} arg.callback
 	 * */
-	"load" : function(arg){
+	"load" : function(arg) {
 		if (typeof arg == "undefined") arg = Object.create(null);
 		var useCache = typeof arg.useCache == "undefined" ? true : Boolean(arg.useCache);
 		var callback = typeof arg.callback == "function" ? arg.callback : function(){};
-		var self = this;
+		var _this = this;
 
 		var db = getContextDB.call(this);
 		var configRow = {"GSID": "ТСFM", "GSName": "Настройки FOM", "GSKindName":"", "GSCOP":""};
@@ -101,78 +101,114 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 
 		/*#if browser,node*/
 		// Номеклатура
-		db.dbquery({
-			"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-gs.load-0" }),
-			"query": "SELECT pid, extID, property, value FROM Property WHERE ExtID IN(SELECT [value] FROM Property WHERE extClass = 'config' AND property = 'fom-config-entry-gsid')",
-			"callback": function(dbres, err){
-				if (err = dbUtils.fetchErrStrFromRes(dbres))
-					return callback(err);
+		var query = ""
+			+ " SELECT"
+			+   "  pid"
+			+   ", extID"
+			+   ", property"
+			+   ", value"
+			+ " FROM Property"
+			+ " WHERE"
+			+   " ExtID IN("
+			+       " SELECT [value]"
+			+       " FROM Property"
+			+       " WHERE"
+			+           "     extClass = 'config'"
+			+           " AND property = 'fom-config-entry-gsid'"
+			+   " )";
 
-				// Конфиг по-умолчанию
-				var dbq = [
-					"SELECT * FROM Gands " 		+
-					"WHERE "							+
-					"GSCOP LIKE '87%' "			+
-					"OR GSCOP LIKE '17%' "		+
-					"OR GSCOP LIKE '27%' "		+
-					"OR GSCOP LIKE '07%' "		+
-					"OR GSID LIKE 'ТСПо%' "
-				];
+		// Конфиг по-умолчанию
+		var queries = [""
+			+ " SELECT * FROM Gands"
+			+ " WHERE "
+			+   "    GSCOP LIKE '87%'"
+			+   " OR GSCOP LIKE '17%'"
+			+   " OR GSCOP LIKE '27%'"
+			+   " OR GSCOP LIKE '07%'"
+			+   " OR GSID LIKE 'ТСПо%'"
+		];
 
-				if (dbres.recs.length){
-					for(var c=0; c<dbres.recs.length; c++){
-						// Запрос из конфига
-						if (dbres.recs[c].property == "запрос-номенклатура"){
-							dbq[0] = "SELECT * FROM Gands WHERE " + dbres.recs[c].value;
-						}
-						configRowProps.push(dbres.recs[c]);
+		db.query({
+			"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-gs.load-0" }),
+			"query": query
+		}).then(function(dbres) {
+			if (dbres.recs.length) {
+				for(var  c = 0; c < dbres.recs.length; c++) {
+					// Запрос из конфига
+					if (dbres.recs[c].property == "запрос-номенклатура"){
+						queries[0] = ""
+							+ " SELECT *"
+							+ " FROM Gands"
+							+ " WHERE " + dbres.recs[c].value;
 					}
+					configRowProps.push(dbres.recs[c]);
 				}
-
-				// На случай если необходимо переопределить запрос на уровне проекта
-				if (self.sql) dbq[0] = self.sql;
-
-				// Расширение номенклатуры
-				dbq.push(
-					"SELECT * FROM GandsExt "				+
-					"WHERE "										+
-					"GSExID IN ("									+
-					dbq[0].replace(/[*]/gi, "GSID")			+
-					")"
-				);
-
-				// Свойства номенклатуры
-				dbq.push(
-					"SELECT pid, extID, property, value FROM Property "	+
-					"WHERE "																+
-					"ExtID IN ("															+
-					dbq[0].replace(/[*]/gi, "GSID")									+
-					")"
-				);
-
-				if (db){
-					db.dbquery({
-						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-gs.load-1" }),
-						"query" : dbq.join("; "),
-						"callback" : function(res, err){
-							if (err = dbUtils.fetchErrStrFromRes(res))
-								return callback(err);
-
-							self._afterLoad(
-								{
-									"data": res[0].recs.concat(configRow),
-									"ext": res[1].recs,
-									"props": res[2].recs.concat(configRowProps)
-								},
-								callback
-							);
-							self._init_timestamp = Date.now();
-						}
-					});
-				}
-
-
 			}
+
+			if (!db)
+				return Promise.reject("!GandsDataModel.load(): !db");
+
+			var promises = [];
+
+			// На случай если необходимо переопределить запрос на уровне проекта
+			if (_this.sql)
+				queries[0] = _this.sql;
+
+			// Основная таблица
+			promises.push(
+				db.query({
+					"query": queries[0].replace("*", ""
+						+ "  [ID], [Sort], [Sort4], [GSID]"
+						+ ", [GSID4], [Tick], [GSCOP], [GSKindName]"
+						+ ", [GSName], [GSCodeNumber], [GSUnit], [GSUnit2]"
+						+ ", [GSCostSale], [GSCost], [GSStock], [CheckStock]"
+						+ ", [ExtID], [ImportName], [FirmDefault], [GSGraf]"
+						+ ", [GSFlag], [DateNew], [UserNew], [DateEdit], [UserEdit]"),
+					"primaryField": "id",
+					"chunked": true
+				})
+			);
+
+			// Расширение номенклатуры
+			promises.push(
+				db.query({
+					"query": ""
+					+ " SELECT"
+					+ "   [GEIDC], [GSExType], [GSExID], [GSExSort], [GSExExtID], [GSExName]"
+					+ " , [GSExNum], [GSExFlag], [GSExAttr1], [GSExAttr2], [Tick], [DateEdit]"
+					+ " FROM GandsExt"
+					+ " WHERE"
+					+   " GSExID IN (" + queries[0].replace(/[*]/gi, "GSID") + ")",
+					"primaryField": "geidc",
+					"chunked": true
+				})
+			);
+
+			// Свойства номенклатуры
+			promises.push(
+				db.query({
+					"query": ""
+					+ " SELECT pid, extID, property, value FROM Property"
+					+ " WHERE"
+					+   " ExtID IN (" + queries[0].replace(/[*]/gi, "GSID") + ")",
+					"primaryField": "uid",
+					"chunked": true
+				})
+			);
+
+			return Promise.all(promises);
+
+		}).then(function(res) {
+			_this._afterLoad({
+				"data": res[0].recs.concat(configRow),
+				"ext": res[1].recs,
+				"props": res[2].recs.concat(configRowProps)
+			}, callback);
+
+			_this._init_timestamp = Date.now();
+
+		}).catch(function(err) {
+			callback(err);
 		});
 		/*#end*/
 
@@ -180,7 +216,7 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 		if (  _utils.isBrowser()  ){
 			var Ajax = require("./../browser/Ajax");
 			Ajax.req({
-				"url": self._fabulaInstance.url,
+				"url": _this._fabulaInstance.url,
 				"method": "POST",
 				"data": {
 					model: "GandsDataModel",
@@ -193,7 +229,7 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 						callback(err);
 						return;
 					}
-					self._afterLoad(JSON.parse(http.responseText), callback);
+					_this._afterLoad(JSON.parse(http.responseText), callback);
 				}
 			});
 		}

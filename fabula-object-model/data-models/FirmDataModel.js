@@ -16,6 +16,17 @@ var FirmDataModel = function() {
 	this._mFirmBranches = [];
 };
 
+
+FirmDataModel.getTableScheme = function() {
+	return FirmDataModel.prototype._firmsTableFldDecl;
+};
+
+
+FirmDataModel.getTableName = function() {
+	return "Firms";
+};
+
+
 FirmDataModel.prototype = utils.createProtoChain(
 	InterfaceFProperty.prototype,
 	DefaultDataModel.prototype,
@@ -70,6 +81,16 @@ FirmDataModel.prototype = utils.createProtoChain(
 			"UserEdit":         { "type": "string", "length": 20 },
 			"sha1":             { "type": "string", "length": 50 }
 		}),
+
+
+		"getTableScheme": function() {
+			return FirmDataModel.getTableScheme();
+		},
+
+
+		"getTableName": function() {
+			return FirmDataModel.getTableName();
+		},
 
 
 		/**
@@ -224,14 +245,14 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"load": function(arg) {
 			arg = arg || {};
 
-			var self            = this;
-			var db              = self.getDBInstance();
+			var _this           = this;
+			var db              = _this.getDBInstance();
 			var callback        = arg.callback || emptyFn;
 			var cond            = [];
 
 			["firmId", "tel3", "tel2", "tel1", "tel", "email"].forEach(function(fld) {
-				var fieldDecl   = self._firmsTableFldDecl.get(fld);
-				var val         = self.get(fld);
+				var fieldDecl   = _this._firmsTableFldDecl.get(fld);
+				var val         = _this.get(fld);
 
 				if (!fieldDecl)
 					return;
@@ -246,13 +267,17 @@ FirmDataModel.prototype = utils.createProtoChain(
 				if (!cond.length)
 					return Promise.reject("FirmDataModel.load(): !cond.length");
 
+				var columns = _this.getTableScheme().getKeys().map(function(column) {
+					return "[" + column + "]";
+				});
+
 				var _query = ""
 					+ " SELECT _fld_"
 					+ " FROM firms AS t_firms"
 					+ " WHERE " + cond.join(" OR ");
 
 				var query = ""
-					+ _query.replace("_fld_", "*")
+					+ _query.replace("_fld_", columns)
 					+ " OR parent_id IN (" + _query.replace("_fld_", "firmId") + ")";
 
 				query += ";"
@@ -270,7 +295,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 					+   ")";
 
 				return db.query({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.load" }),
+					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.load" }),
 					"dbworker": arg.dbworker,
 					"query": query
 				});
@@ -283,13 +308,13 @@ FirmDataModel.prototype = utils.createProtoChain(
 				if (!firmsTable.length)
 					return Promise.reject("FirmDataModel.load(): !dbres.recs.length");
 
-				self._mFirmBranches = [];
+				_this._mFirmBranches = [];
 
 				firmsTable.forEach(function(row) {
 					var _row = new ObjectA(row),
 
 						isParent = ["firmId", "tel", "email", "tel3", "tel2", "tel1"].some(function(key) {
-							var value0 = (self.get(key) + "").toLowerCase();
+							var value0 = (_this.get(key) + "").toLowerCase();
 							var value1 = (_row.get(key) + "").toLowerCase();
 
 							if (!value0 || !value1)
@@ -308,7 +333,7 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 						// Не записывать корневую фирму (не создавать рекурсию)
 						if (firm.get('parent_id'))
-							self.addBranch(firm);
+							_this.addBranch(firm);
 					}
 				});
 
@@ -317,33 +342,33 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 				// ------------
 
-				self.getKeys().forEach(function(k) {
-					self.set(k, void 0, null, !1);
+				_this.getKeys().forEach(function(k) {
+					_this.set(k, void 0, null, !1);
 				});
 
-				self.deleteFProperty();
+				_this.deleteFProperty();
 
 				// ------------
 
-				self.set(parentFirmRow);
+				_this.set(parentFirmRow);
 
-				self.addFProperty(propsTable.filter(function(row) {
-					return self.get("firmId", null, !1) == row.extId;
+				_this.addFProperty(propsTable.filter(function(row) {
+					return _this.get("firmId", null, !1) == row.extId;
 				}));
 
 				return Promise.all(
-					self.getBranch().map(function(firm) {
+					_this.getBranch().map(function(firm) {
 						return firm.load();
 					})
 				);
 
 			}).then(function() {
-				self.clearChanged();
+				_this.clearChanged();
 
-				callback(self, null);
+				callback(_this, null);
 
 			}).catch(function(err) {
-				callback(self, err);
+				callback(_this, err);
 
 				return Promise.reject(err);
 			});

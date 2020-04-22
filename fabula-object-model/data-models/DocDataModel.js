@@ -918,15 +918,23 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				if (where)
 					_where = where;
 
+				var movementColumns = MovDataModel.getTableScheme().getKeys().map(function(column) {
+					return "[" + column + "]";
+				});
+
+				var docsColumns = _this.getTableScheme().getKeys().map(function(column) {
+					return "[" + column + "]";
+				});
+
 				var query = ""
 					+ " SELECT"
-					+   "  *"
+					+   " " + docsColumns
 					+   ", Format(RegDate,'yyyy-MM-dd hh:mm:ss') AS RegDate"
 					+ " FROM DOCS"
 					+ " WHERE " + _where
 
 					+ "; SELECT"
-					+   "  *"
+					+   " " + movementColumns
 					+   ", Format(gsDate,'yyyy-MM-dd hh:mm:ss') AS gsDate"
 					+   ", Format(gsDate2,'yyyy-MM-dd hh:mm:ss') AS gsDate2"
 					+ " FROM Movement"
@@ -1468,34 +1476,24 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				"FirmCustomer":     { "type": "N" },
 				"PayType":          { "type": "S" },
 				"Discount":         { "type": "N" },
-				// "Disc_Text":        { "type": "S" },
 				"Margin":           { "type": "N" },
-				// "Marg_Text":        { "type": "S" },
 				"CurRate":          { "type": "N" },
 				"Currency":         { "type": "S" },
 				"Sum1":             { "type": "N" },
 				"Sum2":             { "type": "N" },
 				"Debt":             { "type": "N" },
+				"Debt2":            { "type": "N" },
 				"SumExt":           { "type": "N" },
 				"SumExt2":          { "type": "N" },
 				"SumExt3":          { "type": "N" },
+				"SumExt4":          { "type": "N" },
 				"SumExtNDS":        { "type": "N" },
 				"RateNDS":          { "type": "N" },
 				"RateSpecTax":      { "type": "N" },
 				"SumNDS":           { "type": "N" },
 				"SumSpecTax":       { "type": "N" },
-				// "Notice":           { "type": "S" },
-				// "DocFlag":          { "type": "S" },
-				// "FilterGS":         { "type": "S" },
 				"IsDeleted":        { "type": "N" },
-				// "DateNew":          { "type": "D" },
-				// "UserNew":          { "type": "S" },
-				"DateEdit":         { "type": "D", "value": "CURRENT_TIMESTAMP" },
-				// "UserEdit":         { "type": "S" },
-				"TextAVR":          { "type": "S" },
-				"Addr":             { "type": "S" },
-				"Debt2":            { "type": "N" },
-				"SumExt4":          { "type": "N" }
+				"DateEdit":         { "type": "D", "value": "CURRENT_TIMESTAMP" }
 			});
 
 			// продублировать ключи внутри деклараций полей

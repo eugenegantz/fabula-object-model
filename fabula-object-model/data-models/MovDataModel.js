@@ -29,7 +29,7 @@ var MFieldMMPId = (function() {
 				return _protoGet.call(this);
 
 			return movObj.get("mmId", null, false);
-		},
+		}
 
 	});
 
@@ -54,7 +54,7 @@ var MFieldDoc = (function() {
 				return _protoGet.call(this);
 
 			return docObj.get("docId", null, false);
-		},
+		}
 
 	});
 
@@ -79,7 +79,7 @@ var MFieldParentDoc = (function() {
 				return _protoGet.call(this);
 
 			return docObj.get("docId", null, false);
-		},
+		}
 
 	});
 
@@ -108,7 +108,7 @@ var MFieldDoc1 = (function() {
 				return pDocObj.get("docId", null, false);
 
 			return _protoGet.call(this);
-		},
+		}
 
 	});
 
@@ -311,7 +311,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			var walker = arg.walker;
 			var obj = {
-				"className": "MovDataModel",
+				"className": "MovDataModel"
 			};
 
 			obj.props = JSON.parse(JSON.stringify(this.getProperty()));
@@ -355,13 +355,17 @@ MovDataModel.prototype = _utils.createProtoChain(
 				callback = arg.callback || emptyFn,
 				dbawws = _this.getDBInstance();
 
+			var columns = _this.getTableScheme().getKeys().map(function(column) {
+				return "[" + column + "]";
+			});
+
 			return new Promise(function(resolve, reject) {
 				if (!(mmid = +_this.get("mmid")))
 					return reject("!mmid");
 
 				var query = ""
 					// Записи движения ТиУ
-					+ " SELECT *, Format(GSDate,'yyyy-MM-dd hh:mm:ss') AS GSDate"
+					+ " SELECT " + columns + ", Format(GSDate,'yyyy-MM-dd hh:mm:ss') AS GSDate"
 					+ " FROM Movement "
 					+ " WHERE"
 					+   "    mmid = " + mmid
@@ -1027,32 +1031,25 @@ MovDataModel.prototype = _utils.createProtoChain(
 				"GSDate2":      { "type": "date" },
 				"Mark":         { "type": "boolean" },
 				"CodeOp":       { "type": "string" },
-				"CodeDc":       { "type": "string" },
-				// "ExtCode":      { "type": "string" },
+				"CodeDC":       { "type": "string" },
+				"AVR1":         { "type": "int" },
+				// "DebetFis":     { "type": "string" }, -- существующее поле
+				// "KreditFis":     { "type": "string" }, -- существующее поле
 				"Storage":      { "type": "string" },
 				"GS":           { "type": "string" },
 				"GSSpec":       { "type": "string", "length": 120 },
-				// "GSExt":        { "type": "integer" },
-				// "Consigment":   { "type": "integer" },
-				"K2":           { "type": "integer" },
 				"Amount":       { "type": "float" },
+				"K2":           { "type": "integer" },
 				"Rest":         { "type": "float" },
 				"RestSum":      { "type": "float" },
 				"Price":        { "type": "float" },
 				"PrimeCost":    { "type": "float" },
 				"Sum":          { "type": "float" },
 				"Sum2":         { "type": "float" },
-				// "MAttr1":       { "type": "string" },
-				// "MAttr2":       { "type": "string" },
-				// "MAttr3":       { "type": "string" },
-				// "MAttr4":       { "type": "string" },
-				// "FirmProduct":  { "type": "integer" },
-				"Remark":       { "type": "string" },
-				"NameAVR":      { "type": "string" },
-				"Agent2":       { "type": "string" },
 				"Manager2":     { "type": "string" },
 				"Performer":    { "type": "string" },
-				"Stock":        { "type": "boolean" }
+				"Stock":        { "type": "boolean" },
+				"DateEdit":     { "type": "date" }
 			});
 
 			fields.getKeys().forEach(function(key) {
