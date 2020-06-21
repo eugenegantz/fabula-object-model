@@ -33,6 +33,7 @@ var DBModel = function(arg) {
 		this.dbAwwS = modDBAwwS.prototype.getInstance(arg);
 
 		[
+			"wsurl",
 			"dburl",
 			"dbname",
 			"dbsrc",
@@ -46,7 +47,7 @@ var DBModel = function(arg) {
 		});
 
 	} else {
-		this.dbAwwS					= modDBAwwS.prototype.getInstance();
+		this.dbAwwS = modDBAwwS.prototype.getInstance();
 
 	}
 
@@ -54,6 +55,11 @@ var DBModel = function(arg) {
 };
 
 DBModel.prototype.instances = [];
+
+
+DBModel.prototype.getConnection = function() {
+	return this.dbAwwS;
+};
 
 
 /**

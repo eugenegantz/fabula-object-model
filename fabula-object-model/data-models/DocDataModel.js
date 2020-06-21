@@ -658,6 +658,27 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 							+   " ," + 0
 							+ " )";
 
+						// Серия сообщений валит вебсокет на фабуле
+						setTimeout(function() {
+							var fields = {
+								"cmd"           : "setflag",
+								"MMID"          : mov.get("mmId"),
+								"*Doc"           : mov.get("doc1"),
+								"FirmContract"  : _this.get("firmContract"),
+								"*GSSpec"       : mov.get("gsSpec"),
+								"*Person"       : _this.get("person"),
+								"*MMFlag"        : nextFlag,
+								"*GS"            : mov.get("gs"),
+								"Agent"         : _this.get("agent"),
+								"Manager"       : mov.get("manager2") || _this.get("manager"),
+								"Performer"     : mov.get("performer"),
+								"Ag"            : "999",
+								"Dt"            : new Date()
+							};
+
+							db.getConnection().send({ fields: fields });
+						}, Math.random() * 3000);
+
 						queries.push(query);
 					}
 				});
