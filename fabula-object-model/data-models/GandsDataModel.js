@@ -503,6 +503,12 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 	 * @return {undefined | Array}
 	 * */
 	"getProperty": function(row, props, options){
+		var priorPropsObj;
+		var props_;
+		var gsRow;
+		var prop;
+		var row_;
+		var c;
 		var ret = [];
 
 		if (  _utils.getType(row) == "object" && row.GSID  ){
@@ -518,23 +524,27 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 
 		if (!row) return ret;
 
-		if (_utils.getType(props) == "array"){
+		if (_utils.getType(props) == "array") {
 
 		} else if (typeof props == "string") {
 			props = [props];
+
 		} else {
 			props = [];
 		}
 
-		var props_ = [], row_ = row, c;
+		props_ = [];
+		row_ = row;
 
-		for(c=0; c<props.length; c++){
-			if (typeof props[c] != "string") continue;
+		for (c = 0; c < props.length; c++) {
+			if (typeof props[c] != "string")
+				continue;
+
 			props_[c] = props[c].toLowerCase();
 		}
 
 		do {
-			if (!props_.length){
+			if (!props_.length) {
 				ret = ret.concat(row_.gandsPropertiesRef);
 
 			} else {
@@ -543,7 +553,6 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 						ret.push(row_.gandsPropertiesRef[c]);
 					}
 				}
-
 			}
 		} while(  row_ = this.getParent(row_)  );
 
@@ -551,21 +560,26 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 			options = {};
 		}
 
-		if (options.onlyPriority){
-			var priorProps = {};
-			for(c=0; c<ret.length; c++){
-				if (
-					typeof priorProps[ret[c].property] != "object"
-					|| priorProps[ret[c].property].extID.length < ret[c].extID.length
-				){
-					priorProps[ret[c].property] = ret[c];
+		if (options.onlyPriority) {
+			priorPropsObj = {};
+
+			for (c = 0; c < ret.length; c++) {
+				gsRow = ret[c];
+				prop = gsRow.property;
+
+				if (!priorPropsObj[prop] || priorPropsObj[prop][0].extID.length < gsRow.extID.length) {
+					priorPropsObj[prop] = [gsRow];
+
+				} else {
+					priorPropsObj[prop].push(gsRow);
 				}
 			}
+
 			ret = [];
-			for(var prop in priorProps){
-				if (!priorProps.hasOwnProperty(prop)) continue;
-				ret.push(priorProps[prop]);
-			}
+
+			Object.values(priorPropsObj).forEach(function(arr) {
+				ret.push.apply(ret, arr);
+			});
 		}
 
 		return ret;
