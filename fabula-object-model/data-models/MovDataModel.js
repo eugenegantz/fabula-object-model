@@ -1087,8 +1087,8 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 		"getDocInstance": function() {
 			var doc;
+			var c;
 			var pMov = this;
-			var c = 0;
 
 			if (this._mMovDocInstance)
 				return this._mMovDocInstance;
@@ -1099,16 +1099,11 @@ MovDataModel.prototype = _utils.createProtoChain(
 				return;
 
 			// если doc не указан явно, искать объект у родителей
-			for (;;) {
+			for (c = 0; c < 100; c++) { // защита от рекурсии
 				if (!(pMov = pMov.getParentMovInstance()))
 					break;
 
 				if (doc = pMov.getDocInstance())
-					break;
-
-				// если по какой-то причине возникнет рекурсия
-				// чтобы не повесить контекст выполнения, установлен счетчик
-				if (c++ > 100)
 					break;
 			}
 
@@ -1202,22 +1197,35 @@ MovDataModel.prototype = _utils.createProtoChain(
 		},
 
 
+		/**
+		 * Вернуть дубликат задачи
+		 *
+		 * @return {MovDataModel}
+		 * */
 		"clone": function() {
 			var _this   = this;
 			var clone   = new MovDataModel();
 
+			// подчинить заявке
+			clone.setDocInstance(_this._mMovDocInstance);
+			clone.setParentDocInstance(_this._mMovParentDocInstance);
+
+			// копировать поля
 			this.getKeys().forEach(function(key) {
 				clone.set(key, _this.get(key, null, false), null, false);
 			});
 
+			// создать дубликаты починенных задач
 			_this.getMov().forEach(function(mov) {
 				clone.addMov(mov.clone());
 			});
 
+			// копировать свойства
 			_this.getFPropertyA().forEach(function(propRow) {
 				clone.addFProperty(propRow.getClone());
 			});
 
+			// сбросить историю изменений
 			clone.clearModelHistory();
 
 			return clone;

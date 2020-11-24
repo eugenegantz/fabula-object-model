@@ -1396,22 +1396,66 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		},
 
 
+		/**
+		 * Вернуть дубликат заявки
+		 *
+		 * @return {DocDataModel}
+		 * */
 		"clone": function() {
 			var _this   = this;
-			var clone     = new DocDataModel();
+			var clone   = new DocDataModel();
 
-			this.getKeys().forEach(function(key) {
+			// копировать поля
+			_this.getKeys().forEach(function(key) {
 				clone.set(key, _this.get(key, null, false), null, false);
 			});
 
+			// создать дубликаты задач
 			_this.getMov().forEach(function(mov) {
-				clone.addMov(mov.clone());
+				var docObj = mov.getDocInstance();
+				var pDocObj = mov.getParentDocInstance();
+				var movClone = mov.clone();
+
+				clone.addMov(movClone);
+
+				// в подчиненной задаче нет поля "doc" (задача на продажу)
+				// гарантировать, что в дубликате это поле так же пустое
+				if (!docObj)
+					movClone.setDocInstance(void 0);
+
+				// задача была подчинена текущей заявке
+				// подчинить соотв дубликату
+				else if (_this === docObj)
+					movClone.setDocInstance(clone);
+
+				// задача была подчинена другой заявке
+				// сохранить такую связь
+				else
+					movClone.setDocInstance(docObj);
+
+
+				// в подчиненной задаче нет поля "parentDoc" (задача на производство)
+				// гарантировать, что в дубликате это поле так же пустое
+				if (!pDocObj)
+					movClone.setParentDocInstance(void 0);
+
+				// задача была подчинена текущей заявке
+				// подчинить соотв дубликату
+				else if (_this === pDocObj)
+					movClone.setParentDocInstance(_this);
+
+				// задача была подчинена другой заявке
+				// сохранить такую связь
+				else
+					movClone.setParentDocInstance(pDocObj);
 			});
 
+			// копировать свойства
 			_this.getFPropertyA().forEach(function(propRow) {
 				clone.addFProperty(propRow.getClone());
 			});
 
+			// сбросить историю
 			clone.clearModelHistory();
 
 			return clone;
