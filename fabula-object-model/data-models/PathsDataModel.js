@@ -40,13 +40,22 @@ PathsDataModel.prototype = {
 	"load": function(arg) {
 		if (typeof arg == "undefined") arg = Object.create(null);
 
-		var callback = typeof arg.callback == "function" ? arg.callback : new Function(),
-			db = getContextDB.call(this),
-			self = this;
+		var callback    = typeof arg.callback == "function" ? arg.callback : new Function();
+		var db          = getContextDB.call(this);
+		var self        = this;
+
+		var query = ""
+			+ " SELECT"
+			+   "  gsExName AS [property]"
+			+   ", gsExAttr1 AS [value]"
+			+ " FROM GandsExt"
+			+ " WHERE"
+			+   "     gsexid = 'SYСПКТМП'"
+			+   " AND gsExType = 'path'";
 
 		if (db) {
 			db.dbquery({
-				"query": "SELECT value, property FROM Property WHERE extClass = 'path' ",
+				"query": query,
 				"callback": function(res) {
 					self.data = res.recs;
 					self.state = 1;

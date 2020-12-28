@@ -135,6 +135,7 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 			if (dbres.recs.length) {
 				for(var  c = 0; c < dbres.recs.length; c++) {
 					// Запрос из конфига
+					// TODO DEPRECATED
 					if (dbres.recs[c].property == "запрос-номенклатура"){
 						queries[0] = ""
 							+ " SELECT *"
