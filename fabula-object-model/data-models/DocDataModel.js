@@ -1182,16 +1182,26 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 			}).then(function(dbres) {
 				var _while          = 100;
+				var now             = new Date();
 				var nextDocId       = void 0;
-				var lastDocId       = dbres.recs[0].docid;
-				var year            = dbres.recs[0].current_year;
-				var nextIndex       = (+((lastDocId || "").slice(-5) || 0)) + 1;
+				var lastDocId       = void 0;
+				var nextIndex       = 1;
+				var year            = now.getFullYear().toString().slice(-1);
+
+				if (dbres.recs.length) {
+					year            = dbres.recs[0].current_year;
+					lastDocId       = dbres.recs[0].docid;
+					nextIndex       = (+((lastDocId || "").slice(-5) || 0)) + 1;
+				}
+
+				if (isNaN(nextIndex))
+					return Promise.reject("_getNewDocIDMethodINCREMENT(): isNaN(nextIndex)");
 
 				function _createDocIdString(fields) {
 					var _index          = fields.index;
-					var _companyID      = fields.companyID || companyID;
-					var _year           = fields.year || year;
-					var _prefix         = fields.prefix || prefix;
+					var _companyID      = fields.companyID;
+					var _year           = fields.year;
+					var _prefix         = fields.prefix;
 
 					_index = _index + "";
 					_index = "0".repeat(5 - _index.length) + _index;
@@ -1204,7 +1214,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				}
 
 				while (_while--) {
-					nextDocId = _createDocIdString({ index: nextIndex });
+					nextDocId = _createDocIdString({
+						  "index"       : nextIndex
+						, "year"        : year
+						, "prefix"      : prefix
+						, "companyID"   : companyID
+					});
 
 					if (_this.isLockedDocId(nextDocId)) {
 						nextIndex++;
@@ -1284,9 +1299,9 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 				function _createDocIdString(fields) {
 					var _index          = fields.index;
-					var _companyID      = fields.companyID || companyID;
-					var _year           = fields.year || year;
-					var _prefix         = fields.prefix || prefix;
+					var _companyID      = fields.companyID;
+					var _year           = fields.year;
+					var _prefix         = fields.prefix;
 
 					_index = _index + "";
 					_index = "0".repeat(5 - _index.length) + _index;
@@ -1308,7 +1323,12 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					currIndex = a;
 
 					if (Math.abs(currIndex - prevIndex) > 1) {
-						var _newDocId = _createDocIdString({ index: prevIndex + 1 });
+						var _newDocId = _createDocIdString({
+							  "index"     : prevIndex + 1
+							, "companyID" : companyID
+							, "year"      : year
+							, "prefix"    : prefix
+						});
 
 						if (!_this.isLockedDocId(_newDocId))
 							return newDocId = _newDocId;
