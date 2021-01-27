@@ -1177,7 +1177,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					"dbworker": " ",
 
-					"query": query
+					"query": query,
+
+					"logs": {
+						"response": true
+					}
 				});
 
 			}).then(function(dbres) {
@@ -1263,7 +1267,11 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 
 					"dbworker": " ",
 
-					"query": query
+					"query": query,
+
+					"logs": {
+						"response": true
+					}
 				});
 
 			}).then(function(dbres) {
