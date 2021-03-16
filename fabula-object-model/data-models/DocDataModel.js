@@ -926,15 +926,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 					return Promise.reject('DocDataModel.load(): "docId" and "id" and "args.where" field is not assigned');
 				}
 
-				var _where = [];
-
-				if (docId)
-					_where.push("docId = '" + docId + "'");
+				var _where = "";
 
 				if (id)
-					_where.push("id = " + id);
+					_where = "id = " + id;
 
-				_where = _where.join(" OR ");
+				else if (docId)
+					_where = "docId = '" + docId + "'";
 
 				if (where)
 					_where = where;
