@@ -100,6 +100,7 @@ FabulaObjModel.setModule("DefaultDataModel", require("./data-models/DefaultDataM
 
 FabulaObjModel.setModule("InterfaceEvents", require("./data-models/InterfaceEvents"));
 FabulaObjModel.setModule("InterfaceFProperty", require("./data-models/InterfaceFProperty"));
+FabulaObjModel.setModule("IFabModule", require("./data-models/IFabModule"));
 
 FabulaObjModel.setModule("AgentsDataModel", require("./data-models/AgentsDataModel"));
 
@@ -113,6 +114,9 @@ FabulaObjModel.setModule("DocDataModel", require("./data-models/DocDataModel"));
 
 FabulaObjModel.setModule("FirmsDataModel", require("./data-models/FirmsDataModel"));
 FabulaObjModel.setModule("FirmDataModel", require("./data-models/FirmDataModel"));
+
+FabulaObjModel.setModule("ClientDataModel", require("./data-models/ClientDataModel"));
+FabulaObjModel.setModule("ClientsDataModel", require("./data-models/ClientsDataModel"));
 
 FabulaObjModel.setModule("MovDataModel", require("./data-models/MovDataModel"));
 

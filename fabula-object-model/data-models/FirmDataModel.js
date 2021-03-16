@@ -653,34 +653,35 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"exists": function(arg) {
 			arg = arg || {};
 
-			var self = this,
-				callback = arg.callback || emptyFn,
-				id = self.get("firmId"),
-				db = self.getDBInstance();
+			var _this       = this;
+			var callback    = arg.callback || emptyFn;
+			var id          = _this.get("firmId");
+			var db          = _this.getDBInstance();
 
-			return new Promise(function(resolve, reject) {
-				if (utils.isEmpty(db))
-					return reject("FirmDataModel.exists(): firmId is empty");
+			if (utils.isEmpty(id)) {
+				callback(_this, null, false);
 
-				db.dbquery({
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.exs" }),
-					"query": ""
-					+ " SELECT email"
-					+ " FROM firms"
-					+ " WHERE"
-					+   " firmId = " + id,
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres)) {
-							callback(err);
+				return Promise.resolve(false);
+			}
 
-							return reject(err);
-						}
+			var query = ""
+				+ " SELECT email"
+				+ " FROM firms"
+				+ " WHERE"
+				+   " firmId = " + id;
 
-						callback(self, null, !!dbres.recs.length);
+			return db.dbquery({
+				"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.exs" }),
+				"query": query
+			}).then(function(dbres) {
+				callback(_this, null, !!dbres.recs.length);
 
-						resolve(!!dbres.recs.length);
-					}
-				});
+				return !!dbres.recs.length;
+
+			}).catch(function(err) {
+				callback(err);
+
+				return Promise.reject(err);
 			});
 		}
 

@@ -54,7 +54,7 @@ DefaultDataModel.prototype = utils.createProtoChain(
 			if (!this.hasField(key))
 				return;
 
-			return this._mDefaultFields[key].get();
+			return this._mDefaultFields[key].get(arg);
 		},
 
 
@@ -98,7 +98,7 @@ DefaultDataModel.prototype = utils.createProtoChain(
 			if (!this.hasField(key))
 				this.declField(key, new MField({ modelCtx: this }));
 
-			this._mDefaultFields[key].set(value);
+			this._mDefaultFields[key].set(value, arg);
 
 			if (useEvent) {
 				this.trigger(eventAfterFld.type, eventAfterFld);
