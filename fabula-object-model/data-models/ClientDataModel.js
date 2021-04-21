@@ -209,6 +209,29 @@ ClientDataModel.prototype = utils.createProtoChain(
 
 
 		/**
+		 * Запросить из базы новый clid. Новая парадигма требует, чтобы id был сквозной для двух таблиц ClientFIO + Firms
+		 *
+		 * @return {Promise}
+		 * */
+		"_requestNewId": function() {
+			var db = this.getDBInstance();
+
+			var query = ""
+				+ " SELECT MAX(firmid) + 1 AS id FROM Firms"
+				+ " UNION ALL"
+				+ " SELECT MAX(clid) + 1 AS id FROM ClientFIO"
+				+ " ORDER BY id DESC";
+
+			return db.query({ "query": query }).then(function(dbRes) {
+				if (!dbRes.recs.length)
+					return 1;
+
+				return dbRes.recs[0].id;
+			});
+		},
+
+
+		/**
 		 * Записать нового контрагента в таблицу "ClientFIO"
 		 *
 		 * @param {Object} arg
@@ -232,6 +255,11 @@ ClientDataModel.prototype = utils.createProtoChain(
 				}
 
 			}).then(function() {
+				return _this._requestNewId().then(function(id) {
+					_this.set("clid", id, null, null);
+				});
+
+			}).then(function() {
 				var values = [];
 				var fields = [];
 
@@ -246,43 +274,16 @@ ClientDataModel.prototype = utils.createProtoChain(
 					values.push(dbUtils.mkVal(val, fldDecl));
 				});
 
-				var query = "INSERT INTO ClientFIO (" + fields.join(",") + ") VALUES (" + values.join(",") + ")";
+				var query = ""
+					+ " SET IDENTITY_INSERT ClientFIO ON"
+					+ " INSERT INTO ClientFIO (" + fields.join(",") + ") VALUES (" + values.join(",") + ")"
+					+ " SET IDENTITY_INSERT ClientFIO OFF";
 
 				return db.dbquery({
 					"dbworker": " ",
 					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-client.ins" }),
 					"query": query
 				});
-
-			}).then(function() {
-				var changed = _this.getChanged();
-				var cond = [];
-
-				changed.forEach(function(key) {
-					var fldDecl = _this._clientsTableFldDecl.get(key || "");
-					var val = _this.get(key, null, !1);
-
-					if (!fldDecl || utils.isEmpty(val))
-						return;
-
-					cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl));
-				});
-
-				var query = "SELECT clid FROM ClientFIO WHERE " + cond.join(" AND ");
-
-				return db.dbquery({
-					"dbworker": " ",
-					"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-client.ins-id" }),
-					"query": query
-				});
-
-			}).then(function(dbres) {
-				if (!dbres.recs.length)
-					return reject('ClientDataModel.insert(): failed to get new client id');
-
-				var id = dbres.recs[0].clid;
-
-				_this.set("clid", id);
 
 			}).then(function() {
 				var clid = _this.get("clid", null, !1);

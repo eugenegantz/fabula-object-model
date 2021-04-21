@@ -94,6 +94,29 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 
 		/**
+		 * Запросить из базы новый firmId. Новая парадигма требует, чтобы id был сквозной для двух таблиц ClientFIO + Firms
+		 *
+		 * @return {Promise}
+		 * */
+		"_requestNewId": function() {
+			var db = this.getDBInstance();
+
+			var query = ""
+				+ " SELECT MAX(firmid) + 1 AS id FROM Firms"
+				+ " UNION ALL"
+				+ " SELECT MAX(clid) + 1 AS id FROM ClientFIO"
+				+ " ORDER BY id DESC";
+
+			return db.query({ "query": query }).then(function(dbRes) {
+				if (!dbRes.recs.length)
+					return 1;
+
+				return dbRes.recs[0].id;
+			});
+		},
+
+
+		/**
 		 * Записать в таблицу _firms
 		 * @private
 		 * @param arg
@@ -121,64 +144,20 @@ FirmDataModel.prototype = utils.createProtoChain(
 					values.push(dbUtils.mkVal(val, fldDecl));
 				});
 
+				var query = ""
+					+ " SET IDENTITY_INSERT Firms ON"
+					+ " INSERT INTO firms (" + fields.join(",") + ") VALUES (" + values.join(",") + ")"
+					+ " SET IDENTITY_INSERT Firms OFF";
+
 				db.dbquery({
 					"dbworker": " ",
 					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins" }),
-					"query": "INSERT INTO firms (" + fields.join(",") + ") VALUES (" + values.join(",") + ")",
+					"query": query,
 					"callback": function(dbres, err) {
 						if (err = dbUtils.fetchErrStrFromRes(dbres))
 							return reject(err);
 
 						resolve();
-					}
-				});
-			});
-		},
-
-
-		/**
-		 * Вернуть id новой записи
-		 * @private
-		 * @param {Object} arg
-		 * @param {String | Object=} arg.dbcache
-		 * @return {Promise}
-		 * */
-		"_promiseGetInsertedId": function(arg) {
-			arg = arg || {};
-
-			var self = this;
-
-			return new Promise(function(resolve, reject) {
-				var db = self.getDBInstance(),
-					changed = self.getChanged(),
-					cond = [];
-
-				changed.forEach(function(key) {
-					var fldDecl = self._firmsTableFldDecl.get(key || ""),
-						val = self.get(key, null, !1);
-
-					if (!fldDecl || utils.isEmpty(val))
-						return;
-
-					cond.push(dbUtils.mkFld(key) + " = " + dbUtils.mkVal(val, fldDecl));
-				});
-
-				db.dbquery({
-					"dbworker": " ",
-					"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins-id" }),
-					"query": "SELECT firmId FROM firms WHERE " + cond.join(" AND "),
-					"callback": function(dbres, err) {
-						if (err = dbUtils.fetchErrStrFromRes(dbres))
-							return reject(err);
-
-						if (!dbres.recs.length)
-							return reject('FirmDataModel._promiseGetInsertedId(): failed to get new "firmId"');
-
-						var id = dbres.recs[0].firmId;
-
-						self.set("firmId", id);
-
-						resolve(id);
 					}
 				});
 			});
@@ -433,26 +412,28 @@ FirmDataModel.prototype = utils.createProtoChain(
 		"insert": function(arg) {
 			arg = arg || {};
 
-			var self = this,
-				callback = arg.callback || emptyFn;
+			var _this = this;
+			var callback = arg.callback || emptyFn;
 
-			self.trigger("before-insert");
+			_this.trigger("before-insert");
 
-			return self.exists().then(function(isEx) {
+			return _this.exists().then(function(isEx) {
 				if (isEx)
 					return Promise.reject("FirmDataModel.insert(): firm already exists");
 
 			}).then(function() {
-				return self._promiseInsertUsr();
+				return _this._requestNewId().then(function(id) {
+					_this.set("firmId", id, null, null);
+				});
 
 			}).then(function() {
-				return self._promiseGetInsertedId();
+				return _this._promiseInsertUsr();
 
 			}).then(function() {
 				return new Promise(function(resolve, reject) {
-					var firmId = self.get("firmId", null, !1);
+					var firmId = _this.get("firmId", null, !1);
 
-					var query = self.getUpsertOrDelFPropsQueryStrByDBRes([], {
+					var query = _this.getUpsertOrDelFPropsQueryStrByDBRes([], {
 						"pid": firmId,
 						"extClass": "FIRMS",
 						"extId": firmId
@@ -461,9 +442,9 @@ FirmDataModel.prototype = utils.createProtoChain(
 					if (!query)
 						return resolve();
 
-					self.getDBInstance().dbquery({
+					_this.getDBInstance().dbquery({
 						"dbworker": " ",
-						"dbcache": self.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins-prop" }),
+						"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-firm.ins-prop" }),
 						"query": query,
 						"callback": function(dbres, err) {
 							if (err = dbUtils.fetchErrStrFromRes(dbres))
@@ -476,22 +457,22 @@ FirmDataModel.prototype = utils.createProtoChain(
 
 			}).then(function() {
 				return Promise.all(
-					self.getBranch().map(function(firm) {
-						firm.set("parent_id", self.get("FirmId"));
+					_this.getBranch().map(function(firm) {
+						firm.set("parent_id", _this.get("FirmId"));
 
 						return firm.save();
 					})
 				);
 
 			}).then(function() {
-				self.clearChanged();
+				_this.clearChanged();
 
-				self.trigger("after-insert");
+				_this.trigger("after-insert");
 
-				callback(self, null);
+				callback(_this, null);
 
 			}).catch(function(err) {
-				callback(self, err);
+				callback(_this, err);
 
 				return Promise.reject(err);
 			});
