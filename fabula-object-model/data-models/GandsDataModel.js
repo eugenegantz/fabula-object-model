@@ -96,27 +96,8 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 		var _this = this;
 
 		var db = getContextDB.call(this);
-		var configRow = {"GSID": "ТСFM", "GSName": "Настройки FOM", "GSKindName":"", "GSCOP":""};
-		var configRowProps = [];
 
 		/*#if browser,node*/
-		// Номеклатура
-		var query = ""
-			+ " SELECT"
-			+   "  pid"
-			+   ", extID"
-			+   ", property"
-			+   ", value"
-			+ " FROM Property"
-			+ " WHERE"
-			+   " ExtID IN("
-			+       " SELECT [value]"
-			+       " FROM Property"
-			+       " WHERE"
-			+           "     extClass = 'config'"
-			+           " AND property = 'fom-config-entry-gsid'"
-			+   " )";
-
 		// Конфиг по-умолчанию
 		var queries = [""
 			+ " SELECT * FROM Gands"
@@ -128,24 +109,7 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 			+   " OR GSID LIKE 'ТСПо%'"
 		];
 
-		db.query({
-			"dbcache": _this.iFabModuleGetDBCache(arg.dbcache, { "m": "m-gs.load-0" }),
-			"query": query
-		}).then(function(dbres) {
-			if (dbres.recs.length) {
-				for(var  c = 0; c < dbres.recs.length; c++) {
-					// Запрос из конфига
-					// TODO DEPRECATED
-					if (dbres.recs[c].property == "запрос-номенклатура"){
-						queries[0] = ""
-							+ " SELECT *"
-							+ " FROM Gands"
-							+ " WHERE " + dbres.recs[c].value;
-					}
-					configRowProps.push(dbres.recs[c]);
-				}
-			}
-
+		Promise.resolve().then(function() {
 			if (!db)
 				return Promise.reject("!GandsDataModel.load(): !db");
 
@@ -201,9 +165,9 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 
 		}).then(function(res) {
 			_this._afterLoad({
-				"data": res[0].recs.concat(configRow),
+				"data": res[0].recs,
 				"ext": res[1].recs,
-				"props": res[2].recs.concat(configRowProps)
+				"props": res[2].recs
 			}, callback);
 
 			_this._init_timestamp = Date.now();
@@ -295,26 +259,32 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 		// -------------------------------------------------------------------------------------
 
 		var proto = Object.getPrototypeOf(self);
-		proto._matcherPatterns = [];
 
-		var configRow = self.dataReferences.get("ТСFM");
-
-		if (configRow){
-			// Заполнение недостающих полей в configRow
-			if (self.data.length){
-				var tmp = self.data[0];
-				for(var prop in tmp){
-					if (!Object.prototype.hasOwnProperty.call(tmp, prop)) continue;
-					if (  configRow[prop] === void 0  ) configRow[prop] = "";
-				}
-			}
-
-			for(c=0; c<configRow.gandsPropertiesRef.length; c++){
-				if (configRow.gandsPropertiesRef[c].property == "номенклатура-группы"){
-					proto._matcherPatterns = proto._matcherPatterns.concat(eval("("+ configRow.gandsPropertiesRef[c].value +")"));
-				}
-			}
-		}
+		/** @deprecated */
+		// TODO: Сильная привязка к кодам. Найти все упоминания в проектах и произвести рефакторинг
+		proto._matcherPatterns = [
+			  {"GS":/пзраф/gi,"gr":"production:folding"}
+			, {"GS":/тцбуд1|тцбуд3|тцбукр|тцбупр/gi,"gr":"carton"}
+			, {"GS":/пзрала/gi,"gr":"production:laminating"}
+			, {"GS":/пзрапз/gi,"gr":"production:cutting"}
+			, {"GS":/тцбуко/,"gr":"envelope"}
+			, {"GS":/пзрапо/gi,"gr":"production:rounding"}
+			, {"GS":/тцмп/gi,"gr":"materials:print"}
+			, {"GS":/гпсупп/gi,"gr":"pens"}
+			, {"COP":/17|27|07/ig,"gr":"print"}
+			, {"GS":/пзраби/gi,"gr":"production:creasing"}
+			, {"GS":/тцбукм/gi,"gr":"materials:carton:regular"}
+			, {"GS":/тцбуме/gi,"gr":"materials:paper:coated"}
+			, {"GS":/тцбукм|тцдк/gi,"gr":"materials:carton"}
+			, {"GS":/^ТСFM$/,"gr":"fom-config"}
+			, {"GS":/тцбуоф/gi,"gr":"materials:paper:offset"}
+			, {"GS":/тцбуме|тцбуоф|тцбуса|тцбуск|тцбуцп|тцбуфб/gi,"gr":"paper"}
+			, {"GS":/ТСПоФм/ig,"gr":"print-formats"}
+			, {"GS":/^тцбу+[a-z-0-9]{1,}/ig,"gr":"material-paper"}
+			, {"GS":/тцдк/gi,"gr":"materials:carton:design"}
+			, {"COP":/((^17$)|^17|^27$|^27)+[0-5,7-9]/ig,"gr":"products"}
+			, {"COP":/((^17$)|^17|^27$|^27)+[0-5,7-9]/ig,"gr":"products:print"}
+		];
 
 		// -------------------------------------------------------------------------------------
 
