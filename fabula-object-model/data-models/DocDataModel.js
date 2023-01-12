@@ -18,6 +18,8 @@ var utils = {
 	"db": require("./../utils/dbUtils.js")
 };
 
+var egAjax = require("eg-node-ajax");
+
 var MFieldDocId = (function() {
 	var _protoSet = MField.prototype.set;
 
@@ -1138,7 +1140,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				"docType": null
 			};
 
-			var gsGroup = gands.dataRefByGSIDGroup.get("SYОП");
+			var gsGroup = gands.dataRefByGSIDGroup.get("SYОП") || [];
 
 			gsGroup.some(function(row) {
 				if (row.GSCodeNumber == res.prefix && 8 == row.GSID.length)
@@ -1146,6 +1148,97 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 			});
 
 			return res;
+		},
+
+
+		"_createDocIdString": function(fields) {
+			var _index          = fields.index;
+			var _companyID      = fields.companyID;
+			var _year           = fields.year;
+			var _prefix         = fields.prefix;
+
+			_index = _index + "";
+			_index = "0".repeat(5 - _index.length) + _index;
+
+			return ""
+				+ _companyID
+				+ _year
+				+ _prefix
+				+ _index;
+		},
+
+
+		"_getNewDocIDMethodREQ": function(arg) {
+			var _this           = this;
+			var db              = _this.getDBInstance();
+			var gands           = _this.getGandsInstance();
+			var docType         = arg.docType;
+			var companyID       = arg.companyID;
+			var docTypeGsRow    = gands.dataRefByGSID.get("SYОП" + docType);
+			var prefix          = docTypeGsRow.GSCodeNumber;
+
+			return Promise.resolve().then(function() {
+				return new Promise(function(resolve, reject) {
+					var faburl = db.dbAwwS.faburl.replace(/[\\/]$/ig, '');
+					var url = faburl + "/db/" + db.dbname + "/newDocNumber";
+
+					egAjax.request({
+						"url": url,
+						"method": "GET",
+						"callback": function(err, res) {
+							try {
+								if (err) {
+									return reject(err);
+								}
+
+								var _res = JSON.parse(res.responseText);
+
+								// Пример ответа
+								// {"tt":"[67+63ms]","err":"","t":0.05,"recs":1,"fld":[{"Name":"Doc5","Size":5,"Type":"C","fType":200}],"res":[["01777"]]}
+
+								if (_res.err) {
+									return reject(_res.err);
+								}
+
+								var nextIndex = +_res.res[0][0];
+
+								if (isNaN(nextIndex)) {
+									return reject("_getNewDocIDMethodREQ(): isNaN(nextIndex)");
+								}
+
+								resolve(nextIndex);
+
+							} catch (e) {
+								reject(e);
+							}
+						}
+					});
+				});
+
+			}).then(function(nextIndex) {
+				var _while          = 100;
+				var now             = new Date();
+				var nextDocId       = void 0;
+				var year            = now.getFullYear().toString().slice(-1);
+
+				while (_while--) {
+					nextDocId = _this._createDocIdString({
+						  "index"       : nextIndex
+						, "year"        : year
+						, "prefix"      : prefix
+						, "companyID"   : companyID
+					});
+
+					if (_this.isLockedDocId(nextDocId)) {
+						nextIndex++;
+						continue;
+					}
+
+					break;
+				}
+
+				return nextDocId;
+			});
 		},
 
 
@@ -1199,24 +1292,8 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				if (isNaN(nextIndex))
 					return Promise.reject("_getNewDocIDMethodINCREMENT(): isNaN(nextIndex)");
 
-				function _createDocIdString(fields) {
-					var _index          = fields.index;
-					var _companyID      = fields.companyID;
-					var _year           = fields.year;
-					var _prefix         = fields.prefix;
-
-					_index = _index + "";
-					_index = "0".repeat(5 - _index.length) + _index;
-
-					return ""
-						+ _companyID
-						+ _year
-						+ _prefix
-						+ _index;
-				}
-
 				while (_while--) {
-					nextDocId = _createDocIdString({
+					nextDocId = _this._createDocIdString({
 						  "index"       : nextIndex
 						, "year"        : year
 						, "prefix"      : prefix
@@ -1375,7 +1452,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		"getNewDocID": function(arg) {
 			arg = arg || {};
 
-			var method = (arg.method || "INCREMENT").toUpperCase();
+			var method = (arg.method || "REQ").toUpperCase();
 
 			if (typeof arg != "object") {
 				throw new Error(
@@ -1417,7 +1494,7 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				}
 
 			}).then(function() {
-				return (_this["_getNewDocIDMethod" + method] || _this["_getNewDocIDMethodUSED"]).call(_this, arg);
+				return (_this["_getNewDocIDMethod" + method] || _this["_getNewDocIDMethodREQ"]).call(_this, arg);
 			});
 		},
 

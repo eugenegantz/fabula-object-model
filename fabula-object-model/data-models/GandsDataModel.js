@@ -48,6 +48,11 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 
 		this._indexData = {}; // after init => Object
 
+		this.dataReferences = new ObjectA({});
+
+		this.dataRefByGSID = this.dataReferences;
+
+		this.dataRefByGSIDGroup = new ObjectA({});
 	},
 
 
