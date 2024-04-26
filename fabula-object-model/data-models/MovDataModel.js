@@ -1174,6 +1174,9 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 			this.mergeFProps(mov.getFPropertyA(), opt.props);
 
+			this.trigger("merge-into-this", { "fromMov": mov, "intoMov": this });
+			mov.trigger("merge-from-this", { "fromMov": mov, "intoMov": this });
+
 			mov.getKeys().forEach(function(k) {
 				this.set(
 					k,
