@@ -150,6 +150,20 @@ IMovCollection.prototype = {
 
 
 	/**
+	 * Добавить запись ТиУ движение если отсутствует.
+	 * @param {MovDataModel | Object} argMov
+	 * @return {this}
+	 * */
+	"addMovOnce": function(mov) {
+		if (this.getMov(mov)[0]) {
+			return this;
+		}
+
+		return this.addMov(mov);
+	},
+
+
+	/**
 	 * Удалить запись ТиУ движение
 	 * @param {MovDataModel | Object=} arg
 	 * @return {*}
