@@ -97,22 +97,21 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 	"load" : function(arg) {
 		if (typeof arg == "undefined") arg = Object.create(null);
 		var useCache = typeof arg.useCache == "undefined" ? true : Boolean(arg.useCache);
-		var callback = typeof arg.callback == "function" ? arg.callback : function(){};
+		var callback = typeof arg.callback == "function" ? arg.callback : function() { };
 		var _this = this;
 
 		var db = getContextDB.call(this);
 
 		/*#if browser,node*/
 		// Конфиг по-умолчанию
-		var queries = [""
+		var _gandsQuery = ""
 			+ " SELECT * FROM Gands"
 			+ " WHERE "
-			+   "    GSCOP LIKE '87%'"
-			+   " OR GSCOP LIKE '17%'"
-			+   " OR GSCOP LIKE '27%'"
-			+   " OR GSCOP LIKE '07%'"
-			+   " OR GSID LIKE 'ТСПо%'"
-		];
+			+ "    GSCOP LIKE '87%'"
+			+ " OR GSCOP LIKE '17%'"
+			+ " OR GSCOP LIKE '27%'"
+			+ " OR GSCOP LIKE '07%'"
+			+ " OR GSID LIKE 'ТСПо%'"
 
 		Promise.resolve().then(function() {
 			if (!db)
@@ -121,20 +120,47 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 			var promises = [];
 
 			// На случай если необходимо переопределить запрос на уровне проекта
-			if (_this.sql)
-				queries[0] = _this.sql;
+			if (_this.sqlWhere) {
+				_gandsQuery = "SELECT * FROM Gands WHERE (" + _this.sqlWhere + ")";
+			}
+
+			var gandsQuery = _gandsQuery.replace("*", ""
+				+ "  __TOP__"
+				+ "  __IDENTITY__, [Sort], [Sort4], [GSID]"
+				+ ", [GSID4], [Tick], [GSCOP], [GSKindName]"
+				+ ", [GSName], [GSCodeNumber], [GSUnit], [GSUnit2]"
+				+ ", [GSCostSale], [GSCost], [GSStock], [CheckStock]"
+				+ ", [ExtID], [ImportName], [FirmDefault], [GSGraf]"
+				+ ", [GSFlag], [DateNew], [UserNew], [DateEdit], [UserEdit]"
+			)
+				+ " AND __WHERE_IDENTITY__"
+				+ " __ORDER_BY__";
+
+			var extQuery = ""
+				+ " SELECT"
+				+ " __TOP__"
+				+ "   __IDENTITY__, [GSExType], [GSExID], [GSExSort], [GSExExtID], [GSExName]"
+				+ " , [GSExNum], [GSExFlag], [GSExAttr1], [GSExAttr2], [Tick], [DateEdit]"
+				+ " FROM GandsExt"
+				+ " WHERE"
+				+ " __WHERE_IDENTITY__"
+				+ " AND GSExID IN (" + _gandsQuery.replace(/[*]/gi, "GSID") + ")"
+				+ " __ORDER_BY__";
+
+			var propsQuery = ""
+				+ " SELECT"
+				+ " __TOP__"
+				+ " __IDENTITY__, pid, extID, property, value FROM Property"
+				+ " WHERE"
+				+ " __WHERE_IDENTITY__"
+				+ " AND ExtID IN (" + _gandsQuery.replace(/[*]/gi, "GSID") + ")"
+				+ " __ORDER_BY__";
 
 			// Основная таблица
 			promises.push(
 				db.query({
-					"query": queries[0].replace("*", ""
-						+ "  [ID], [Sort], [Sort4], [GSID]"
-						+ ", [GSID4], [Tick], [GSCOP], [GSKindName]"
-						+ ", [GSName], [GSCodeNumber], [GSUnit], [GSUnit2]"
-						+ ", [GSCostSale], [GSCost], [GSStock], [CheckStock]"
-						+ ", [ExtID], [ImportName], [FirmDefault], [GSGraf]"
-						+ ", [GSFlag], [DateNew], [UserNew], [DateEdit], [UserEdit]"),
-					"primaryField": "id",
+					"query": gandsQuery,
+					"identityField": "ID",
 					"chunked": true
 				})
 			);
@@ -142,14 +168,8 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 			// Расширение номенклатуры
 			promises.push(
 				db.query({
-					"query": ""
-					+ " SELECT"
-					+ "   [GEIDC], [GSExType], [GSExID], [GSExSort], [GSExExtID], [GSExName]"
-					+ " , [GSExNum], [GSExFlag], [GSExAttr1], [GSExAttr2], [Tick], [DateEdit]"
-					+ " FROM GandsExt"
-					+ " WHERE"
-					+   " GSExID IN (" + queries[0].replace(/[*]/gi, "GSID") + ")",
-					"primaryField": "geidc",
+					"query": extQuery,
+					"identityField": "GEIDC",
 					"chunked": true
 				})
 			);
@@ -157,11 +177,8 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 			// Свойства номенклатуры
 			promises.push(
 				db.query({
-					"query": ""
-					+ " SELECT pid, extID, property, value FROM Property"
-					+ " WHERE"
-					+   " ExtID IN (" + queries[0].replace(/[*]/gi, "GSID") + ")",
-					"primaryField": "uid",
+					"query": propsQuery,
+					"identityField": "uid",
 					"chunked": true
 				})
 			);
