@@ -7,7 +7,6 @@ var IFabModule = require("./IFabModule.js");
 var IEvents = require("./InterfaceEvents");
 var ObjectA = require("./ObjectA");
 var _utils = require("./../utils/utils");
-var dbUtils = require("./../utils/dbUtils");
 
 // Для совместимости
 var getContextDB = function(){
@@ -227,92 +226,160 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 	/**
 	 * @ignore
 	 * */
-	"_afterLoad": function(dbres, callback){
-		var c, L, v, gsid, gslv,
-			lvs = [2, 4, 6],
-			self = this,
-			gandsRef = Object.create(null),
-			dataRefByGSIDGroup = Object.create(null);
+	"_afterLoad": function(dbres, callback) {
+		var c, L, v, gsid, gslv;
+		var lvs = [2, 4, 6];
+		var _this = this;
+		var gandsRef = Object.create(null);
+		var dataRefByGSIDGroup = Object.create(null);
 
-		self.data = dbres.data;
-		self.state = 1;
+		_this.data = dbres.data;
+		_this.state = 1;
 
-		for(c=0; c<self.data.length; c++){
-			gandsRef[self.data[c].GSID] = self.data[c];
-			if (!self.data[c].gandsExtRef) self.data[c].gandsExtRef = [];
-			if (!self.data[c].gandsPropertiesRef) self.data[c].gandsPropertiesRef = [];
+		for (c = 0; c < _this.data.length; c++) {
+			gandsRef[_this.data[c].GSID] = _this.data[c];
+
+			if (!_this.data[c].gandsExtRef) {
+				_this.data[c].gandsExtRef = [];
+			}
+
+			if (!_this.data[c].gandsPropertiesRef) {
+				_this.data[c].gandsPropertiesRef = [];
+			}
 		}
 
 		var gandsExt = dbres.ext;
 
-		for(c=0; c<gandsExt.length; c++){
-			if (  typeof gandsRef[gandsExt[c].GSExID] == "undefined"  ) continue;
+		var _sortkeys = ['GSExID', 'GSExType', 'GSExName', 'GSExSort', 'GEIDC'];
+
+		function _cmple(a, b) {
+			if (isFinite(a) && isFinite(b)) {
+				return +a < +b;
+			}
+			return a < b;
+		};
+
+		// Сортировка ASC
+		function _cmpf(a, b, c, k) {
+			for (c = 0; c < _sortkeys.length; c++) {
+				k = _sortkeys[c];
+				if (a[k] != b[k]) {
+					return _cmple(a[k], b[k]) ? -1 : 1;
+				}
+			}
+			return 0;
+		};
+
+		// У длинных записей поле "сорт" одинаковое -- сортировать в порядке записи в БД
+		gandsExt = gandsExt.sort(_cmpf);
+
+		// Склеить длинные записи (GSExFlag = "d")
+		gandsExt = gandsExt.reduce((arr, row) => {
+			var _row = row;
+			var prev = arr[arr.length - 1];
+
+			if (!!~row.GSExFlag.indexOf('d')) {
+				row.GSExAttrMERGED = (row.GSExAttr1 || '') + (row.GSExAttr2 || '');
+			}
+
+			if (prev) {
+				// Если это "длинная" запись -- склеить в одну
+				if (
+					   !!~prev.GSExFlag.indexOf('d')
+					&& !!~row.GSExFlag.indexOf('d')
+					&& prev.GSExID == row.GSExID
+					&& prev.GSExType == row.GSExType
+					&& prev.GSExSort == row.GSExSort
+					&& prev.GSExName == row.GSExName
+				) {
+					prev.GSExAttrMERGED += row.GSExAttrMERGED;
+
+					_row = void 0; // игнорировать текущую строку (она записана как составная в другой)
+				}
+			}
+
+			_row && arr.push(_row);
+
+			return arr;
+		}, []);
+
+		for (c = 0; c < gandsExt.length; c++) {
+			if (typeof gandsRef[gandsExt[c].GSExID] == "undefined") {
+				continue;
+			}
+
 			gandsRef[gandsExt[c].GSExID].gandsExtRef.push(gandsExt[c]);
 		}
 
 		var gandsProps = dbres.props;
 
-		for(c=0; c<gandsProps.length; c++){
-			if (  typeof gandsRef[gandsProps[c].extID] == "undefined"  ) continue;
+		for (c = 0; c < gandsProps.length; c++) {
+			if (typeof gandsRef[gandsProps[c].extID] == "undefined") {
+				continue;
+			}
+
 			gandsRef[gandsProps[c].extID].gandsPropertiesRef.push(gandsProps[c]);
 		}
 
-		for (c = 0, L = self.data.length; c < L; c++) {
-			if (typeof self.GSUnits[self.data[c].GSID] == "undefined")
-				self.GSUnits[self.data[c].GSID] = self.data[c].GSUnit;
+		for (c = 0, L = _this.data.length; c < L; c++) {
+			if (typeof _this.GSUnits[_this.data[c].GSID] == "undefined") {
+				_this.GSUnits[_this.data[c].GSID] = _this.data[c].GSUnit;
+			}
 
-			gsid = self.data[c].GSID;
+			gsid = _this.data[c].GSID;
 
 			for (v = 0; v < lvs.length; v++) {
 				gslv = gsid.substr(0, lvs[v]);
 
 				if (gslv.length == lvs[v]) {
-					if (!dataRefByGSIDGroup[gslv]) dataRefByGSIDGroup[gslv] = [];
+					if (!dataRefByGSIDGroup[gslv]) {
+						dataRefByGSIDGroup[gslv] = [];
+					}
 
-					dataRefByGSIDGroup[gslv].push(self.data[c]);
+					dataRefByGSIDGroup[gslv].push(_this.data[c]);
 				}
 			}
 		}
 
-		self.dataReferences = new ObjectA(gandsRef);
-		self.dataRefByGSID = self.dataReferences;
-		self.dataRefByGSIDGroup = new ObjectA(dataRefByGSIDGroup);
+		_this.dataReferences = new ObjectA(gandsRef);
+		_this.dataRefByGSID = _this.dataReferences;
+		_this.dataRefByGSIDGroup = new ObjectA(dataRefByGSIDGroup);
 
 		// -------------------------------------------------------------------------------------
 
-		var proto = Object.getPrototypeOf(self);
+		var proto = Object.getPrototypeOf(_this);
 
 		/** @deprecated */
 		// TODO: Сильная привязка к кодам. Найти все упоминания в проектах и произвести рефакторинг
 		proto._matcherPatterns = [
-			  {"GS":/пзраф/gi,"gr":"production:folding"}
-			, {"GS":/тцбуд1|тцбуд3|тцбукр|тцбупр/gi,"gr":"carton"}
-			, {"GS":/пзрала/gi,"gr":"production:laminating"}
-			, {"GS":/пзрапз/gi,"gr":"production:cutting"}
-			, {"GS":/тцбуко/,"gr":"envelope"}
-			, {"GS":/пзрапо/gi,"gr":"production:rounding"}
-			, {"GS":/тцмп/gi,"gr":"materials:print"}
-			, {"GS":/гпсупп/gi,"gr":"pens"}
-			, {"COP":/17|27|07/ig,"gr":"print"}
-			, {"GS":/пзраби/gi,"gr":"production:creasing"}
-			, {"GS":/тцбукм/gi,"gr":"materials:carton:regular"}
-			, {"GS":/тцбуме/gi,"gr":"materials:paper:coated"}
-			, {"GS":/тцбукм|тцдк/gi,"gr":"materials:carton"}
-			, {"GS":/^ТСFM$/,"gr":"fom-config"}
-			, {"GS":/тцбуоф/gi,"gr":"materials:paper:offset"}
-			, {"GS":/тцбуме|тцбуоф|тцбуса|тцбуск|тцбуцп|тцбуфб/gi,"gr":"paper"}
-			, {"GS":/ТСПоФм/ig,"gr":"print-formats"}
-			, {"GS":/^тцбу+[a-z-0-9]{1,}/ig,"gr":"material-paper"}
-			, {"GS":/тцдк/gi,"gr":"materials:carton:design"}
-			, {"COP":/((^17$)|^17|^27$|^27)+[0-5,7-9]/ig,"gr":"products"}
-			, {"COP":/((^17$)|^17|^27$|^27)+[0-5,7-9]/ig,"gr":"products:print"}
+			  { "GS": /пзраф/gi, "gr": "production:folding" }
+			, { "GS": /тцбуд1|тцбуд3|тцбукр|тцбупр/gi, "gr": "carton" }
+			, { "GS": /пзрала/gi, "gr": "production:laminating" }
+			, { "GS": /пзрапз/gi, "gr": "production:cutting" }
+			, { "GS": /тцбуко/, "gr": "envelope" }
+			, { "GS": /пзрапо/gi, "gr": "production:rounding" }
+			, { "GS": /тцмп/gi, "gr": "materials:print" }
+			, { "GS": /гпсупп/gi, "gr": "pens" }
+			, { "COP": /17|27|07/ig, "gr": "print" }
+			, { "GS": /пзраби/gi, "gr": "production:creasing" }
+			, { "GS": /тцбукм/gi, "gr": "materials:carton:regular" }
+			, { "GS": /тцбуме/gi, "gr": "materials:paper:coated" }
+			, { "GS": /тцбукм|тцдк/gi, "gr": "materials:carton" }
+			, { "GS": /^ТСFM$/, "gr": "fom-config" }
+			, { "GS": /тцбуоф/gi, "gr": "materials:paper:offset" }
+			, { "GS": /тцбуме|тцбуоф|тцбуса|тцбуск|тцбуцп|тцбуфб/gi, "gr": "paper" }
+			, { "GS": /ТСПоФм/ig, "gr": "print-formats" }
+			, { "GS": /^тцбу+[a-z-0-9]{1,}/ig, "gr": "material-paper" }
+			, { "GS": /тцдк/gi, "gr": "materials:carton:design" }
+			, { "COP": /((^17$)|^17|^27$|^27)+[0-5,7-9]/ig, "gr": "products" }
+			, { "COP": /((^17$)|^17|^27$|^27)+[0-5,7-9]/ig, "gr": "products:print" }
 		];
 
 		// -------------------------------------------------------------------------------------
 
-		self._buildIndexData();
+		_this._buildIndexData();
 
-		callback(null, self);
+		callback(null, _this);
 	},
 
 
@@ -711,13 +778,13 @@ GandsDataModel.prototype = _utils.createProtoChain(IEvents.prototype, IFabModule
 	 * @return {Array}
 	 * */
 	"parseGsLink": function(str, withNested) {
-		var self = this;
+		var _this = this;
 
-		return (self.matchGsLinks(str) || []).reduce(function(prev, curr) {
+		return (_this.matchGsLinks(str) || []).reduce(function(prev, curr) {
 			return prev.concat((
 				withNested
-					? self.dataRefByGSIDGroup.get(curr) || self.dataRefByGSID.get(curr)
-					: self.dataRefByGSID.get(curr)
+					? _this.dataRefByGSIDGroup.get(curr) || _this.dataRefByGSID.get(curr)
+					: _this.dataRefByGSID.get(curr)
 			) || [])
 		}, []);
 	}
