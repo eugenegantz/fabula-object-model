@@ -564,8 +564,12 @@ _utils.rmGsTags = function(str) {
 };
 
 
-_utils.isEmpty = function(val) {
-	return ![].concat(val).join("");
+_utils.isEmpty = function(val, trim) {
+	val = [].concat(val).join("");
+
+	trim && (val = val.trim());
+
+	return !val;
 };
 
 

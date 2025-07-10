@@ -116,8 +116,12 @@ InterfaceFProperty.createUpsertDeleteQueryString = function(arg) {
 
 		prevPropsByUId[uid] = row;
 
-		if (!nextRow)
+		if (
+			!nextRow
+			|| utils.isEmpty(nextRow.get("value"), true)
+		) {
 			return deletedPropsUId.push(uid);
+		}
 
 		row.getKeys().forEach(function(key) {
 			var fieldDecl = tableScheme.get(key);
@@ -174,7 +178,7 @@ InterfaceFProperty.mkDBInsertStr = function(argProp) {
 		if (utils.isEmpty(row.get("property")))
 			return prev;
 
-		if (utils.isEmpty(row.get("value")))
+		if (utils.isEmpty(row.get("value"), true)) // check isEmpty with string trim
 			return prev;
 
 		row.getKeys().forEach(function(colKey) {
@@ -380,7 +384,7 @@ InterfaceFProperty.prototype = DefaultDataModel.prototype._objectsPrototyping(
 		/**
 		 * Обновляет существующее или записывает новое свойсто с указанными ключами
 		 * @param {object} getKeyValue - искомое свойство
-		 * @param {Object} insProperty - свойство на замену
+		 * @param {object} insProperty - свойство на замену
 		 * */
 		"upsertFProperty": function(getKeyValue, insProperty) {
 			var ownProperty = this.getFPropertyA(getKeyValue);
