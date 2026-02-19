@@ -950,14 +950,14 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 				var query = ""
 					+ " SELECT"
 					+   " " + docsColumns
-					+   ", Format(RegDate,'yyyy-MM-dd hh:mm:ss') AS RegDate"
+					+   ", Format(RegDate,'yyyy-MM-dd HH:mm:ss') AS RegDate"
 					+ " FROM DOCS"
 					+ " WHERE " + _where
 
 					+ "; SELECT"
 					+   " " + movementColumns
-					+   ", Format(gsDate,'yyyy-MM-dd hh:mm:ss') AS gsDate"
-					+   ", Format(gsDate2,'yyyy-MM-dd hh:mm:ss') AS gsDate2"
+					+   ", Format(gsDate,'yyyy-MM-dd HH:mm:ss') AS gsDate"
+					+   ", Format(gsDate2,'yyyy-MM-dd HH:mm:ss') AS gsDate2"
 					+ " FROM Movement"
 					+ " WHERE"
 					+   " doc1 IN ("

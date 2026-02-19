@@ -365,7 +365,7 @@ MovDataModel.prototype = _utils.createProtoChain(
 
 				var query = ""
 					// Записи движения ТиУ
-					+ " SELECT " + columns + ", Format(GSDate,'yyyy-MM-dd hh:mm:ss') AS GSDate"
+					+ " SELECT " + columns + ", Format(GSDate,'yyyy-MM-dd HH:mm:ss') AS GSDate"
 					+ " FROM Movement "
 					+ " WHERE"
 					+   "    mmid = " + mmid
