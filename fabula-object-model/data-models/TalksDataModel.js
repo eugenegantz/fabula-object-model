@@ -126,14 +126,13 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 
 				if (!idx && nextMMFlag) {
 					return str + ""
-						+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
+						+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [key], [part])"
 						+ " SELECT"
 						+   " CAST(CONCAT(FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd'), 'T', FORMAT(CURRENT_TIMESTAMP, 'HH:mm:ss'), '.000') AS DATETIME)"
 						+   " ," + "CONCAT('Фаза: ', mmFlag, ' &rArr; ', '" + nextMMFlag + "', '" + (msg ? "<br>" + msg : "") + "')"
 						+   " ," + agent
 						+   " ," + "[mmid]"
 						+   " ," + "[doc1]"
-						+   " ," + "FORMAT(CURRENT_TIMESTAMP,'hh:mm')"
 						+   " ," + "'" + keyRandStr + "'"
 						+   " ," + idx
 						+ " FROM Movement"
@@ -143,14 +142,13 @@ TalksDataModel.prototype = utils.common.createProtoChain(IFabModule.prototype, {
 				}
 
 				return str + ""
-					+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
+					+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [key], [part])"
 					+ " SELECT "
 					+   " CAST(CONCAT(FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd'), 'T', FORMAT(CURRENT_TIMESTAMP, 'HH:mm:ss'), '.000') AS DATETIME)"
 					+   " ," + "'" + msg + "'"
 					+   " ," + agent
 					+   " ," + "[mmid]"
 					+   " ," + "[doc1]"
-					+   " ," + "FORMAT(CURRENT_TIMESTAMP,'hh:mm')"
 					+   " ," + "'" + keyRandStr + "'"
 					+   " ," + idx
 					+ " FROM Movement"

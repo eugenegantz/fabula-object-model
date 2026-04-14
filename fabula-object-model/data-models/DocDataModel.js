@@ -648,14 +648,13 @@ DocDataModel.prototype = DefaultDataModel.prototype._objectsPrototyping(
 						&& prevFlag != nextFlag
 					) {
 						query = ""
-							+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [tm], [key], [part])"
+							+ " INSERT INTO Talk (dt, txt, agent, [mm], [doc], [key], [part])"
 							+ " VALUES ("
 							+   " CAST(CONCAT(FORMAT(CURRENT_TIMESTAMP, 'yyyy-MM-dd'), 'T', FORMAT(CURRENT_TIMESTAMP, 'HH:mm:ss'), '.000') AS DATETIME)"
 							+   " ," + "'Фаза: " + (prevFlag || "") + " &rArr; " + nextFlag + "'"
 							+   " ," + 999
 							+   " ," + id
 							+   " ," + "'" + mov.get("doc1") + "'"
-							+   " ," + "FORMAT(CURRENT_TIMESTAMP, 'hh:mm')"
 							+   " ," + "CONCAT(CURRENT_TIMESTAMP, '" + utils.string.random(3) + "')"
 							+   " ," + 0
 							+ " )";
